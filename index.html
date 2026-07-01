@@ -188,38 +188,32 @@
   <section id="metingen">
     <h2 class="sec">📏 Metingen → FIFA-stats</h2>
     <div class="note">
-      Gebaseerd op de KNVB-presentatie <i>"VCT in de praktijk"</i> (Raimond Massop). Voer per speelster de meetgegevens in;
-      de zes FIFA-stats worden automatisch berekend. <b>PAC</b> komt uit de sprinttijd (15&nbsp;m), <b>PHY</b> uit de conditie-/intervaltest,
-      en <b>SHO/PAS/DRI/DEF</b> uit een beoordeling 1–10 uit een gerichte oefenvorm. De omzetting is calibreerbaar hieronder.
+      Elke FIFA-stat wordt gemeten met een <b>gestandaardiseerde test</b> (bv. de shuttle run voor conditie). Kies een <b>meetdatum</b>,
+      voer de resultaten in die je die training hebt gemeten — de stats en de kaartjes updaten meteen, en alles wordt <b>per datum bewaard</b>
+      zodat je de ontwikkeling over tijd ziet in het overzicht onderaan. Een stat is het gemiddelde van de tests die 'm voeden (de meest recente meting telt).
     </div>
     <div class="controls">
-      <label>Sprint 15 m — top (→99)
-        <input type="number" step="0.01" id="anchFast" value="2.40" style="width:90px"></label>
-      <label>Sprint 15 m — laag (→50)
-        <input type="number" step="0.01" id="anchSlow" value="3.20" style="width:90px"></label>
-      <label>Conditie-eindniveau — top (→99)
-        <input type="number" step="0.1" id="condFast" value="20.5" style="width:90px"></label>
-      <label>Conditie-eindniveau — laag (→50)
-        <input type="number" step="0.1" id="condSlow" value="13.0" style="width:90px"></label>
-      <label>&nbsp;<button class="btn primary" onclick="applyMeas()">↻ Bereken stats</button></label>
+      <label>📅 Meetdatum <input type="date" id="measDate" onchange="changeMeasDate()"></label>
+      <label>&nbsp;<button class="btn primary" onclick="applyMeas()">↻ Herbereken alle stats</button></label>
       <label>&nbsp;<button class="btn" onclick="saveStats()">💾 Opslaan</button></label>
     </div>
-    <p class="hint" style="margin-top:-4px">Conditie-eindniveau = bv. eindsnelheid 30‑15 IFT (km/u) of shuttle-runniveau. Anchors gelden voor seniorenvrouwen; pas ze aan jullie eigen data aan.
-      Sprint 5/15/25&nbsp;m volgen de KNVB-testopzet (start-, versnellings- en volgehouden snelheid, slide 40–43).</p>
+    <p class="hint" style="margin-top:-4px">Vul alleen de tests in die je die dag hebt afgenomen; lege velden worden overgeslagen. Leeg = de vorige meting van die test blijft gelden.</p>
     <div style="overflow:auto">
       <table id="measTable"></table>
     </div>
-    <h2 class="sec" style="margin-top:22px">📖 KNVB-referentie sprinttijden (slide 40)</h2>
-    <p class="hint">Referentie uit de presentatie (Football Periodisation, R. Verheijen) — snelste tijd in een <b>voetbalsprintduel</b> (situatie 3):</p>
-    <div style="overflow:auto;max-width:560px">
-      <table>
-        <tr><th>Leeftijd</th><th class="center">Sit. 1 (alleen)</th><th class="center">Sit. 2 (2 spelers)</th><th class="center">Sit. 3 (duel)</th></tr>
-        <tr><td>Onder 15</td><td class="center">1.85 s</td><td class="center">1.80 s</td><td class="center">1.75 s</td></tr>
-        <tr><td>Onder 17</td><td class="center">1.72 s</td><td class="center">1.69 s</td><td class="center">1.63 s</td></tr>
-        <tr><td>Onder 19</td><td class="center">1.65 s</td><td class="center">1.61 s</td><td class="center">1.54 s</td></tr>
-      </table>
+
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;color:var(--gold);font-weight:600">⚙️ Testinstellingen (ijking per test)</summary>
+      <p class="hint" style="margin-top:8px">Elke test rekent lineair om naar 0–99: <b>Top</b> = topwaarde → 99, <b>Zwak</b> = zwakke waarde → 50.
+        Bij tijden geldt: lagere tijd = beter, dus Top &lt; Zwak. Pas de waarden aan naar jullie eigen niveau (seniorenvrouwen als startpunt).</p>
+      <div style="overflow:auto;max-width:660px"><table id="testCfgTable"></table></div>
+    </details>
+
+    <h2 class="sec" style="margin-top:22px">📈 Voortgang over tijd</h2>
+    <div class="controls">
+      <label>Speelster <select id="progPlayer" onchange="renderProgress()"></select></label>
     </div>
-    <p class="hint">Kernidee KNVB: de snelste sprint ontstaat in een <b>duel</b> (situatie 3) — meet daarom bij voorkeur voetbalspecifiek, niet geïsoleerd.</p>
+    <div id="progressWrap" style="overflow:auto"></div>
   </section>
 
   <!-- ============ ONTWIKKELING ============ -->
@@ -545,7 +539,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));renderCards();renderMeasTable();renderDev();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
+  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));PLAYERS.forEach(p=>computePlayerStats(p.n));renderCards();renderMeasTable();fillProgPlayers();renderProgress();renderDev();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
   r.readAsText(f);
 }
 
@@ -730,77 +724,103 @@ function renderPerPlayer(){
       <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
 }
 
-/* ---------------- METINGEN → STATS ---------------- */
-const MEAS_FIELDS=[
-  {k:"s5",lbl:"Sprint 5m (s)",step:"0.01",ph:"start"},
-  {k:"s15",lbl:"Sprint 15m (s)",step:"0.01",ph:"→PAC"},
-  {k:"s25",lbl:"Sprint 25m (s)",step:"0.01",ph:"volgehouden"},
-  {k:"cond",lbl:"Conditie-eindniveau",step:"0.1",ph:"→PHY"},
-  {k:"sho",lbl:"Afronden (1-10)",step:"0.5",ph:"→SHO"},
-  {k:"pas",lbl:"Passing (1-10)",step:"0.5",ph:"→PAS"},
-  {k:"dri",lbl:"Techniek (1-10)",step:"0.5",ph:"→DRI"},
-  {k:"def",lbl:"Verdedigen (1-10)",step:"0.5",ph:"→DEF"},
-];
+/* ---------------- METINGEN → STATS (gestandaardiseerde tests, over tijd) ---------------- */
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-function statFromTime(t,fast,slow){ if(isNaN(t))return null; const f=(t-slow)/(fast-slow); return Math.round(clamp(50+f*49,1,99)); }
-function statFromCond(x,fast,slow){ if(isNaN(x))return null; const f=(x-slow)/(fast-slow); return Math.round(clamp(50+f*49,1,99)); }
-function statFromScore(v){ if(isNaN(v))return null; return Math.round(clamp(v/10*99,1,99)); }
-function getMeas(n){ store[n]=store[n]||{stats:{},note:"",meas:{}}; store[n].meas=store[n].meas||{}; return store[n].meas; }
-// bereken de 6 stats voor 1 speelster uit haar metingen + de anchors
-function computePlayerStats(n){
-  const fast=+document.getElementById("anchFast").value, slow=+document.getElementById("anchSlow").value;
-  const cFast=+document.getElementById("condFast").value, cSlow=+document.getElementById("condSlow").value;
-  const m=getMeas(n); const s=store[n].stats=store[n].stats||{};
-  let v;
-  v=statFromTime(parseFloat(m.s15),fast,slow); if(v!=null)s.PAC=v;
-  v=statFromCond(parseFloat(m.cond),cFast,cSlow); if(v!=null)s.PHY=v;
-  v=statFromScore(parseFloat(m.sho)); if(v!=null)s.SHO=v;
-  v=statFromScore(parseFloat(m.pas)); if(v!=null)s.PAS=v;
-  v=statFromScore(parseFloat(m.dri)); if(v!=null)s.DRI=v;
-  v=statFromScore(parseFloat(m.def)); if(v!=null)s.DEF=v;
+// Testcatalogus. top = topwaarde (→99), low = zwakke waarde (→50). Werkt voor tijd (lager=beter) én score (hoger=beter).
+const TESTS=[
+  {k:"sprint10", stat:"PAC", lbl:"Sprint 10 m",              unit:"s",      top:1.80, low:2.40, step:"0.01"},
+  {k:"sprint30", stat:"PAC", lbl:"Sprint 30 m",              unit:"s",      top:4.50, low:6.00, step:"0.01"},
+  {k:"beeptest", stat:"PHY", lbl:"Shuttle run (beep test)",  unit:"niveau", top:11.0, low:5.0,  step:"0.1"},
+  {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
+  {k:"illinois", stat:"DRI", lbl:"Illinois behendigheid",    unit:"s",      top:16.0, low:20.0, step:"0.1"},
+  {k:"dribbel",  stat:"DRI", lbl:"Dribbelparcours",          unit:"s",      top:12.0, low:18.0, step:"0.1"},
+  {k:"finish",   stat:"SHO", lbl:"Afrondtest",               unit:"raak/10",top:9,    low:2,    step:"1"},
+  {k:"passing",  stat:"PAS", lbl:"Passtest",                 unit:"raak/20",top:19,   low:8,    step:"1"},
+  {k:"duel",     stat:"DEF", lbl:"1v1 duels gewonnen",       unit:"%",      top:80,   low:30,   step:"5"},
+];
+const STAT_TESTS={}; STAT_KEYS.forEach(s=>STAT_TESTS[s]=TESTS.filter(t=>t.stat===s));
+function convert(val,t){ const v=parseFloat(val); if(isNaN(v)||!t)return null; const f=(v-t.low)/(t.top-t.low); return Math.round(clamp(50+f*49,1,99)); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function selDate(){ const el=document.getElementById("measDate"); return (el&&el.value)?el.value:todayStr(); }
+
+// Metingen over tijd: store[n].sessions = [{date, results:{testKey:val}}]
+function getSessions(n){ store[n]=store[n]||{stats:{},note:""}; if(!Array.isArray(store[n].sessions))store[n].sessions=[]; return store[n].sessions; }
+function sessionFor(n,date,create){ const ss=getSessions(n); let s=ss.find(x=>x.date===date);
+  if(!s&&create){ s={date,results:{}}; ss.push(s); ss.sort((a,b)=>a.date<b.date?-1:1); } return s; }
+// meest recente waarde van een test op of vóór 'date' (date leeg = alle)
+function valAsOf(n,k,date){ const ss=getSessions(n).filter(s=>!date||s.date<=date).sort((a,b)=>a.date<b.date?1:-1);
+  for(const s of ss){ if(s.results && s.results[k]!==undefined && s.results[k]!=="") return s.results[k]; } return undefined; }
+function latestVal(n,k){ return valAsOf(n,k,null); }
+// stats zoals ze golden op 'date' (of nu, als date leeg): gemiddelde van geconverteerde tests per stat
+function statsAsOf(n,date){ const out={};
+  STAT_KEYS.forEach(stat=>{ const vals=(STAT_TESTS[stat]||[]).map(t=>convert(valAsOf(n,t.k,date),t)).filter(v=>v!=null);
+    if(vals.length) out[stat]=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length); });
+  const all=STAT_KEYS.map(s=>out[s]).filter(v=>v!=null);
+  out.OVR=(all.length===6)?Math.round(all.reduce((a,b)=>a+b,0)/6):null; return out;
 }
-function applyMeas(){
-  PLAYERS.forEach(p=>computePlayerStats(p.n));
-  renderCards(); renderMeasTable(); renderDev(); flash("Stats berekend uit metingen ✓");
-}
-// LIVE: tijdens het invullen van een meting meteen de kaart + tabel bijwerken (zonder focus te verliezen)
+function computePlayerStats(n){ const s=store[n].stats=store[n].stats||{}; const cur=statsAsOf(n,null);
+  STAT_KEYS.forEach(k=>{ if(cur[k]!=null) s[k]=cur[k]; }); }
+function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); renderDev(); flash("Stats herberekend ✓"); }
+
+// LIVE invoer op de gekozen datum
 function measInput(n,k,val){
-  getMeas(n)[k]=val;
-  computePlayerStats(n);
-  updateCardStats(n);       // kaartje meteen bij
-  updateMeasComputed(n);    // berekende kolommen in deze rij
-  renderDev();              // 'Huidig'-waarde bij de doelen
+  const s=sessionFor(n,selDate(),true); s.results[k]=val;
+  computePlayerStats(n); updateCardStats(n); updateMeasComputed(n); renderDev();
 }
-function updateCardStats(n){
-  const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`);
-  if(!c) return;
+function updateCardStats(n){ const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`); if(!c)return;
   const s=(store[n]&&store[n].stats)||{};
-  STAT_KEYS.forEach(k=>{const inp=c.querySelector(`[data-stat="${k}"]`); if(inp && document.activeElement!==inp) inp.value=(s[k]!=null?s[k]:'');});
-  const o=c.querySelector('[data-ovr]'); if(o) o.textContent=ovr(n);
+  STAT_KEYS.forEach(k=>{const inp=c.querySelector(`[data-stat="${k}"]`); if(inp&&document.activeElement!==inp)inp.value=(s[k]!=null?s[k]:'');});
+  const o=c.querySelector('[data-ovr]'); if(o)o.textContent=ovr(n);
 }
-function updateMeasComputed(n){
-  const row=document.querySelector(`#measTable tr[data-n="${CSS.escape(n)}"]`);
-  if(!row) return;
+function updateMeasComputed(n){ const row=document.querySelector(`#measTable tr[data-n="${CSS.escape(n)}"]`); if(!row)return;
   const s=(store[n]&&store[n].stats)||{};
-  ["PAC","PHY","SHO","PAS","DRI","DEF"].forEach(k=>{const c=row.querySelector(`.comp[data-c="${k}"] b`); if(c)c.textContent=(s[k]??'–');});
+  STAT_KEYS.forEach(k=>{const c=row.querySelector(`.comp[data-c="${k}"] b`); if(c)c.textContent=(s[k]??'–');});
   const o=row.querySelector('.comp[data-c="OVR"] b'); if(o)o.textContent=ovr(n);
 }
+function changeMeasDate(){ renderMeasTable(); }
 function renderMeasTable(){
-  const t=document.getElementById("measTable");
-  t.innerHTML=`<tr><th>Speelster</th>${MEAS_FIELDS.map(f=>`<th class="center">${f.lbl}</th>`).join("")}
-    <th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">PHY</th>
-    <th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">OVR</th></tr>`+
-    PLAYERS.map(p=>{
-      const m=getMeas(p.n), s=(store[p.n]&&store[p.n].stats)||{}; const nEsc=p.n.replace(/'/g,"\\'");
-      return `<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
-        MEAS_FIELDS.map(f=>`<td class="center"><input type="number" step="${f.step}" value="${m[f.k]!=null?m[f.k]:''}" placeholder="${f.ph}"
-          style="width:64px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
-          oninput="measInput('${nEsc}','${f.k}',this.value)"></td>`).join("")+
-        `<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td>
-         <td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td>
-         <td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td>
-         <td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
-    }).join("");
+  const t=document.getElementById("measTable"); if(!t)return; const date=selDate();
+  let h1=`<tr><th rowspan="2">Speelster</th>`;
+  STAT_KEYS.forEach(stat=>{ const ts=STAT_TESTS[stat]; if(ts.length) h1+=`<th class="center" colspan="${ts.length}" style="border-left:2px solid var(--line)">${stat}</th>`; });
+  h1+=`<th class="center" colspan="7" style="border-left:2px solid var(--gold)">Berekende stats</th></tr>`;
+  let h2=`<tr>`;
+  STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ h2+=`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''} title="${tt.lbl}">${tt.lbl}<br><span style="opacity:.6">${tt.unit}</span></th>`; }); });
+  h2+=`<th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">PHY</th><th class="center">OVR</th></tr>`;
+  t.innerHTML=h1+h2+PLAYERS.map(p=>{
+    const nEsc=p.n.replace(/'/g,"\\'"); const sess=sessionFor(p.n,date,false); const r=(sess&&sess.results)||{}; const s=(store[p.n]&&store[p.n].stats)||{};
+    let row=`<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`;
+    STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="number" step="${tt.step}" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
+      style="width:58px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
+      oninput="measInput('${nEsc}','${tt.k}',this.value)"></td>`; }); });
+    row+=`<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td><td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td><td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
+    return row;
+  }).join("");
+}
+function renderTestCfg(){
+  const t=document.getElementById("testCfgTable"); if(!t)return;
+  t.innerHTML=`<tr><th>Test</th><th class="center">Stat</th><th>Eenheid</th><th class="center">Top (→99)</th><th class="center">Zwak (→50)</th></tr>`+
+    TESTS.map((tt,i)=>`<tr><td>${tt.lbl}</td><td class="center"><span class="badge">${tt.stat}</span></td><td class="mini">${tt.unit}</td>
+      <td class="center"><input type="number" step="${tt.step}" value="${tt.top}" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].top=+this.value; computeAllAndRefresh()"></td>
+      <td class="center"><input type="number" step="${tt.step}" value="${tt.low}" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].low=+this.value; computeAllAndRefresh()"></td></tr>`).join("");
+}
+function computeAllAndRefresh(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); }
+function fillProgPlayers(){ const sel=document.getElementById("progPlayer"); if(!sel)return; const cur=sel.value;
+  sel.innerHTML=PLAYERS.map(p=>`<option value="${p.n}">${p.n}</option>`).join(""); if(cur)sel.value=cur; }
+function renderProgress(){
+  const wrap=document.getElementById("progressWrap"); if(!wrap)return;
+  const sel=document.getElementById("progPlayer"); const n=(sel&&sel.value)||PLAYERS[0].n;
+  const ss=getSessions(n).slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(!ss.length){ wrap.innerHTML='<p class="hint">Nog geen metingen voor deze speelster. Kies een datum bovenaan en voer een test in.</p>'; return; }
+  let prevOvr=null;
+  wrap.innerHTML=`<table><tr><th>Datum</th><th class="center">PAC</th><th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">PHY</th><th class="center" style="border-left:2px solid var(--gold)">OVR</th><th class="center">Δ</th></tr>`+
+    ss.map(sesh=>{ const st=statsAsOf(n,sesh.date);
+      let delta='—'; if(st.OVR!=null&&prevOvr!=null){const d=st.OVR-prevOvr; delta=(d>0?'<span style="color:var(--green)">▲ +'+d+'</span>':d<0?'<span style="color:var(--red)">▼ '+d+'</span>':'0');}
+      if(st.OVR!=null)prevOvr=st.OVR;
+      return `<tr><td>${new Date(sesh.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})}</td>
+        <td class="center">${st.PAC??'–'}</td><td class="center">${st.SHO??'–'}</td><td class="center">${st.PAS??'–'}</td>
+        <td class="center">${st.DRI??'–'}</td><td class="center">${st.DEF??'–'}</td><td class="center">${st.PHY??'–'}</td>
+        <td class="center" style="border-left:2px solid var(--gold)"><b>${st.OVR??'–'}</b></td><td class="center">${delta}</td></tr>`;
+    }).join("")+`</table>`;
 }
 
 /* ---------------- ONTWIKKELING / LEERDOELEN ---------------- */
@@ -926,8 +946,9 @@ function collectState(){ return {store:store, fixtures:fixtures}; }
 function applyState(st){ if(st && st.store) store=st.store; if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); }catch(e){} }
 function renderAll(){
+  PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderDev(); renderBel(); renderPeriode();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderBel(); renderPeriode();
 }
 async function cloudLoad(){
   if(!CLOUD) return;
@@ -970,8 +991,10 @@ async function cloudInit(){
 }
 
 /* ---------------- INIT ---------------- */
+const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
+PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
-renderMeasTable(); renderDev(); renderBel(); renderPeriode();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderBel(); renderPeriode();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 cloudInit();
