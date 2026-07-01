@@ -399,6 +399,24 @@
     <div style="overflow:auto">
       <table id="perPlayer"></table>
     </div>
+
+    <h2 class="sec" style="margin-top:26px">🔔 Herinneringen (aankomende taken)</h2>
+    <div class="note">
+      Aankomende taken binnen het gekozen venster. Klik op de groene <b>WhatsApp</b>-knop om die speelster kort te herinneren aan haar taak —
+      het bericht (met datum, tegenstander en taak) staat al klaar; jij tikt alleen op verzenden. Gebruikt de telefoonnummers die je invult
+      bij <b>Gesteldheid → persoonlijke links</b>.
+    </div>
+    <div class="controls">
+      <label>Vooruitkijken
+        <select id="remWindow" onchange="renderReminders()">
+          <option value="7">1 week vooruit</option>
+          <option value="14" selected>2 weken vooruit</option>
+          <option value="21">3 weken vooruit</option>
+        </select>
+      </label>
+      <label>&nbsp;<button class="btn" onclick="renderReminders()">🔄 Ververs</button></label>
+    </div>
+    <div id="remWrap" style="overflow:auto"></div>
   </section>
 
   <p class="foot-note">
@@ -672,7 +690,7 @@ function assignTasks(){
     }
   });
   sched={pts,sub}; tasksAssigned=true;
-  renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode();
+  renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders();
   if(typeof persistLocal==="function") persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
   flash("Taken eerlijk & gevarieerd verdeeld ✓");
@@ -1024,9 +1042,48 @@ function sanitizePhone(raw){ let d=(raw||"").replace(/[^\d]/g,""); if(!d)return 
   if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="31"+d.slice(1); return d; }
 function waMessage(n){ return "Hoi "+n+"! 🌡️ Dit is je persoonlijke maandelijkse check-in voor SC Stiens VR1 — hoe voel je je, mentaal & fysiek? "+
   "Het duurt ~20 seconden en is vertrouwelijk (alleen de staf ziet het). Vul 'm hier in: "+playerLink(n)+" — alvast bedankt! 🧡"; }
-function openWA(n){ const num=sanitizePhone(getPhone(n));
-  if(!num){ alert("Vul eerst een telefoonnummer in bij "+n+"."); return; }
-  window.open("https://wa.me/"+num+"?text="+encodeURIComponent(waMessage(n)),"_blank"); }
+function openWAmsg(n,msg){ const num=sanitizePhone(getPhone(n));
+  if(!num){ alert("Vul eerst een telefoonnummer in bij "+n+" (tabblad Gesteldheid → persoonlijke links)."); return; }
+  window.open("https://wa.me/"+num+"?text="+encodeURIComponent(msg),"_blank"); }
+function openWA(n){ openWAmsg(n,waMessage(n)); }
+// ---- Taak-herinneringen ----
+function taskReminderMsg(name,taskText,dateStr,opp,home){
+  const d=new Date(dateStr+"T00:00:00");
+  const ds=d.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"});
+  const wed = opp ? ("de wedstrijd "+(home?"thuis":"uit")+" tegen "+opp) : ("de wedstrijd ("+(home?"thuis":"uit")+")");
+  return "Hoi "+name+"! 🖤🧡 Kleine herinnering: op "+ds+" heb je een teamtaak bij SC Stiens VR1 — "+taskText+" bij "+wed+". Alvast bedankt! 💪";
+}
+function remindTask(n,code,fi){
+  const f=fixtures[fi]; if(!f)return; const opp=(f.opponent||"").trim();
+  let task;
+  if(code==="drive") task="rijden naar de uitwedstrijd";
+  else if(code==="wash") task="de wedstrijdshirts wassen";
+  else if(code==="flag") task="vlaggen (grensrechter)";
+  else if(code==="ref") task="fluiten + wedstrijdcoördinator zijn";
+  else { const mate=(f.food||[]).filter(x=>x!==n); task="het eten voorbereiden"+(mate.length?(" (samen met "+mate.join(" & ")+")"):""); }
+  openWAmsg(n, taskReminderMsg(n,task,f.date,opp,f.home));
+}
+function renderReminders(){
+  const wrap=document.getElementById("remWrap"); if(!wrap)return;
+  const wEl=document.getElementById("remWindow"); const win=+((wEl&&wEl.value)||14);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const end=new Date(today); end.setDate(end.getDate()+win);
+  const rows=[];
+  (fixtures||[]).forEach((f,fi)=>{ const d=new Date(f.date+"T00:00:00"); if(d<today||d>end)return;
+    const add=(arr,code)=>(arr||[]).forEach(n=>rows.push({n,code,fi,date:f.date,opp:(f.opponent||"").trim(),home:f.home}));
+    add(f.drive,"drive"); add(f.wash,"wash"); add(f.flag,"flag"); add(f.ref,"ref"); add(f.food,"food");
+  });
+  if(!rows.length){ wrap.innerHTML='<p class="hint">Geen taken in dit venster. Vul de wedstrijddata in en klik op <b>Verdeel taken</b>, of vergroot het venster.</p>'; return; }
+  rows.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
+  const LB={drive:"🔵 Rijden",wash:"🟣 Wassen",flag:"🟡 Vlaggen",ref:"🔔 Fluiten/coörd.",food:"🟢 Eten"};
+  wrap.innerHTML=`<table><tr><th>Datum</th><th>Wedstrijd</th><th>Speelster</th><th>Taak</th><th class="center">Herinner</th></tr>`+
+    rows.map(r=>{ const nEsc=r.n.replace(/'/g,"\\'");
+      return `<tr><td>${new Date(r.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</td>
+        <td class="mini">${r.opp||("Wedstrijd "+(r.fi+1))} (${r.home?"thuis":"uit"})</td>
+        <td><b>${r.n}</b></td><td>${LB[r.code]||r.code}</td>
+        <td class="center"><button class="btn" onclick="remindTask('${nEsc}','${r.code}',${r.fi})" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td></tr>`;
+    }).join("")+`</table>`;
+}
 function renderMoodLinks(){
   const w=document.getElementById("moodLinks"); if(!w)return;
   w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>📱 Telefoon</th><th>Persoonlijke link</th><th></th><th class="center">WhatsApp</th><th class="center">QR</th></tr>`+
@@ -1134,7 +1191,7 @@ function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringi
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders();
 }
 async function cloudLoad(){
   if(!CLOUD) return;
