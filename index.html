@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SC Stiens Vrouwen 1 — Teamdashboard 2026/2027</title>
+<style>
+  :root{
+    /* SC Stiens clubkleuren: zwart, oranje, geel */
+    --bg:#0c0c0e; --bg2:#18181d; --card:#1c1c22; --line:#34343f;
+    --txt:#f4f4f6; --muted:#b7b7c4; --gold:#F28C00; --gold2:#b56a00; --yellow:#FFD200;
+    --green:#37d67a; --blue:#5aa9ff; --red:#ff7a7a; --purple:#b48cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(1200px 400px at 50% -140px, rgba(242,140,0,.16), transparent 70%),
+      linear-gradient(160deg,#0c0c0e,#141416 60%,#0c0c0e);color:var(--txt);}
+  header{padding:22px 22px 10px;text-align:center;}
+  .headwrap{display:flex;align-items:center;justify-content:center;gap:16px}
+  header h1{margin:0;font-size:25px;letter-spacing:.5px}
+  header h1 span{color:var(--gold)}
+  header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+  .crestbig{filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+  nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0 6px;padding:0 12px}
+  nav button{background:var(--card);border:1px solid var(--line);color:var(--txt);
+    padding:9px 16px;border-radius:999px;cursor:pointer;font-size:14px;transition:.15s}
+  nav button:hover{border-color:var(--gold)}
+  nav button.active{background:var(--gold);color:#1a1200;border-color:var(--gold);font-weight:600}
+  .wrap{max-width:1220px;margin:0 auto;padding:18px 16px 60px}
+  section{display:none}
+  section.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2.sec{font-size:18px;margin:6px 0 4px;color:var(--gold)}
+  .hint{color:var(--muted);font-size:13px;margin:0 0 16px;line-height:1.5}
+
+  /* ---- FIFA CARDS (SC Stiens thema: zwart/oranje/geel) ---- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:20px}
+  .fcard{position:relative;border-radius:16px;padding:26px 15px 14px;
+    background:linear-gradient(160deg,#26251f 0%,#1a1a1c 45%,#111113 100%);
+    border:1px solid var(--gold);box-shadow:0 10px 26px rgba(0,0,0,.5);color:#f6f6f8;
+    min-height:340px;display:flex;flex-direction:column;overflow:hidden}
+  .fcard::before{content:"";position:absolute;top:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,var(--gold),var(--yellow))}
+  .fcard::after{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+    box-shadow:inset 0 0 40px rgba(242,140,0,.06)}
+  /* positielijn-accent linksboven */
+  .fcard .line{position:absolute;top:11px;left:14px;font-size:10px;font-weight:800;letter-spacing:.6px;
+    padding:2px 8px;border-radius:999px;text-transform:uppercase}
+  .fcard.gk .line{background:rgba(255,210,0,.18);color:var(--yellow);border:1px solid var(--yellow)}
+  .fcard.def .line{background:rgba(90,169,255,.18);color:var(--blue);border:1px solid var(--blue)}
+  .fcard.mid .line{background:rgba(55,214,122,.18);color:var(--green);border:1px solid var(--green)}
+  .fcard.att .line{background:rgba(255,122,122,.2);color:var(--red);border:1px solid var(--red)}
+  .fcard .crest{position:absolute;top:9px;right:12px;opacity:.95}
+  .fcard .top{display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px}
+  .rating{text-align:center;line-height:1}
+  .rating .ovr{font-size:36px;font-weight:800;color:var(--yellow)}
+  .rating .pos{font-size:15px;font-weight:800;letter-spacing:1px;color:var(--gold)}
+  .rating .pos2{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-top:2px}
+  .avatar{width:62px;height:62px;border-radius:50%;
+    background:linear-gradient(150deg,var(--gold),var(--yellow));
+    display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#1a1200;
+    border:2px solid rgba(255,255,255,.35)}
+  .fname{text-align:center;font-size:20px;font-weight:800;margin:8px 0 2px;text-transform:uppercase;letter-spacing:.5px}
+  .fmeta{text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:4px 0 8px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;font-size:13px}
+  .stat{display:flex;justify-content:space-between;align-items:center}
+  .stat b{font-weight:800;color:var(--yellow)}
+  .stat input{width:40px;background:#f4f4f6;border:none;border-radius:5px;
+    text-align:center;font-weight:800;color:#111;font-size:13px;padding:2px}
+  .foot{margin-top:auto;padding-top:8px}
+  .foot textarea{width:100%;border:1px solid rgba(242,140,0,.35);border-radius:7px;background:rgba(0,0,0,.35);
+    color:#f4f4f6;font-size:11px;padding:6px;resize:vertical;min-height:34px;font-family:inherit}
+  .foot textarea::placeholder{color:rgba(255,255,255,.5)}
+  .badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);margin:2px 2px 0 0}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .btn{background:var(--card);border:1px solid var(--line);color:var(--txt);
+    padding:9px 14px;border-radius:9px;cursor:pointer;font-size:13px}
+  .btn:hover{border-color:var(--gold)}
+  .btn.primary{background:var(--gold);color:#1a1200;font-weight:700;border-color:var(--gold)}
+
+  /* ---- TABLES ---- */
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;font-size:13.5px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:var(--bg2);color:var(--gold);font-weight:600;position:sticky;top:0}
+  tr:hover td{background:rgba(255,255,255,.03)}
+  td.center,th.center{text-align:center}
+  .tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+  .t-drive{background:rgba(74,163,255,.18);color:#8ec5ff}
+  .t-wash{background:rgba(168,121,255,.18);color:#c6a8ff}
+  .t-flag{background:rgba(255,210,90,.18);color:#ffd98a}
+  .t-food{background:rgba(55,214,122,.18);color:#8ff0b8}
+  .controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin-bottom:16px;
+    background:var(--card);border:1px solid var(--line);padding:14px;border-radius:12px}
+  .controls label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:5px}
+  .controls input,.controls select{background:var(--bg2);border:1px solid var(--line);color:var(--txt);
+    padding:8px;border-radius:7px;font-size:13px}
+  .balance{margin-top:22px}
+  .bar-row{display:grid;grid-template-columns:130px 1fr 42px;gap:10px;align-items:center;margin:4px 0;font-size:13px}
+  .bar{height:16px;background:var(--bg2);border-radius:999px;overflow:hidden}
+  .bar span{display:block;height:100%;background:linear-gradient(90deg,#4aa3ff,#37d67a)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 0}
+  .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
+    padding:12px 14px;font-size:13px;color:#ffe6a8;line-height:1.55;margin-bottom:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .foot-note{color:var(--muted);font-size:12px;text-align:center;margin-top:30px;line-height:1.6}
+  .mini{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div class="headwrap">
+    <span id="crestHeader" class="crestbig"></span>
+    <div>
+      <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel</p>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button data-tab="cards" class="active">FIFA-kaartjes</button>
+  <button data-tab="squad">Selectieoverzicht</button>
+  <button data-tab="metingen">Metingen</button>
+  <button data-tab="ontwikkeling">Ontwikkeling</button>
+  <button data-tab="belasting">Belastbaarheid</button>
+  <button data-tab="periode">Periodisering</button>
+  <button data-tab="schedule">Taakschema's</button>
+</nav>
+
+<div class="wrap">
+
+  <!-- ============ CARDS ============ -->
+  <section id="cards" class="active">
+    <div class="toolbar">
+      <button class="btn primary" onclick="saveStats()">💾 Opslaan</button>
+      <button class="btn" onclick="exportData()">⬇︎ Exporteer data (JSON)</button>
+      <label class="btn" style="cursor:pointer">⬆︎ Importeer<input type="file" accept=".json" onchange="importData(event)" hidden></label>
+      <button class="btn" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR staan op <b>–</b> tot je metingen en video-analyses hebt.
+      Vul de vakjes in zodra de data binnen is; de OVR berekent zichzelf uit het gemiddelde. In het onderste vak van elke kaart kun je
+      meetgegevens / video-notities kwijt (bv. sprinttijd 30m, max hartslag, xG, key observaties). Klik daarna op <b>Opslaan</b>.</p>
+    <div class="cards" id="cardGrid"></div>
+  </section>
+
+  <!-- ============ SQUAD ============ -->
+  <section id="squad">
+    <h2 class="sec">Selectieoverzicht 2026/2027</h2>
+    <p class="hint">Basisgegevens uit de teamvragenlijst. Gebruikt als input voor de schema's (rijbewijs/auto bepaalt het rijschema).</p>
+    <div style="overflow:auto">
+      <table id="squadTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ METINGEN ============ -->
+  <section id="metingen">
+    <h2 class="sec">📏 Metingen → FIFA-stats</h2>
+    <div class="note">
+      Gebaseerd op de KNVB-presentatie <i>"VCT in de praktijk"</i> (Raimond Massop). Voer per speelster de meetgegevens in;
+      de zes FIFA-stats worden automatisch berekend. <b>PAC</b> komt uit de sprinttijd (15&nbsp;m), <b>PHY</b> uit de conditie-/intervaltest,
+      en <b>SHO/PAS/DRI/DEF</b> uit een beoordeling 1–10 uit een gerichte oefenvorm. De omzetting is calibreerbaar hieronder.
+    </div>
+    <div class="controls">
+      <label>Sprint 15 m — top (→99)
+        <input type="number" step="0.01" id="anchFast" value="2.40" style="width:90px"></label>
+      <label>Sprint 15 m — laag (→50)
+        <input type="number" step="0.01" id="anchSlow" value="3.20" style="width:90px"></label>
+      <label>Conditie-eindniveau — top (→99)
+        <input type="number" step="0.1" id="condFast" value="20.5" style="width:90px"></label>
+      <label>Conditie-eindniveau — laag (→50)
+        <input type="number" step="0.1" id="condSlow" value="13.0" style="width:90px"></label>
+      <label>&nbsp;<button class="btn primary" onclick="applyMeas()">↻ Bereken stats</button></label>
+      <label>&nbsp;<button class="btn" onclick="saveStats()">💾 Opslaan</button></label>
+    </div>
+    <p class="hint" style="margin-top:-4px">Conditie-eindniveau = bv. eindsnelheid 30‑15 IFT (km/u) of shuttle-runniveau. Anchors gelden voor seniorenvrouwen; pas ze aan jullie eigen data aan.
+      Sprint 5/15/25&nbsp;m volgen de KNVB-testopzet (start-, versnellings- en volgehouden snelheid, slide 40–43).</p>
+    <div style="overflow:auto">
+      <table id="measTable"></table>
+    </div>
+    <h2 class="sec" style="margin-top:22px">📖 KNVB-referentie sprinttijden (slide 40)</h2>
+    <p class="hint">Referentie uit de presentatie (Football Periodisation, R. Verheijen) — snelste tijd in een <b>voetbalsprintduel</b> (situatie 3):</p>
+    <div style="overflow:auto;max-width:560px">
+      <table>
+        <tr><th>Leeftijd</th><th class="center">Sit. 1 (alleen)</th><th class="center">Sit. 2 (2 spelers)</th><th class="center">Sit. 3 (duel)</th></tr>
+        <tr><td>Onder 15</td><td class="center">1.85 s</td><td class="center">1.80 s</td><td class="center">1.75 s</td></tr>
+        <tr><td>Onder 17</td><td class="center">1.72 s</td><td class="center">1.69 s</td><td class="center">1.63 s</td></tr>
+        <tr><td>Onder 19</td><td class="center">1.65 s</td><td class="center">1.61 s</td><td class="center">1.54 s</td></tr>
+      </table>
+    </div>
+    <p class="hint">Kernidee KNVB: de snelste sprint ontstaat in een <b>duel</b> (situatie 3) — meet daarom bij voorkeur voetbalspecifiek, niet geïsoleerd.</p>
+  </section>
+
+  <!-- ============ ONTWIKKELING ============ -->
+  <section id="ontwikkeling">
+    <h2 class="sec">🎯 Individuele ontwikkeling</h2>
+    <div class="note">
+      De persoonlijke <b>ontwikkelpunten</b> en <b>procesdoelen</b> uit de teamvragenlijst — de basis voor de individuele
+      trainingsmomenten (KNVB-maatwerk). Elk doel is gekoppeld aan de bijbehorende FIFA-stat, zodat je voortgang kunt volgen:
+      <b>doel → meting → ontwikkeling</b>. Zet de status en het voortgangspercentage naar eigen inzicht en klik op <b>Opslaan</b>.
+    </div>
+    <div class="toolbar"><button class="btn primary" onclick="saveStats()">💾 Opslaan</button></div>
+    <div style="overflow:auto">
+      <table id="devTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ BELASTBAARHEID ============ -->
+  <section id="belasting">
+    <h2 class="sec">🩺 Belastbaarheidsprofiel</h2>
+    <div class="note">
+      Automatisch afgeleid uit werk/studie, diensten en vakantie, volgens de KNVB-risicofactoren voor <i>belasting &amp; belastbaarheid</i>
+      (slide 57–79). Dit is geen medisch advies maar een signaal voor <b>individueel maatwerk</b> in de trainingsbelasting.
+    </div>
+    <div class="legend" style="margin-bottom:12px">
+      <span>🟢 Fysiek actief werk → let op stapeling/vermoeidheid</span>
+      <span>🟡 Zittend werk → risico onderbelasting, extra activatie</span>
+      <span>🔵 Onregelmatige/nachtdiensten → afstemmen &amp; communiceren</span>
+      <span>🟣 Lange afwezigheid/later terug → geleidelijke opbouw</span>
+    </div>
+    <div style="overflow:auto">
+      <table id="belTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ PERIODISERING ============ -->
+  <section id="periode">
+    <h2 class="sec">🗓️ Periodiseringskalender (VCT)</h2>
+    <div class="note">
+      Het KNVB-periodiseringsmodel (slide 46–55) gekoppeld aan jullie wedstrijdschema. Elke wedstrijdweek krijgt de bijbehorende
+      voetbalconditievorm: partijgrootte (11v11 → 3v3), sprintvormen (VsWr/VsVr) en intervalloopvorm, plus een <b>underload</b>-moment
+      vlak voor de wedstrijd. Genereer eerst het wedstrijdschema op het tabblad <b>Taakschema's</b>.
+    </div>
+    <div class="controls">
+      <label>Cyclus
+        <select id="cycleLen">
+          <option value="6">6-weekse cyclus (weinig midweekse wedstrijden)</option>
+          <option value="3">3-weekse cyclus (veel midweekse wedstrijden)</option>
+        </select>
+      </label>
+      <label>Trainingen per week
+        <select id="trPerWk"><option value="2">2×</option><option value="3" selected>3×</option><option value="4">4×</option></select>
+      </label>
+      <label>&nbsp;<button class="btn primary" onclick="renderPeriode()">🔄 Genereer kalender</button></label>
+    </div>
+    <div style="overflow:auto">
+      <table id="periodeTable"></table>
+    </div>
+    <p class="hint" style="margin-top:10px">
+      <b>Legenda:</b> VCT = voetbalconditietraining · OT = opstart-/hersteltraining · WT = wedstrijdtraining ·
+      VsWr = voetbalsprints weinig rust (herhaald-kort-sprintvermogen) · VsVr = voetbalsprints veel rust (start-&nbsp;&amp; versnellingsvermogen) ·
+      UL = underload (±50%). Grote partijen = extensieve duur (volhouden), middengroot = intensieve duur, klein = extensieve interval (explosiever handelen).
+    </p>
+  </section>
+
+  <!-- ============ SCHEDULE ============ -->
+  <section id="schedule">
+    <h2 class="sec">Eerlijke taakschema's</h2>
+    <div class="note">
+      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen/fluiten, eten &amp; wedstrijdcoördinator) telt als
+      1 punt. Bij elke taak wordt automatisch de speelster met de <b>minste punten</b> gekozen. Wie geen auto/rijbewijs heeft, kan niet
+      rijden en pakt dus <b>automatisch extra was-, vlag- of eettaken</b> op — zo eindigt iedereen op (bijna) evenveel punten.
+      Amber vlagt/fluit niet (eigen voorkeur) en wordt daarom vaker als wedstrijdcoördinator ingedeeld.
+    </div>
+
+    <div class="controls">
+      <label>Aantal wedstrijden
+        <input type="number" id="cfgMatches" value="22" min="1" max="40" style="width:80px">
+      </label>
+      <label>Startdatum (1e wedstrijd)
+        <input type="date" id="cfgStart" value="2026-09-05">
+      </label>
+      <label>Standaard aanvangstijd
+        <input type="time" id="cfgTime" value="14:30" style="width:100px">
+      </label>
+      <label>Rijders per uitwedstrijd
+        <input type="number" id="cfgDrivers" value="3" min="1" max="6" style="width:80px">
+      </label>
+      <label>Was-beurten per wedstrijd
+        <input type="number" id="cfgWash" value="1" min="1" max="3" style="width:80px">
+      </label>
+      <label>Patroon
+        <select id="cfgPattern">
+          <option value="alt">Om en om thuis/uit</option>
+          <option value="allhome">Alle thuis</option>
+        </select>
+      </label>
+      <label>&nbsp;
+        <button class="btn" onclick="buildFixtures()">🆕 Nieuw rooster</button>
+      </label>
+      <label>&nbsp;
+        <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel taken</button>
+      </label>
+      <label>&nbsp;
+        <button class="btn" onclick="exportICS()">📅 Exporteer agenda (.ics)</button>
+      </label>
+    </div>
+    <p class="hint" style="margin-top:-4px">Vul per wedstrijd de <b>datum</b>, <b>tijd</b>, <b>tegenstander</b> en <b>thuis/uit</b> in de tabel in.
+      Klik daarna op <b>Verdeel taken</b> voor een eerlijke taakverdeling en op <b>Exporteer agenda</b> voor een <b>.ics</b>-bestand
+      dat je in Apple Agenda, Google Calendar of Outlook importeert. Elke afspraak bevat de tegenstander én wie rijdt, wast, vlagt en het eten regelt.</p>
+
+    <div class="grid2">
+      <div>
+        <h2 class="sec">📋 Weekschema</h2>
+        <div style="overflow:auto;max-height:560px">
+          <table id="schedTable"></table>
+        </div>
+      </div>
+      <div>
+        <h2 class="sec">⚖️ Lastverdeling (totaal punten per speelster)</h2>
+        <p class="mini">Doel: alle balken even lang. Verschil van hooguit 1 punt is normaal bij oneven aantallen.</p>
+        <div class="balance" id="balance"></div>
+        <div class="legend">
+          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen/fluiten</span><span>🟢 Eten/coördinator</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-top:26px">👥 Per speelster</h2>
+    <div style="overflow:auto">
+      <table id="perPlayer"></table>
+    </div>
+  </section>
+
+  <p class="foot-note">
+    Placeholder-stats klaar voor metingen &amp; video-analyse · Data blijft lokaal in je browser opgeslagen (localStorage) —
+    gebruik <b>Exporteer</b> om te delen of te back-uppen.<br>Gemaakt voor SC Stiens Vrouwen 1.
+  </p>
+</div>
+
+<script>
+/* ---------------- SPELERSDATA ---------------- */
+const PLAYERS = [
+  {n:"Mare", age:25, city:"Stiens", job:"Docent wiskunde", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, centraal achterin, linksback", licence:"Ja", car:true, shirt:"S", goal:"Kampioen worden & het super leuk hebben", holiday:"11–18 juni & 27 juni–3 aug"},
+  {n:"Esmee Terpstra", age:20, city:"Stiens", job:"Verpleegkunde (hbo)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor of back", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"10 juli–10 aug"},
+  {n:"Renske", age:23, city:"Heerenveen", job:"Recruiter (Worketeers)", pos:"CM", role:"mid", form:"4-4-2 / 4-3-3", top:"CM, CAM of aanval", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"Nog niet bekend"},
+  {n:"Maja", age:22, city:"Sneek", job:"HRM", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, linksback of centraal", licence:"Ja", car:true, shirt:"M", goal:"Bovenin meedraaien & meer plezier", holiday:"13–27 juli (+ Sneekweek)"},
+  {n:"Nynke", age:23, city:"Leeuwarden", job:"Intercedent (Olympia)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsbuiten, linksbuiten, spits", licence:"Ja", car:true, shirt:"M", goal:"Top 3", holiday:"Onbekend · weg wknd 7/8/9 aug"},
+  {n:"Coby Keizer", age:25, city:"Oude Bildtzijl", job:"Sportkunde (Windesheim)", pos:"CB", role:"def", form:"1-4-3-3", top:"Achterin", licence:"Ja", car:true, shirt:"—", goal:"Bovenin meedraaien / promotie", holiday:"Niet weg"},
+  {n:"Grietine Bergsma", age:24, city:"Vrouwenparochie", job:"Verpleegkundige + HBO-V", pos:"LB", role:"def", form:"1-4-3-3", top:"Links- of rechtsback", licence:"Ja", car:true, shirt:"S", goal:"1e of 2e (kampioen)", holiday:"26 okt–5 nov"},
+  {n:"Iris", age:25, city:"Hallum", job:"Fysiotherapeut", pos:"CAM", role:"mid", form:"1-4-3-3", top:"11, 7, 8 of 10", licence:"Ja", car:true, shirt:"S", goal:"Top 3 minimaal", holiday:"Waarschijnlijk juli"},
+  {n:"Merle", age:19, city:"Burdaard", job:"Zelfstandig kok", pos:"CAM", role:"mid", form:"1-4-3-3", top:"10, 8 of spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"6–10 aug · daarna stage buitenland"},
+  {n:"Sacha", age:26, city:"Leeuwarden", job:"Gymdocent (MHS)", pos:"CB", role:"def", form:"1-4-3-3", top:"Centraal verdediger, 6 of spits", licence:"Ja", car:true, shirt:"L", goal:"KAMPIOEN!", holiday:"7 juli–5 aug"},
+  {n:"Arwen Kuipers", age:21, city:"Harlingen", job:"Integrale veiligheidskunde", pos:"GK", role:"gk", form:"1-4-3-3", top:"Keeper", licence:"Ja", car:true, shirt:"S", goal:"Kampioen / top 5", holiday:"Evt. 1e twee weken aug"},
+  {n:"Esmee Diekstra", age:21, city:"Stiens", job:"W&S adviseur", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsachter, vleugel", licence:"Rijbewijs, geen auto", car:false, shirt:"M", goal:"Top 5 sowieso", holiday:"7–25 juli"},
+  {n:"Jetty De Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
+  {n:"Sigrid", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
+  {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
+  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Nee", car:false, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noFlag:true, noteExtra:"Wil niet fluiten/vlaggen; pakt vaker wedstrijdcoördinator op"},
+  {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
+];
+const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
+
+/* Top-3 posities per speelster (afgeleid uit de teamvragenlijst) */
+const POS3 = {
+  "Mare":["RB","CB","LB"],
+  "Esmee Terpstra":["RW","LW","RB"],
+  "Renske":["CM","CAM","ST"],
+  "Maja":["RB","LB","CB"],
+  "Nynke":["RW","LW","ST"],
+  "Coby Keizer":["CB","RB","LB"],
+  "Grietine Bergsma":["LB","RB","CB"],
+  "Iris":["RW","CM","CAM"],
+  "Merle":["CAM","CM","ST"],
+  "Sacha":["CB","CDM","ST"],
+  "Arwen Kuipers":["GK"],
+  "Esmee Diekstra":["LB","RB","LW"],
+  "Jetty De Ruiter":["ST","CAM","CM"],
+  "Sigrid":["CB","CAM","CDM"],
+  "Bente":["LB","RB","RW"],
+  "Amber Merkx":["RW","LW","ST"],
+  "Alyssa Visser":["CB","CDM","CM"],
+};
+function posList(p){ return POS3[p.n] || [p.pos]; }
+
+/* Individuele leerdoelen uit de teamvragenlijst (ontwikkelpunt + procesdoel + gekoppelde stat) */
+const DEVGOALS = {
+  "Mare":{dev:"Rust in mijn spel, diepe ballen verder krijgen",proc:"Goede conditie & rust aan de bal",link:"PAS"},
+  "Esmee Terpstra":{dev:"Creatiever, niet in de stress onder druk, beter met links",proc:"Creatiever voetballen, meer rust",link:"DRI"},
+  "Renske":{dev:"Mezelf vrijspelen (o.a. als middenvelder)",proc:"Mezelf vrijspelen op elke positie",link:"DRI"},
+  "Maja":{dev:"Sneller handelen",proc:"Meer routine & zekerheid, positieve sfeer",link:"DRI"},
+  "Nynke":{dev:"Linkervoet, aannames en afronden",proc:"Zekerder aan de bal, focus op positief",link:"SHO"},
+  "Coby Keizer":{dev:"Handelingssnelheid, keuzes maken, tactisch inzicht",proc:"Verbaal sterker, aanspreken & mening geven",link:"DRI"},
+  "Grietine Bergsma":{dev:"Hoge ballen aannemen en bal daarna benutten",proc:"Spel lezen, rustiger aan de bal, fitter, baltempo omhoog",link:"DEF"},
+  "Iris":{dev:"1-tegen-1, afronden, aannames, voorzetten onder druk",proc:"Meer coachen, simpeler spel, wedstrijden winnen",link:"SHO"},
+  "Merle":{dev:"Verdedigen en 1-tegen-1 situaties",proc:"Beter verdedigen (1-1), zo fit mogelijk",link:"DEF"},
+  "Sacha":{dev:"Nauwkeurige passing en strakke lange bal",proc:"Basis: passing, schot op goal, coachen",link:"PAS"},
+  "Arwen Kuipers":{dev:"Coaching, hoge ballen, uittrappen & meevoetballen",proc:"Beter ingespeeld, focus vasthouden",link:"PAS"},
+  "Esmee Diekstra":{dev:"Rust aan de bal, overzicht, zelfvertrouwen",proc:"Overzicht houden, rust aan de bal",link:"PAS"},
+  "Jetty De Ruiter":{dev:"Handelingssnelheid en sterk aan de bal",proc:"Plezier terugvinden, positief blijven",link:"DRI"},
+  "Sigrid":{dev:"Ruimte creëren, looplijnen, omschakelen; lange bal",proc:"Communiceren, fit worden, koppen",link:"PAS"},
+  "Bente":{dev:"Aannemen en opbouwen onder druk",proc:"Aannemen & opbouwen onder druk",link:"PAS"},
+  "Amber Merkx":{dev:"Met links, betere keuzes voor de goal, acties durven",proc:"Meer acties durven, meer assists/goals",link:"SHO"},
+  "Alyssa Visser":{dev:"",proc:"",link:""},
+};
+const STATUS_OPTS=[["open","Open"],["bezig","Bezig"],["behaald","Behaald"]];
+function getGoal(n){ store[n]=store[n]||{stats:{},note:""}; store[n].goal=store[n].goal||{status:"open",pct:0}; return store[n].goal; }
+
+/* ---------------- SC STIENS EMBLEEM ---------------- */
+const ROLE_LABEL={gk:"Keeper",def:"Verdediging",mid:"Middenveld",att:"Aanval"};
+const LOGO_SRC="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPYAAAFECAYAAAAUZ8MCAABRuklEQVR42u1dBZhUVRue3F2WJaS7S7pDWkFEWgQVQVDAn5BupBsEAUkBCUEaQUo6BKQVxECwEQy6l/L89z07d+beOzcn78ye73neR9ndmVvnveecL97PQgixMDAwRBfYTWBgYMRmYGBgxGZgYGDEZmBgYMRmYGBgxGZgYMRmYGBgxGZgYGDEZmBgYMRmYGBgxGZgYMRmN4GBgRGbgYGBEZuBgYERm4GBgRGbgYGBEZuBgRGbgYGBEZuBgYERm4GBgRGbgYGBEZuBgRGb3QQGBkZsBgYGRmwGBgZGbAYGBkZsBgYGRmwGBkZsBgYGRmwGBgZGbAYGhmASm1nysGu9bYM49GR3ghmz6CH1yxzOc3jCoT67I8yYRT6py3K45yI14XCTQxF2Z5gxi1xSZ+Xwp4vQQmD2TsfuEDNmkUfqeA4nZEjN4wCHWHanmDGLHFLbOWxSITWPVRys7I4xYxYZxJ6jg9Q8JrE7xoyZ+Uk9yACpeXRjd44ZM/OSur0PpObRit1BZszMR+qXBCEtEW4Ms5Fb463/4b8qxH7IoQG7k8yYmYfUz7mI6UXY64Nt5PE+C3m4xUpxd65VjdyId1djd5QZs/CTuhKHO7KkHmAjj3ZayH8nBDhuIbenqZIbCSyV2J1lxiy8pL4pS+r+NvJwq4TUPI5x5J6sSe5y7A4zY2YiUl/ra6PLbiGZDy0R//vJUQu5NVGV3Jc5lGB3mhmz0JG6HIdrSqR+8JmYxFMH2YktbQzp97adPDkuIPcRC7k51sbIzYyZ2WfqB5+KSb16io3Yn4qhxAZaNHaQxCMCch/WJPd1tudmxiy4pH6Wwy29M/WeBTYSm8FDah7NGjjIo2OGyI0XyTPsCTBjFnhSP+8KR+ki9VcrrSRtNm9S8+jYyiHec2uTG8euw54EM2aBI/VrSnFqOVKf4/6dNa9TkdQ8hr1j9yL3rXGaSSyvsCfCjJn/pO6pRDQa0pJ4v//43EryF9EmNY/3B9m9veWTVL3l/3Hozp4MM2a+EdrKYYIiqZF8sl0cn/5nt4UULaGf1Dzmj7J5x7mnWrVyy8exkk9mzIyROgWHlUqkuvEuR+pdYlJf328hpcoaJzXgeCqGLJto88pQuzNTk9w4xxTsiTFjpk3qTBwOK5J6hI083u9N6kqVfSO1kNwIjUmz1O59pElunGsm9uSYMVMmdXEOvymRCI6tJ4d8I/X/6seQ7AViVf8GobHPPvAm9/0VHLn7qJIb51ySPUFmzLxJ/bJSMQeAPS8cW76QumtVB7k7z0m+2ZGKZMqjTe71073J/WCDlTrrVMh9l3nMmTHzENruckQpkgbLYSnR4CjTs6duW8lBrnLfAWKTX9OQo5tSkbTZfdhzc0Cl2I0h2lJLuCb2ZJklZ1Jn5LBdkSR9bSRxjTepL+6wkhKltUndopyTXO6V9F08sYF9a1ORlJm1yb14nDe5Hx+wkJtjNMm9k+27mSVXUtfkcEnN8/1wm3fJ5fmNVlKwqDFSS4kN7FmlTW5gqiTOzce673yg6VT7GwIQ7EkzSy6EtnEYoiRjxDvJHh/0JvU33Oyds4BxUssR2wi5pRlqbqfaMk2nGq5xBFuaM4t2UufmsE9tprsz20oTRKQk+mKRlaTLEeMTqZWIbYTcnVqLC0d4IPMN8ksas/chDvnYCGAWjaR+Q7Eyy5UemrjWKjszrnnfRlJk1CbfGxUdsqRWIzZwaIO2Qw1oXN9B7hyyyO67b03QJDc8/h3YSGAWLYTOwmGd2qC/OYpbeu+RlzF6r7+dOrK0SNexSpL3W+kYasQGjmxMRdLnitU8TuUqTvLXTpkX0HELubdQc2lOXB1KsrORwSxSCY1c73YcrqoN9LtzvOPTNG58xELebuXQlTXWv5ZDUzdci9gA4tw5CmqTO29hJzmjsLp4uNlKHX8a54P67v+xXHNmkUbqfBx2qA1u7EsfbJQnx5W9FlKntj5Sj6vn0NUQQA+xgZ8OpCYFi2uTO022GLJ5lk32/J98qauIhLj8DaylLzPTExrFG8M53Fcb0Lfft3qlhvLATKin7DI2XQyZ38Suu9OHXmIDf51ITcpVjtOVXz62t1hHTYjEVVZahaZxbg9dVWwp2QhiZkZSN+bwq+osPUjZQcY7yVJl0Z6l02SMIRtetRtq4WOE2MDt79KQF15MoWvV8EoTB7l9UP6aHn9hIbfe0zV7X+DQki3PmZmF0GU57NYauBDpf6Iw+LGf7t3erotEObPHkAPt7IZ7cxklNvDwfBrSvp0+chcv5STfr1d+aSWu5mbvgbrOFaGxqmxkMQsXoRGTXupSFFEcqDeG2mgBhdKAv7DNSqpV1VdyWa6Ak5zt7FvTPV+IzWPisJQipVMlYLWxfJJN8VrxYrsz3ar3nBFJKMhGGrNQEToXh7mKGmQ8+nBkmm+l2t1KA33jDBvJmEtfvXSzMk5ysbvPnTT9IjawYWECScii71zhzVdamrs958N1nfdjDos5FGAjj1mwCJ2dwzQOD7QGJDTDHu1WHtj3vrSQ7u30Lb3tHIY8px6jDgWxgdM7UpH8xWJ1nTckmk6tUl6pILvu3se6nGuM4MyCQmiIHyzSnKGx7B7urRgqBWSBsR/VQ460mWLIyhZ2vwgdSGIDV06lJs89H6fr/OMyxJCJ/eyyqaii5flMXYktfO75Gg4V2Mhk5guZkVxSh8MWPaRBTPr+cvkcb/fy86iFjOllJzHp9S1ni+d1khMdAkPqQBIbePxzGjKwV7xu2aXq1Zy0Kk3thYdab53ec2EMvCkrMGGmh9BPcejF4ZwuQnPLyHuL1ffRwNfckrR8Rf2aZK0qOMmlHraAkTrQxOaxaXECSZdT39IchSYoAVWbvfmiEg1tc7kwGarlMrMRzExIZpRR1uWwTLHThpTQA200L1opyUS4lx7SVf8sncAtXWc1cgSU0MEkNvDLwdSkSvU43S8t5Jp/s0Z99qYE32SY4NgqbXDN4k42spMvoctwGM/hT72DhxJ6kZV2zNAamNvn2kiBp/XP0iXzOcmx9vagkDqYxObj3YN7x+sKiQF40aHzp5rnXETw8Yav9wqHmRyq48XNRnv075vLu9IXfzYyUG4MS9pDay25gV82W8nLjRy6CQ2vd7fqDvJ3D1vQSB1sYgtru3MXidV97bkKOsmqKTbNe0r34NstNMlHp5NNCKjUzHAp1jgYE6KDzGld6p+LXVI9hgYFGsM/QDbVce2Bd+uAhQzvZifxmfRreefOEUM2t7IHldChJDZw/ZvU5I3XUxjSNK9R3UlOrrDqIvjjfRbuWnRnsUlxg8NaV9VdVsaQyCFyGg4NOUzmcEJNfkjNIXZ3rpU82mPRNdDg7Z43ykay5TMm2N+ukoP83s0WElKHktjChJas+fXP3ljGv9HCQX7doo/gKHVFmqoOYUU1nHUlG70adUR3LVOGcWiGFL5I2ZNw55nAoTKHbq7UzrNa6Z1qWWJIKkGBhlxttOzA4mZxLCON9srKm9NJNr5mDxmhw0Vs4Oqp1KRdG2OzN2Lfvdrbyb+79T0Hukzf5ZrFB/t9ny64UlkHusKdGSPIAZzf5TgcymGBRabzBEoOz3BYz+E9Dh2hNsmhcKj7NMG76aptxk1+23U+W9S6ZRgB3vb3P7bSCiS9gwiEhqB+mXLGCB2TLob0rOHwKy000ojNY+eKVLpqvKV55wM7GSM4tkyocb8zQ3dGmx5cdsXMZ7g6nzZ2JS3Fh5gLKVG77orgdHRxAS+h0zLRnBsWlwfRyIVedRF/l6sp2ywOI10X3YFDK9ebo5YKGrn+pjWHrhwGc5jIYT6Hra5l9CVXKmHgBjg3M6O5OyXzPgMDxrXkRoFD8dLGe2RVKewkX75pDwuhzUBs4P6PacjIgSlJikwxhgn+Tls7+WmT1dDzQrIQsgCR1YZy2SDd12scfnBV9y3nMJ3DKA59OLR3laFinDdR4EET10oZe/4urs+NdW0PkGG3l8N3HK4b9SVYXA4FEq3AmxtqHij6f3LQGJmBm9xsjsSKfEWMEzpbtiQxhKsmuA/hJrZQoaVp0xQ+NQ1EtOHwUqvhZ4iZ/OHn3HJ9AbcnHx29Y12AxKgjNtQ+4c2+t8Sa1D/6uHEyAz+st9K9XtpsxjtXpkgfQ/rWdJA/u5vnvpiF2MLQWMnycT51Bq1a1UlFKRKP+PZskViUuI6bzWdxRB8RneS2BHy5G0pgac09GHSlQJz50Q7fiUwF8A9byMrJNvJcbYdPAw4x6TYVHeS7Tua7V2YjNp9zvmhagqHYtxCZcsdQgYpv11p9fuY80bFsv8fN6HCiBnHpHlJiR8SJohkcbvrdD620rSva3zw5YvHrgdK46PEkMf4ubRy6BPmV0LCUkxx+y27a+2dGYvO4dzYNmTwyJcmYO9bn+49UVYQdr+/3f0zwkk4QyEBpKZxxcLQG0CEXHmI/3puUCPBwq4U2hcOyFrHd29OtVBges+SNwdyF9gvM0hmkxd7n9ntJzg68OTEDw8OJeLLeEJRRMndrZyfZ8/nXML5BSSfZ39Zu+gdtZmILddYmDPOP4EhXfaGOg8znSP73LmtAxw0/u2Nl+OBTboxy+32IaWDFiEkH+vAYyxrthrU50S+JXzc4niGdFj4iyFQjnTlxpZWm2VJecBObks9Antj7jXkfcbH4DA6G8jvsbfFSEAI/w+/oS2N/0mf8WTb74gSDYglmZn/JzMMX7TFGbH0EnzIqpa7uJ1oOt9o1HWT6u3by42fWkI013mGHmgLM/JQbu1zckGJX0u8pJ760qJb+yo7roBHbpEB46sBiKxnR3U41xZzpYgJCZiEiac8VScTmUbNmYJ8XctPbtXSQj7lZEFpzkT7GkwWxEedEJhiqhp6t5dAl48uIbW7UqhXc5/d0CSdNY8WMfpDbbt4+GIHEHmFwjy38MBqx9e1oJ7OG2ci2uTZyFk6FL0N/ESjS/3mzlez40EZmDrXTcBT2U+lzBp/EjNjRR2y5pTtkq9q87CCjetppQtKxT6zk6t7wjPU/PrfSVecSboWBlefu+d6VcFDB1U1srP2FH762zyJ7I7LkcZIKFZ3kpYYO0pnbu6KPMgiHkNHnc2z0pKAeglJGAM4MfBeAVEH8DETF3wD7F1pp25gF3PJifF876dPBTl5/yUHqceTFDUcecTgIHExi/9PTRt6r7yDbW9uDGvcOB7GH948nC6cmkFvfRgax1ZCBmzwqVXbSjqMdWznIoE52MmWgnSybmDTZ7f3I5h7H5z5LGu+Xdljd45wHfo/VAT6DWPyc4TYyupedOnJfa+agMlJ5CjllxTmQKBVQYoOQZiJUNBEbBSHCGeNp7mWJHtdjnnfQ3/32TuQQ+6aAwIc3pvKkhWaNocUg+9elIv/9EpnENgMCTmy8adiNNU7sC91sZMlLdvJONQepXdRJinCkzcIN8rj04h5ceirCmpZ2kmHPOcialnZyvkt4if3D3tTk/VEpycvNU5BiZWJpeEqongL9caWc8ALFY8mYwSnJ74dTM2IzYkcWsU+9bSdtKzlIfHpj35e7WD5Deej1SzrJwNr6NMf9JTYEFCYNT0nKVzGWBpo6ezoSlylBtv76+RfiyIo5CbRAhBGbEdu0xL7Sy0ZG1nXQXHG1gQ4CFyr7NMlXsiDJXjgXickQTwqXK0pgl69cJjv37CITp75HXnmzFf25/SnlhI0yBZxBnbGxP4aeWZrsyteUtVAOUqR8MVK2egVSumo5krdEAZImR3r6uwVLPqLXNH3ODPo7uc8/lSOWdO4QT45tTsWIbZDYCumvDxixA0RsqKHUk4guxGZMSZq3aUkWLl1Evjr9NXnw4AGRs//++4/cun2LKNnNWzfJF18eINNmf0DadnqLEok/BopNgkXslXMTSI6C3i+VgmWKkMEjh5Bde3eTa9evKZ43fodrExruQ7d+PUjGfFll72mJcnE0OeWfk6kZsSWYNliG2AOVyzYfeRF7h/jDv21lxFYjNhxc5QuKSf3qW6+TP/68QIJhNV6o7T7O1tftASc2Mr9avZpCsnSOJc1ef5l8eexwQK4BL7k169eS+s0bEmd67zLOZTMTGLElWDTWZojYXmWbSAHVE+5ixLaRy9zyu7pAZjhlljRk6cplJFh24+YNunTnWwD92zOwzrM/Dqems6aoTLJuDfL1N6eCdk0X/7pE3uzSwZMhVjiWShozYmsT+1pfA8R+IGnHwoitTOwBtTwlnglZ05K9X+wjwbT1mza4j9e4tDOgXvHzX6QmOQt5lt54gbw3fQoJhWE1wB/3vREp2R5bL7Hln/fvFpcEkZjYGxix9eDrjnZ36ApLVZAu2PZ2j87u409v6AgYsS8dT01nSqFD7OCRQyEh9bmfzhNHuqRVQupsMeTGmdSM2DqIjSIThef9m5yYIS3VZMTWJyHs/v/O7UNCgjzF87uPeeZ/gYljPziXhlSu5ll+5yqal/z0y88kVNaldzf3sft0i2decQUgU01UfnxQkdinQezzXsSW9DVGpRS7sd7g49Twfv956WLQCfD9jz94+k/ndQYsQWVAT0/nzPR5MpMfz58LGamvXL1C/RI4NirwfvsyNSO2AqCOKyL2fkVinwKxT0l/cf8T75I2dmOV8VLrFiEhAcJd/DG7VnUEhNgnt6Zyl7RiO7F91w4SShs9aaz7ml57JQWLYxsgNsLSCs97P4h9UvoLKKYwYuvHRx8vDAkJXmjewPOQX7UHhNg1n/Uswf/Xs0tISX0/8T7JUjC7+/jHt7AEFUPE3q5I7L0Wlxi6mNiLGLGN4PS334SEBPySFVuAv3r4nyu+7ZME0RIcy+JQGrLS+OPX4l4wLKVUHVtni4mNsLTC894AYm/2HgTexI5Jz26sEnwhxMOHD8niT5bQWbJTr67kg7kzyeHjR8jjx49l/x5LZP54yHALRBGI0GGGZX4oDRlpRSuUcB9/85IERmwNoDRUyElErxSe9zIQe7XXIJjrTeynsrMbqwRp2qQe696/p3zedK6MNKa7fM0KkpiY6P77XoP6uP9mwgsOv4ktLKtEvjpWBP4a0mK//eE7cub7b1VTZGFbtm/1KJmUjiVPfmZFIFo4sVzMSwgqKjzveRZXi1nRL6AUKiV2zgJOdnMVgGwwo/baW601vxf7zxkfzqKze7GKJT0PuIPdb2J36uDxhI95b5zPZH7y5AlZsvxj8kyd6u5YNK0t5/6/0rPPkJnzZpM7d+94fa52gzruv503OSWr7tKBb9eJeYluowrPe6rF1W9I9Ivb73sTu1AxRmwlXPr7L8OEuHrtKuk9uK+ooEMJwtg1arMDIbSQzdXiFp5wX3Pacd1IN9UU9s+fjcxd+KF7ZXPi65Pu32XOG0t1xRmxtYFiLFGDi2WKxB4BYk/wavg+wTt1rXQ5RmzFvY8faaSY8bB/bvN2O1rSqXWsDlUcfhMbQgn896HU0hf79/K/tPRUtMLIF0uaNElBmjVLIVsVhuIVvAxatW/j/hka9TGhBZ0pzJJGkvc+UiR2XxB7kFd72VHexK5ZgxFbCYjFBsLu3rtLVqxdSeo0qadYg738ZbvfxF460+MNx17fl5eRcCkNBRWUeD76yUNKSCDtXpWKerul2wu+iCUeRSxfpWbE1glprzI0EVB43m+D2J3l2ulIiQ01UHZz5VGySpmAe43PnvuRNGzZxOtYO1r7T2ykbbrzj5ctNnxuiNvzn0+XM5Z8syOVah766g8TSPpc3i+qLh3jmTSSAQVVKSfRmUfhebe0uPpZe7XdkX5JswaM2HJaZO7kgSAVgGzY/BmNMbtnxywx5Mhb/jnP6tWP8ysGX+qZsu7PQ9pITzkoNM6eqe45LmZrFJ4wYusDolJSTqKtkMLzrgtivyj3S2mrEXRQYDdYjMn1Pfckf6lCPnnH9RgKMopXKiV6ofz6ju/EFuqWYa9sxCBz5L7mYrGGVEdRY93XtVoY2CueiRka7GLi1SxgjOLzrgBiPyPbNEDSFaHrG4zYUkDkoFhez6z9XOPnyb3794JCbhCqQOnC7mO1quB7EQgIyX8P9stG7NSZ05568CYpDMstXTiSVPN9+WumUmoERYo7dQsZcigIYheV1T3bI/4SdAJhN9hbaOHgm3aRGmnl56qS3/74PSjk/ua7MyQ+s8ejvecNu0/EhgQw/x2PHj0ydA6//Par51qrxRkiNRxlRUvH6l7CM2J7ULGSN7FV2vpmBLGzyP3y4efiLxnbmxFbSfMMnmrhz6GkMm7KhIBkc0lt6Jjh7uM0KuWbgkrFZzxL8X/+/dewR5zf88dmiNE18wL4u5LlPceFHrlcthkjtjzq13V4dfNUed52ENsh98sHkrajc0fY2A1WIDYqreR+DyXOIaOHBXQGR2ILXwwSky6G/NTVOLHrv+gRDzx56ivD5/B6hzc8Kqnd4nU5zuT0yDcsTGDE1onWzcXEfqIssnDFwhv3j+teYgurxcSGegO7wfLERqcP1VBFujgam/5k9fKA7MGFxFrYzLhKaf8e8X6VnB47eVwUZ586OqVqqEvYyF6oSFq2Uhwjtk6gAaWoZHOPIrHPCol9zkts4WMxsVFZwm6wPLGL59WfvJM2ZwaqW3bk+FGfiS2MI+OlInxuv3Az+AZuBTG3cRLQ/wvN/oTEXj7bk6DStU93n86h58DeoutCXfenCxLIn0dTU1HExdMTSJXqcV6NBfYd3E8jCPzPUDrKiK2NMb3ExH64RTHUdVBI7MNeb/gPxcQ+s5Zpi8sR+/tOnhdejiK56d4a1VJ6Pl+mWnnqZTZqR08c89pnf/qKnTxbzEkTGaTHQX+wmuViyNr5CTQ8dW6/xwGHtFBfU2Hf+N+buu9VrRefc+fUf7hwnvvniG3LkRoNA3IVYmOMB7pyigpA1ioS+1Mhsb1qsm9PExP74g5GbDliz27k2V+/1bWju9YaZZfV69XS/A5UQPkS1+Y/X66Ak7xcVv+KoUbtOKodnqeIZ3nsj8YZVg9qhSwoYEEnFGktuvDlt2+NOHNtzbwE2vaHjTEPVk8RExsrasWSTQGx53kVgoyTvCGOMBUVOWK3EBTHrFy3Sjbui1pqpcH/bKO6hskkDDnJLfVbtnuNvDtqKBkwfBB5+Y1XaHWV8G8QRxY60LDK8FfdZdmqT2j7odoN61B/Apb4m7dtoSSWM/Tyct+Dup5Ze8H7Kb06kKCCDDntiAhAlAKFK2r9zKIRexaI+QjNBAVijxESe7RXvvhQ77TS1FkZmYVAl0ukePIOMjUlFSxd0X9rxPhRtNkexBQGjXjXcOYX7PhXJ7zOJUXmVGTyB+/LOud4tRZhvyyHoH0v9rxKyi3BMhS8CF84EH4AnILzer5ZfZozL2cQc6j30ovJZqxhKyzKE5+mSOzOQmJ7FYKgdYiU2PmKsAovIfa19SzDK9auEjJSrFq3WnQeaFO7Z/9eXUt4aIaHU5BRaBOmTvLEabkVhLC1EHqf6cmKE2qSRzOwFRbliY9TjIA0FRK7qdwfPTkkJjayXxihPRguqHhDvDpUhmWu8DzQclevwRsvVDoRiiEgbTWUhtz6dLkzeZ0LUmf1hgVB/ip1qkX1OEMvcWj760wnrSwkdmXZtNLd4i9r8iLLFxc5ogTN+LDMDoUhBVQo2Zsq21OGY+MvvtzIs4TP5Lke/DzUNmzsCK/7Omv+HEPfsXXH51E9zrLlc+ptxgfkEhI7l2xa6SYrKwRRQZxrP4gm70Zzrn016IsJz6HRK00NfweIw3++besUJJXAdzJwxOCQEht+CalyzK+//2boO9CSFz6GaB1nlSo79WadATFCYjs5/KeVfTa+L8sXl0PTVs1DQgKolqLpvPDYvoj8f7Zlo/vzPbvEk09mJYi+M1QdNnnrO6S/WClEoM6q1/KVLBi146t5Q4feDiB/W6TG/fCiV+OAxWJiL53Ass/kMHvBnJAQoP+wgV7HRl9po7bus0+9cr3f7RMvCjEFSu5Jj/31z9/u/HdfiY3koGgdXz3eFGedoY5DgdjH5Yh9REuGGLE0RmRv/PzrL0Ef/NhHyjm9SlQubfi7hP2ypo1J6dYo6yyQJOYTboJVXy60XXt3i5bjSDs1Whgjd2+iBRP7iYmN3noKxF4nR+xVWmqlP37Gss+kwP4aM04w7dDRL6mTzK0VVtVBCuTyOO7QhVOvQQJYqFEu7Jf1+GdvcqNbB4o+gmE4F3j00a1UeMx3+hrLX8eKKZrH2PJJkuSUDxWJPU2O2JO1RA3vHmLZZ3LAMhLZZcEQWEBFGOq73bnVhZ3k75420r+Ww6c9/pyP5nryxEvISxtNGJZSlMCC2RDyyEadWlpJNkphKtzP8z//pOt7kOCTrVDOqB5fX0h66d2erEjs3nLE7q5H+yxDTkZkHjHpxP9GSSKypZDldfPWTb8G/ndnv6eEFX5/6fxO8ptL6+zHzjaSJqPnd3BAaSV0QHARySz8Z5bNVK6sOrg+lUhCiV5vhniaMbdt13afMtVwfmjtU795Q6+UUCiWvtXWk+ZauFxRzRcJ4u7RHsOmWz1Jo4CbIxQ94i/LEbuRHomkUmVZkopbpKCDnTQv4yR2md8h/AINNORhHzxyiKZQatnf//xDCyZq1n/Wa+A/X9xDah6zGonDj8h+A3kR/pG+JLBfFn5ni5e19cpuf5dUux2fyfv6MuTNQnPD8RKDZJMc0dHa56vTX9Oumvhbac46n7e+aXHSC+b6N+LiFOy7h48b6dWpBH3BUCEW7TM1n5wi1RNXiWGXkyN2MVkllY1WlqSiUY+NXlodqzhI2kzKf4vZHLMQely37tiWerMBpE7iBSBs4yNEKm5WHl/PQa70kn+YQ5/zfh7QRStdtRwtlcxdLJ/X7597Po7c/cGYAGHXt+NJ6mzarXwQdgLkMspEf5snlox9N6XXeZzdm5rkKuxd4IHrwAuvXI2KXnvyaEaeQuIY9uP9qjHstHLETiH3x/DACb+4TwcWy5YSm8elHjaqaNKcW9Wky+zfd6fnPt+rhoOc76KtjrKqhZ3kyqH9ndAoG9YvXtSxwwhufZuGNtCrXSfOp7bKKPCow71UIMKg1K+Lr8Vu2SIFG2N4Cdd26BVYuGZRMrlYtlRwAQXf7IbLE1sIzLB737CTkXUdpGlppybxnNySq3BuJ2lbyUHFEf822NgeDrUFTe2kfkmnaOUA4YUS+ZxkQPMYOvP6Qmg5XDudmtZNQx/8+RfiSJFSse5uHykzJ3UIKV42ljRqnILGyDdyy+0bZ4wdv0IlNsY6tRYTO3GVIrFPqBH7gJfgwhQxsXfNZ8TWQ2xZ8nFkRReP7a3tZNNrSdjNkf/rjnZKzGkNHKRzVf8wok6SVBJmeqi74HuVGt+bHUwaKYZMHmDX24hvlRqxvXpl3xwpDnn9uoXFsn0lthqEtd3+4PUKDl1tdBmxIwMbPrDprcMeq0bsQbJ12ccFm3fu/+MysBtOa5i5pe/x9vaAEPvQm4HxXcxvYmfEjiJ8KxFYQCdchTHUVo3YzWTb/ewVu9uLl4q+kFfmAtlpWGrGh7OotxpeZb7dqxp8bUQvxbh6Hu825IVRqKEXwqw0JWcbI3bkwSENdR1XDXVVViO2bLufBxsiN+SFLCYkRECG6OMVS2mCBAgMLbLDx4/QpvWrP11Dfy5XDogMqXmL5pPOvd6hwoPCYgWgo4+N6KVoUNLzsty9b4/upA+kk/KfK5nPqUtXnBE7MgDFIlFV127VUNdTasSO4fDYq8priZjY/d42f8gL4oGoO0aSRCANiRh1m77gETBsYWwpfrG7jTrNBtZ2UKEG/OxyL08WGRJbjBRefDB3pvtculd3MGJHEeo+K/aIP/hUcX/9r0XLuD/6yavKa4aY2PNHmdszDmXOa9evBU3BBEqgvNACiKpG5N+72cialnbSs4aDVCnspBrfUgccmuvx/4bKpxFr/Goz92ehLc6IHT3o3k7iEV+oSOwv9BB7o5dnfLTYM3dkqXk948FWAIEEklsEv6j30he9tJY1t9MKrDIF5AX8pcQWaqeNmjjG0EuGL3dMkT6G/NXDxogdRcAEKvKIT9WhJa5C7LFanvFbByw0h9V0BekDegW9dhh63e62K887yA+dbNQ73r6ygxTV0eoHOdbCQgzcX3Tw4P+N/b8vLxl8h97eXYzYkQFMoCIBw+GKz7e7HmK/pqcYpGBRc3nGUQARCm3s8jUreUiqI20UhQqvvdWa7ve//eE7LxkfJJDw/bXh3VYS2JczFEi4Z/q6DkbsKCv+uH1QwLljFnKtj+Lzra2H2CXlPpy4Tvz2eKmhuTzjECMItqGXtFYHCpAWPa2g033up/Oa+lxbWnn21/DeGzF0yOA/e6CdnRE7ioCJU6fOWVKjex3EhrDhIy/P+EdiYo/obh7POAZ4KGzpymWyxy9SvhgVRNArtCAkNrzjvogIQpObb0mLjLWrBtroMmKbHy9JBAwT11j1CxiqkPtbr5zx98TEXjfNPJ7xqbOmh4TYwr7UQkB8wFdFTeG+/MTXJ3V/x4bNn3lqq8s5NXPUtw1wkpEDU5LmzVOQkuXjSJZ8sbTOGkopaICXr2gsqVsvjgzoGU92r0pFHp7XJh6qsKCZFgygiqxY6eRLbEycIvWi+YrE3m2E2Mu8ZJIGiz1050ykf+ZPr2kj+lxyQgH+EluIp3JlpHXMeiBMlIHggtxDP+mqE38qk/F7inppkPzSceWKLJRfstTi4GDtVDHfbk1UJPYUI8TuLZtaekCcM56Q2Rw3ActSXwzyRQcOH6TA/llLo0vp+IEitq9AwovwOV3oZqOEdqpELvASQR8vnAteWPyy3itzj3vGIwbEk8QfvYnd5nVWMx0sQDhUSOzrAxRXZK8bIXZt2dRSycEqVzGHZ9wXQ3qpMOxE875LFCAduv2PrFm/1itjTSjZK0SLtq/SdrFGbNGyxbSNLA+0iE2fJ7PoZ1qo/FxVWWLDiZYvp9NLq6xBi8Y0Sw0vKEgLyaXPQuIIufI1XqjtdZ2lK8SRnw6IZ2/IGvE65FNmTNV97jmfzkM/161fD8W/QedQ6KijJa+enH0pIAAJAcYVa1fSaAQkijEBXL9xnQol7ti9k0yaNpk0ee0lr04k4Qa62j4+rjuVtJgRYqeR+xJkvgiJ3eNNe8QSG3JEat+J0BM6OV64+Cf9e6Um9oHYBmAgN2/T0tBnUKgiJTbqvIUCh3hx9R7cl1z6+y/D5wSSt2rfRhQFyJg7lhzZmCRX/OO+1J4c9SplDH03+ltjpaA3PHnxr0s00qBnLCAlF2FAENhIh5W1G9bRXuVm6Ltdu6Zux9k9DnaLEeM+8IuXA22ymNifTDKHA82XvllQ2lRqRi8tIkHii9xSFZrigYidYylvtBGdlNjH2ttFe2nogaOHtL+GIpnshXO5vzdt9hhyekcqMvc9j+4YpJeNEnvmvNl+9RyTrbTjVlz+XjM01EHwsGZPdrLrbXJ/xGLUuA+tln7R9UHmdKBBhdPXvG902IC3W1j6qBe+NMSTk+SFM+yHc2d9JvbqlnYqq8T/G5K8/sofS9VTSz1T1kOgp2OpHBL/b5SOGjEU0fjaYaRj906yzyJjvqwB0z3HUt1MjrObYxWX4bN8IXZfPbXZGXOZoFPCmhV+P0zsqfE9aCWr5EiSAvtKfw0hLsyIRk1IbOSkC3tLB6MABhreiNfLqa8adV4afREIDUtsuT0xupAGytCdJJzj+cI2q94a7La+ELuabAbaGvFy/MXnw5+BhmquQBr21UPHDNd0qkAz21/DywFOHn+ILXSSnTz1VdBCflgZCbuS8Km8voQO/bF2ndt7ZftpNUswYs/UqR62sZwjvyTjbIeq4+xpX4gdL1ebfXeO+TLQoKMdjPY6IDicWkrFHP4OUFjDlk2olzwQxEY3kGAbXkTCYw4YPoiE2oRtigJd0QdHXTgdaM0aSBxnKxX31zc52Cy+GPfBr7VKOD+fYw4HWst2rwVtIMFrLQ25GI1dK4k2YFXgy0tJSmzs040uifFiMtqyFkUq+UsVch93+64dISe2sL83dR5+vjlg3w2nXjjHMXrQC/mFjrcKxN5p8dW4D8/1+sI+NvLksOfAV/aap1EfYrDBMgwe4d47EMdCqKxQ2ad9+qyU2D0H9tb92d8v/EH7giE0hNkJHUOMdOzkvdMIpwVaoUaPQTpKeO24nkAZ4ubhHMNoVa2zVHOsP8RuI5uoskm8HH+6hDkSVTBIkdgQLBPKEPElmP46ad7u0TkgxNYbT0cPMeGMyyNLwey0c6Uew8oA2x8ksoTD0D/b18xDXD/6iCFhBwkqf1666P4dklj0Ok6DJV54S5Dd+eSg6v66gT/EziubqCKp9EK3AjNl7uChBasZPbppQtE0EIawz6p1q/0mNtJD9e73kYkVCC9/vZdeJMPGjjAFsa9cvaL7syjvFZHJ1SIYe2s0RAznuC1fUew4e7BecRn+n6p4oU5ye7X9uTVBvFxY8Z75NNAwo3Tq1dVwfFjP8hlLWL75HPC/nl0MfQdmOnwO+/YcRXLT/4fcsa/ERhadXsOSG6EhORhpcI/ZTtiETzjzadngkUNo6Az+BTQjhAPOiMCElNhGzhuG8lskoYDU7l5peTKT4pVKhXXM9u0oSUyZp0jsby3+GvclK70SVfpx++yjnhO4tMO8Gmj8HhIDN1D7QcgQB7oIBM4vX4mNpI1QG6SbhedvxAGIzDPp9aPdsK/E9nXlgFn6/ZnTSIValU0xVjfNlCSmjFFchs8NBLG7yn35w83m3GerJtdzMwQIsf/QF34NagwkMxEbudGhNuxHA0lsI7kIUmJDfkqusMWIIVEIW7hw7q+v7xfsr79UlUJ6PRDELhEp+2wQt0Tl0rr+Ft5oONqkTeL12Oc7twWM2HxnTH+IPXLC6LDsdbG3DxSxjdxDKbEB5AMYWc4rGSStpFV/Ydlfb7CqOc7yBILYVg6XvfbZ48y3z+YHB/K/oR8m3EMpof07bxt++MjuYsQmovzxcBMbgO/CSNhOyVC2G+okFfSd17m//tkSKJMrCJHGs82wz5678EPRA/rpl59Jv6EDRNVJUhgtOYRJiwTCTWy0HwqHCQlqBmIDsRlT0hp5tGzyZTWmFE4MNtZPt+ltvrcgkMTuJBvP3miuffYvv/0q+5CQR4zCetRXFy5X1B2rLFimCNm5Z5fhh370xLGwE7trn+5umaQ6jesZvgbsy/XKMClBGPMNJbGhvc6fAyIUwoIU6dYMGYkI8RmtJkNefCilhq8IiqueHFKNX7cOJLELyipfzhcTu2Or8O2zfc3g8sU2bt0UdmLzhn1lpnxZfUoNVSqB1OqJJtRWDwexhQbNdv470EABDR0Q6pQ7b4hHGDFe6SXYKFNOvL+G1LcKsbNYAmncF/7plTc+xmYa4YV3+nYPGbERhzULsTF7+ZMvDX8BikdqN6hDz4EPEaK+uUy18tRbjUo3KIzwKyJ0LjULseER59sg80k6OE+saBCbFi13N20wnG8QirGLJpc688N/sATa5JRL6T77kOeE/t4Vvn12IAsBtEzqeQ8nscdOHu9TswF/DKWaZiD22XM/irTnpIY9NiIYiJFDrtmo1az/bEjG7ra5kvzwIYqz9bRgELuDbH32avFyvFTZ0O+z4TC5fed2WBIzwk1svqUvZll/4/N6DCIOcvnU4SD2hwvneSSYDUpL6TFILQV77MZliCF3BJPj4z2q++t6wSB2AbmD3X5fTOxh74S+PhvLyFAZcqTNQmzsk4XCB1hJ+Co5pNeEjQrCTWzh/joQYS5pAo6ecKm/qFVDvL++v1xxGZ7IIc4SDOO++LxWeumJ5aFfjhtJR/THsM8MtK64P8Tm99dCQFk0mAbJYLMQm99f47+BNshkhWLsju4l3l9jolQg9l5LsIz78smyYa9PPbP2k+MWkrtgaJfjwZQD4u2PPy8EpROIP8Tm99dSoBQ0kFJBQoP6KX8cXlc8HMQW7q8xcwfapPUAIWmVe1y1McCQYBK7puxyfKp4Od7zrdAtx+G9DYREkZpB8RPVV8HoBOIPsV9o3sD9Pa+Wd3opqEKAMJCGogmhUmnt5+LCRmzh/nrBko8Cep2hUlFJnzOGPDrm4Q3qL1T219WCSWw7h6tey/H+Ntq/lz9BvIVCOWNDDSRYszZmajVSh4vYvKwSdcCkjyF/9bCR4XUcXsURy1Z9ErAXn7DbaPt2KcJKbOH+GhmGgfQhhCpXvM3LDr364WgMEGMJpnEHWKKVhYblePZ8ofeO125Yh+6N7ife9/sBgwwo9cSKQG+OeiiJjbpw/juqFfF025zb2E6JLjw/5HRDRMDfyIEwzXL57ISwEpvfX/OVYcjvhjqKrwYVlj7v9gtpjjg61uoMc31uCbZxB3lJ7uB3Zpun2gvi/1AXnb94gWKaqZo3FHpmxSqWNFx8EkpiC7Wv0WNb+CwOc1uhcgWcstVvONfZC+aQr785pduDjoYByOqCKAT/XWihGy5iC/fX0q4tiOfj3uDFp6dLy6kzp6nQg5L/JGhCIJnEYS4NmeFOoSB2gsv1Lm6z+6451Uupk+fpPJToI8aPorMwCgRQSAAgGwkvABSLYMYPdcle2kwBSM6RdNsErvSy0fa6eXMqr5wQzkGsFgknkHwCudCkDvcBTf/QjRM5AtLPlaoQR/t3CYltRuBZQhXlpdYtqDcfrYiQNYjGiwhbIlstXOfW5EXxMhx98VRkkLJZQmHcgbbIncSj7YJ43GELSZONtUMNNrH5/bXS2/4yR/Clze2kRU1uJZM1MOeMvtmRQGwzY9FYSTXXCFvg+nP5Qey39RSFvNLEEdUPp0Q+p994prB/n3+tvFNtCed5NvOc5N7ZNGTr0gQyalBK0rhJCpK/WCxdEiq+NDLGkFyFY8kz1eNI61YpyOjBKcmGhQnkyqmkdrod2qUgZSrGBQ2BehGZDQ5JNdejXarL8EGhJHZW1xJBvBwfan6Rw0BCD6HMAhBb2riex40zqcmvh8TAz5T+PlSoVSs6x02d2rqX4UARSyiNO+ABreX47YMWkioLI7bZiW1WRCuxF4zWvQw/Ywm1cQftpmc5/mpTByM2IzYjtqDo49o+3cvwoeEgdjY9y/ENH9gYsRmxGbFdaFxfsgz/yETLcK3l+MOtYu942myM2IzYjNgA/E6ipJRhJlqGay3Hpckqb77iYMRmxE72xIa/CX4nd2745yZbhmstx68PFOeOmylZhRGbETtceK2ZJDd8juoyvJAlnMadwB7Z3PENnlkbFSzZ8jkZsRmxkzWxRRJIHCcwASo8r6OWcBt3Em/JlnJOEy/H+79tZ8QOMf7uYSO/vmMjp7h7/8NEpztGff2b1CTxR0bskKY1F3CSx8d1d/p4xwzETiOXO36tr432H+Iv5Nt1VkbsAAPposfa28miZnYyoJaD1mQjkw354QkZdOz5sibVVVevFUfavJ6CDO8fT1Z/mEC+35OaPP6ZETuQGNJVopQyRZHYjzhktJjBuBNZI3eS0G8SXkzlKk5GbD/wT08bLfjoz5G45tP6yOsrErLEkGfrxpGh/eLJnlWpyINzjNj+4MfPPFx4fFC14d5mi1mMO5kmcid5U5JhM2e4jRHbIH57J6nGukFJJ0mVMYwND7PFkCZNUpClMxNClm4aLcSuUV0iWPix6jL8FTMR28nhH9kU052eC0LGTYqMjNhaQMnlmpZ20rS0k8Sl8xxP2M4m5IULAsVOFIc0a5aCbPk4IahL9mgh9kJJY40bwxWf/TUOsRYzGXdCU2S9sXPFy/FWLzkYsRUAR9eoug6SK4fnGBAAQM+x3fv20HrycF0r9Mv37N9LO64I65hR/TVhWEpy7XRqRmwZoHTZQOx6hsVsxp1UMbmThUtfKE/8xSIrI7YE57vYSPfqDvdSG7Mj+j1/tmUjefToEVX6QG8u9J8K17VCMujH8+foueCc0Hml8avN3DM5HHG9usaTS8dTM2IL0L2dpH3PB6rL8FIWMxqKwvV0CylR2smI7do/96rhcDvBIOnUc2BvWTknKHGG+3pxblL79fffSO/Bfd3Ciikzx5CBveJpSI0RO4ZGg0RdNPsqjoeTFrMad3IdZZ1oErWIWcNsyZrY2ENPb+AgGbN4tMjQ6O7K1SuKiqToJhr2ZWWO9IrniJ8PGzvCTfBMeWLJnEkpyaOfki+xa9d0GHGadTYzsVNxuC3rRNshqD/9wkJSZ02exD74pkdoMCZDPO0KCbFANZvz0VzTXPPAEYNVzxVa5tAXw7Xh7ytUiSNffZ4qWRJ79RTdBR93kQ9iMbNxJzhHT2FI5zaOZEXsf3vaaPw5Jp2n35iefs0gSoa8WUxzzeg9/fOvv2ieNxrHP9uoblJDeu6aB/eOJw/PJx9iQ377wRFBptkm1dl6nsXsBgeArBOtvzgT7fRqa7Ih9skOdlLe1fYIMsNQRdVj23ZtJ8/UqW666y5XoyLZuuNzXdewaNlid5/q8tzsfXZv6mRB7BHdJZlmk1WJXdoSCcad6CHZTLSPxbP2c7UdUU/sj1+yu73dmMEuXPxTs8PH4k+WUNlcs1//0xWK05eUln43WgPx7X7hPUfaajQTGwKR6BWvszXul5ZIMe5k28hdBFVXESTCb55li1piw0HWs0bSiwv9pMe/P1G11Q5+t2rdareTDJrYbd5uR746/TXt4HH6229ot88ho4fRnl28kyqYwD652vM1qaD+us8+JWe+/5Z2WcG5tO30lluDHeeM9j9arYQmTZvs3nv36RavmdwSqcTu2MpQeWbrSCJ2LId/9XTmfLqEM+qIfbG7jTQqlXRdSObY+8U+1QF/4uuT7u6OIEvnXu/omtkPHz9CvelFyhcL2DXhJYSGfp+sXk6b3KvZpb//ogkrPMHReODoiWOqn0FHET4eDwnkO99HH7G/E45xbvuJbajCWPnXdJlmOsg9Su5ibo0XewrnjbJFFbF/6mojFQs53Y3o1Vrf3Lp9i3rF+SSPV996XZdjSs6OnTxOO1wkZE3r07Ugww2ZbSCrUUMsu3XHtjSJBdeCNr64NiX7/cIfpEy18kn79cpx5N+vUkcNsRvUk4S4lqrO1iMskWbcSWfh8FBWE22bYJlyyEIy5Y4OYp/rYiPF8iaR+rnGz9P2u0p24PBBkr9UIfq32E9rzep6DfFkzOJpc2bQdQ1ZCmYn0+fMCEgjw/2HvnD7BvIUz0/2Hdiv+LfYXqCtEH0BlosjF46kjgpi75ovFlNA6ysFUj/gkNkSicad+Md6+mnDgxjpxEZaaD5Xnyz0inrw4IHsgEZD+qFjhtMlLwASKv2tP/bv5X9Jp15dRcUb0gZ2mKHv3L0T0OMi3XT4uJF0L40ZHL2ycM1y9vDhQ3c73ILFY73IHWnELlteXMWVuEp1tl5kiVTjTr6s7EX1sZHHghYn/+6OzMYCQlLzMzWWpEoDGXtWNIOjjeNLFKB75GAb9u9SDzua76HvdzAN18Y7ArF6wYtG6UWHe0ZXLmVjRcvySCP2qim6GwEAJS2RbNwF7NeTsNKrvT0iiQ1HWQVXjBqdKjELyRkKKAqULpy0D2vRWNMxFUhDAQk6aOLYCKWFytBzGvcEx0Xr4B/OnVUk9ytvtnLvuXmHWiQRu1hJQ9JHuyyRbtxFvCh7cX1tVEmCvxEXd1hVG8SZEZAmaujyfiNGrbSkhqeYL3XE0jsc1qLtq/T4wZ6p5WzkhNF0WY5EFXjFlZbl6G1NX3wNU9BQWCQRe+kE8Wx9a5zqbP18NBDbCvFzeeVM8azdJcLSTFFqif+WrFJG0VEGpxg81dhPo0IrXMY7qtS81cE0rBRwD3AvlByFcKiVrV4hqZKsS3zEELtgUSd5KChNfrhFdbY+aYkWQxBeMc30kOeG/LbVSmIzRNasDa+yUkiLJzXivKhfDqchTg5HWjhty/at9H4ASJeVM8TvsxXKSe9t0VKRMQbmj5LM1hNVid0ymojt4PC73IXeWyCetdu/GjmzNmYgpZAOlt9mITWscLmitJgk3LZzzy56T+CVP3jkkOzf4OexGVNyLyLzj4HcBZ0kUVDsgfZWKqQ+z8FmiSZTagckLQ4595mVxKSPDGIjTVTOzv/8E8mYLysl/vpNG4gZLOfTeagDywyGFx3IjT339z/+IPs3U2dNj8bZ+m1LtBl3USk4/CU7ay8Sz9qdWpt/1kYIRy43Gt5uFEfQPshh3FNLDVVlBcsUMc35LFn+sTvltmP3TjTXnM+L5413ppkVhYpJ9tbqemZ/cIixRKNxF9ZTz177z+3m9pBDwghxWhRFINtqxdqVNNmjZbvXaMYV/gbLXq2iiFAazhmOKTMZClqUkmcQ5zeDaoyRzpkas3UnS7Sa2qx9d7541u7bMbJbAqGQwkxG1UxqVSZmM351E2koXU4ct3642Zo8Z2sBuXvLztr9xHFtZKNFcl9tpf13OImNJBWzGQpfIvH5bpwhyTIba0ues7WA2AkcLuvRII/UHHLADJ7wSCD2qIljIu7ZPvOMOCdcI8ss+mdrrb02zUbbL9izHLCQLHkis14bnnFGbG2D0yzSnu2hJYIJiFuO3xylOlt3tCQXcwkx/CGbQ/6BeNaeOyIy67V5oX9GbHVDimkkPddXmjiMVHCdQw6HJTkZd8HtlW6IUKr40bHIazCAbDSzmVmJjcKQSHmu6Dv382aBOspR1XprczXYC3E22o+yKisTxbP29rmRNWtDOcWMxDajV/yff/+NmOfa/22x8ui9xaqz9deok7AkR0PerNKNebBRTG5IzkRMwb3J4sVmjWPDUNoZCc8UKj/XBf6fJwct5PoA1dn6BUtyNVfl11HZtkAjxYqmEIhzposMYkPZ02yGzDOzpJQKDbXikfBMZw8Xh7egJxDV9dYBIHc1pRt0/xPxrI3OhZEwCMrXrGQ6AuUulo/CbAatNbM/zzLlnNTX4/b77LRQFSCFcfufabtmhoHc6xRb8ApSTbEUyprX/I600lXLmS6klCJzKqpDhhxtthQ30j44hhxZKp5gbk1QXYIvZIz2ELugkqIpxNaFN3XZRPM70lBJZQaDUOEb/3vT6/zws0CLGPpqkC6OJPH/B+tUl+BorpeNMVpM7mlKwoePdllETQbQntTMgwG1xOE2VEqhBlvpHItWKEFOnTkd9vNE3bpZn2P6nDE0tVkU3hpqiy6d8BAQO61S9xBpkwE0Ezd7zbZWa9xg2gdzZ9Klt57OmWjRG07bsPkz0z7DORKH2b2PVGdrCImkYEyWJ3dHpRuXuFq8JEdM0czERjlnqA3NAhq/2szwuULoEHvdcNjEqe+Z8vlVqiyu3nqExnp9VWfrlxmDlYlt43BC1pE2SKy0cvugheQrYl5H2rxF80NKkH0H95NcRfP6fL7oSoI2QaE2OR9A2LdSGWLImbVWI7XWuxl7tcldRekGSrXId3xoXkcaGuuFwqDJjc4bkGEKhG9gyoypISU29vpme3bDu4kzzBLXqpL6MYeijLn6yL1YyZEm7PsFvGVS8UM0nQtG6x6h/XnpIqlZ/9mAn3vDlk3osj4UWwfojZvpuRUv5ST3D1vE3TIHqy7BpzDG6id2Rg5XFTPSBMkC1/ZZSLZ85lySI40TnTDmLvxQteumL7Zx6yYqvxSsc8eyXknc39+49Zr1a8mbXTq4ZYbNFLM+LIlZ35mpOltf4JCKMdYYuTso3VCp+OH66eZakkPosFu/Hu6WPjxKPVOWLpuhlearYRXQvX/PkMx0WN6PnTxesReZXkP3EXjqazeo4258D0DJle8Lbgb0eFO8BNeQOwKaMqb6lkd+UEmQ4dFu8ZK8RWNzLMn7DukvIgIEF2Z8OIu80LyBu0E8Vbgs+zTtRPnd2e91EwT9v/hOGaFEnSb1yF///G2IzOjzPWHqJFKxdhX3Swj/RbotXm4Qg+TvE1RUwr0kh+IohD3cS/AjFnJjmCqpP2Ms9Z3cxTg8ko1tjxPHGJFIEM50UwzMabM/UB3saAO0bNUn5OU3XqFKnPxny9WoSHW01cjz8YqlJHX2dGGtMYfYv5pdvnKZzF4wh1StW8NNVMz6WMHMnDeb+gSUbOW6VaJ7Eko4uCX4lx+LV4FoP6VC6jsccjGG+kfuMYpFIpL90JZZtrCRGvtoI3bv/j06mNF5E95ofA+WqWhx+/nObW7pYuhs821mww20CEJTwcePH7uvA+eJ823aqrn7OvB3aFL40ccLydVrV3XfE3QAeSpXxpBf1+DOkiX456pFHkBPxkz/iQ0Zpe8VlU33WMLebOD9mdP82oOidzSW61im8t8JXe2hY4abUlu7er1atO82lFhxnsJIwHvTp6jOzFoG/wPfmTRUMsIPjkjSRoerkvpw1LXpCSO5K3N4IuslHyuu28Y+CfulUA2MTr26BtRrjCSRDt3+Rz3qkVCiivPE+R7/6kTA7gHIjfY/oZA6kiaiQClXhdSJHIowRgaW3FMVveRLxA8HIYtQiDI8U6e6YqN7fw3tbl98uZFpCZ0mR3q6b1ZqH+yvIdQmdDYGA5MHSJbgWzS94IMYEwNP7HgOPyl6yXdaQqpJjoENz28w7dON601LbKSCBts+XDgvaOdfv66DVgq6l+CHNSu3TiQ7xdEQkru64pJ8pI3uj4TqpjVrBG9Jjtkq2Hb33t2weYq1sHnblpCknKJARSsUh2aDRs49ez4n+XuXJBHlA80leHHGwOCSe5LSA5CKMqC5X+bcBlMKK5Wie0Yt6SN/kzb0WvM2LU1Haniug50uyxvKX5X228jHh4feSGwfoa1d821GcsGBPox5ofGSf6NX3XTrbGMhMF7JE8kVSkkTe/bvDVmRBOLeyXEZLrRZ8+d4ncPICaPdv6/8XFXd5z6kq3hf/XifptrofuYFDx25S3N4IBsCG2yj0rDChzewk90wsWHL16zwcuAg2SKUBudUsJ1IZl2G8wYHpTA9F7F0oemdsatVFYsSIpqCRCcVUt/ikIcxLrTkHqj0QG5NEs/aaE5epYrTMLFhn23ZKCqJ3LV3d8hrls3UAD6Uy3ChdezeiR6/bae3vH6nh9joAXdhm3hc3FuguQR/kzEt9MSGKMNuvSEwPFQ9Df4wM0gNWWX4XckqZcKiMrJgyUfJdhkudaKhoERqWTWqxBD63PuRzWiBxwrGsvCROxuHK4q121vFS/J9C7W10hKypfUaOLz2dbh6XyEzLRBCCpG4DOcN3m8cH89CKoaoVUAijVc/PqBZY/0rhzSMYeEldyOlB4SGaUJdcmDqIO399u79e7wGVtqcGcjTFYqHTfQPJY/hJjXqv8OxDIchXRVZbkK7cPFPzZrulk3E8Wq6r1bXBYciShXGLHOQe4bqfvu4mNytmzs095EokZRK+CRkTRs2YiNuHm5iIwwYLsMzQd68MMaPqji18y1WUlyKqXNfPZgxylwhsJOK++2PJMkI3CyO5H+1QVGkfDFy7fo1LwdWuGSFMTuFu2Z5+64dYbl2lIPi+Eix5SvKUPqq+nLOHkN+WC9+7g/Wa5J6BwttmY/c+ThcV4xvbxA/ZPQ51kpeQekhv/Ts824/+rO9X+wL26yF3PRwLsMfPXoUluuGKAPOodegPvTfCHdpJaGg9bJoX71XM179JyS5GJPMSe5mSg8ODxUPV/iwDyy2krgM6gMa2lyYIRYtW0z/jfLKcFk4NbjDuQznc8bxX7lkFSk+GCJ2lkENBSnHKqSGmEdVxiBzk3uy0gOk+eRHxOReOkE7Mw0SRidPfUX/v13n9mEb4D/98nOyW4bD3uraMcm7/cH7VMRBtYy2tbjXFtWgn8ZSRqOB2E5FrTQOt9+3ej34d7toe8qnz5lBpYlQcBBOgyBiclqGw5C/j3ZEWgUxdWo7aDKSyFm2WJPUn0JfjzEnMsidhcNFvc40hEO0xBAxU5SuVp7+/6W//wrbIIfwX3JahkN7HPc+NkNKdWdncSe5Ktlq6XCWfc/kgyOP3JWU8slpL7B13p5y9GvSkuPFf8PZYxrqIslpGQ7ZYq3zg4glnKHC54kOrdf7q5L6BodCjCmRSe72is60fjbyaIf4Df/PbgsprENWCd7ycJpae9xAA/pj4VqGI+MOiUGq0kxZYsjJFZIV2EFN0YT/ODRkDIlscs9WzEwbbCOP91u8wmBaMsaIJ5/4+kTYiK0V7onEHmRSQ8eQMhrFHUgP/nyOOKwFsQ3o4GkswYcyZkSHM22Poqd8lI3K4ggHx1crrSRtNo2m6Hky0WYA4bBQNosPZe25MKsMSqha57ZwjM0XD/gK5iyLHnKn43DOSNrpznk22k5Vq78VMsLCYf60zDXSJCBUSjG8ISGo3ksvap7byB52L1Lfna9J6qOsOX30kbuwWmbanVneYbAV79loFpPaAEP4K9Re8i3bt4ak2gtlqqEkNkjd+NVmmufVu703qRNXapL6D0RLGBOik9x1lFoGyTX7A+YMt+kiQKhm7tPffkMVUlGQcujol3QvGgy88mYrem1abYtCTeoOr0mqtRDW2mDV6tyBljxlGAOim9wd1N7sePNLyT1loHYCC2buYJMbvb3yFM9PnXfrN20Iukca3TDxAvnlt19NQepXmjjE0kaudjwaYS2o2jZiIz95kHu04kDg3vwP1nuTe3Sv8JIbvb74lrPIGQ+FLV25LOg6b3pJ3aCegyRK0oHRcfX6QE0PeCc24pMPsdGid4lajBszgZTcekQRg0VuXhqo/Ttvh3Q/j6aBOC6KL8JF6mdrOWgCkaha6wsLuTFEk9Tj2WhPfuSOcdXfKlaDSRNYgC5tHLrI/fuFPwJGABSh8IkxwWoppGQX/7rkXpJLxSf8DWnp8X7LkRqqOBqN84BPWFgr+ZI7DYdTiuQeZKPLPWleeWcd5M75dB7yw7mzfhMA6av4PsgyCYUfQmmr1q2m5wD9bmELXX+ST/TEqWVJfdhCcw80SL0LL242wpM3uTMp9gRDdhq33IOovJTc3dppL8sz5c/mVxfKfQf2U01xzJjnfjof1jTWVu3b0GsaPm6k3045YbtgQ6TWl1V2jBV2MOPJndeloCFPbm7Zhz2dL3tu5DqDoEYNy160tgGx9x/6goTbrt+4Tj3yiJ+jE6YvBt9DsYolfSb1rYmaseofmAoKMym5S6glsPhDbtQRb/p8s6FSRb7hfTgryaR28MghSmxkvV29dtXQZ5F+K+zmYYTU/x2zkNtTNEl9gUMONpKZyZG7Mod7iuQe4S1nDAzSQe7YjCnJ4k+W6PIU13ihtlu5xWw2etJYem5NWzU3lNuObYnWPWpYT4HU72uS+jIyC9kIZqZG7mfVyE2LRmTIPam/vv5g/+vRWXW2a92xbZIedrvXiBkNKaa8xjlUZbQMDQb0tAJG8ok0Tq2T1Fex2mIjl5kectfj8NAoueeN0s4t5wGpn7wlClBtbISxXmrdwh0zRiIKElLMasiNR4EI9v9Hjh9V/Lv5ixdoapTxaaLSjDKdpL4JQQ02YpkZIXdjLXLL7blXTdGuCtMCwktmt517dtH9Nhxq2D9/+8N3tMRz4dJFdAuhVwwCBR3S3G+dpL7HSM3MV3K/4so1NuRQQ/F/ysy+ExszdyTY0DHD/XqBjejuXaVFvd+TdJH6WTZCmflD7tfVZm5K7n3e5D60xEoy5vJtwGP5+tsfv5ue2AOGD/Lt+rjtyoLRNnlST2SkZmaSZTlNYtnrTe6zG6wkfxGnT4O/x4BepiY1UkIRZzd6XVjJbJklQ+rDmk3oGamZhZ7cNP10pze5/95lJRUqGic3NMwRzzarzflornFhxNwx5Phy78o5OCJvjrbpcZQxUjMLA7kHePfk5qWNG73gMEyEvkP6m5LUaHmE3HUj11KomJOc3+hNaohJ6ijoYN5vZkEnd121ODeK/h985j2AEc5B+xlDy9YsacKmqaanKEQvqlV1Umlnr3uyW1fp5WVGamahInc11yyiKNaQuNqb3MDUQXbdsW4zJqqguqtg6SK6z7/NyzKJJ1A+2Wah2xcNUl9iySfMQk3ucq7ZRHFgom+UHLm3zrZpyhsLsW3ndtMQu0vvbrrO2c69vMb3tctePzTKNOSMgN84FGAjjVk4yF1MrSqMqp/O9pY2Br771EoKFtXnVIvPkppbkl8I+756wDB94a2EzDHk02k2WVLfX6EpPAicZQUdzMJN7lyuckHFgYrKpCdHvQf5lb0WWs2ky0ueIx355rszYSE1ctsbvdJU13nmLuikDRfkSI1miBqEBo6w0ktmZiF3Bg6H1QbszTE28vigzLKU23++01ZfAUlMhnja/D2UduDwQZK7WD5d51erhpP8tVOG1Mcs5M4Huki9lUM8G1HMzETueA5b1AYuGsXJxbqBJeNtJD6Tvj33q2+9TuWFgr30njB1ku7GBL3a2716U/Mx6lvjbXpIvRjtmNhIYmZGcjs4LFQbwIh1P9gov1T9epX+TDWIFpz4+mRQSA35ovrNG+reTy+fJL+ffrTHQm4M00Xq8Ux4kFkkEPxd1YHcx0buL5MnN5q3v/i8vn03xBumzppOZ9dA2e59e0j2wrl0HR/Ov9MKYb2Hm630JaZB6Mcc/sdGDLNIIncrDg9UPeYzrXT/6ZWNddxChnez05CRHoJBceXPSxf9InRiYiLp824/2mVEzzGRSXd1r/y2Ai8tHZ7vWxxeYCOFWSSSu7pL4UNxgKPwQc6pBmyfa9Ps1S3s2V24XDHyVteOZOSE0WTeovlUZ23fwf1UmujUmdMUx04epz+Dsgn+Zsx746jIQ0K2tPpWCRliyOQBMjXUvJNspi4nGfTJSrERwiySyY0unz+qOtWG2Mij7fLkvrTDSurUdoSsH7Ya8nH7/6MKWwi8nHRIAwMnOGRjI4NZNJA7rVrXEb6tkFIaKpbm6B2mNxU1S8EcpP/QgWTclAm0kKTXoD60NRBmc/w/0H/YIFK0YgndpG7WQHnpjfTQG+/qIvVKFs5iFm3ktnOYpjX4aZ/uY/IEOrDYSnIW0L80796/J7l957ZXGAtaZGjFq+d74ril94wh8qmhdD/9Cbf07quL1EOZ55tZNBO8g1rppzuZZb88kS7vsZDmDfUvzfOVLEj2frGPkhr9xJ5vVl/3Z0uUVvZ6PzmiO+nkLodm7MkzSw7krsrhL9Wl+SAbebjJqjhTLuL2s2kMFJKgW6feWZoXGbz3pfyxoRajo38W8DOHkuyJM0tO5M7K4ZBWvBv51XJFJMDPm6201jmQDrIc+Z1k5zyb4gslcZ2u+DSfHvoUe9LMkiO50cp3phZJkJIpp4bKCziM62MnMen9J3WLxg5amCK79D5qoft/HYQGRnOwsSfMLLkTvB2H+1pL8wcqS3NUVJUu59vsnSFnDFk2UXmWfrxH99Ib4hON2RNlxsxD7hJa8W7g7nxlrzkqxaDVbWT2bvqig8bKFZfeq3WJIgAnOeRnT5IZM29yp3LFelVJBEVPFFgokRHFJGXLq8/emXKrz9JPvrSQ29N0L73ncohjT5AZM3WCd9bKM8csmrhSeaZFCeWYXnYah5bbS8uJC7o/u1WXyCBwh8Or7IkxY6af3GU5nNMiF3pcyTUI5HFmrZVUquxUbavjxnGXykkfXaQ+xaEIe1LMmBkndwKHRVoko461DcqzNzznUEdFbFrxb3brEu3nMZ1DLHtCzJj5R/DXVOWOBWWgaJWjOCMrzNL3l+pOC/2XQwP2RJgxCxy583L4Uot8kF+CyIEeUqOZ4K0JumfpnUiqYU+CGbPAk9vhKqZ4pDl7z1afvVG8oTOMlcihByvgYMYs+AQvpyV5zM/evL7aw21WCiSbGJilv+JQlN1xZsxCR+44lxOL6Nl7355q/Q9qLaj71vGZJxzGMNVQZszCR/DaHH7V4znX0SuL78JRmd1ZZszCT26ExWZpKbRozNaYpd9jGWTMmEXo7M1maWbMInP2nsHhPxF5e7ngres9ns3SzJhFDsErczijoRZaht0pZswij9xOV1eSREnhRm+IK7I7xIxZZBO8kKtaDCKKudkdiX77P/z4dzStRE/LAAAAAElFTkSuQmCC";
+function CREST(w,id){ const h=Math.round(w*1.317); return `<img src="${LOGO_SRC}" width="${w}" height="${h}" alt="S.C. Stiens" style="display:block;object-fit:contain">`; }
+
+/* ---------------- FIFA CARDS ---------------- */
+let store = loadStats();
+function loadStats(){ try{return JSON.parse(localStorage.getItem("scstiens_stats"))||{}}catch(e){return {}} }
+function saveStats(){
+  document.querySelectorAll(".fcard").forEach(c=>{
+    const n=c.dataset.n; store[n]=store[n]||{stats:{},note:""};
+    STAT_KEYS.forEach(k=>{const v=c.querySelector(`[data-stat='${k}']`).value.trim(); store[n].stats[k]=v;});
+    store[n].note=c.querySelector("textarea").value;
+  });
+  localStorage.setItem("scstiens_stats",JSON.stringify(store));
+  flash("Opgeslagen ✓");
+}
+function ovr(n){
+  const s=(store[n]&&store[n].stats)||{};
+  const vals=STAT_KEYS.map(k=>parseInt(s[k])).filter(v=>!isNaN(v));
+  if(vals.length<6) return "–";
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+}
+function initials(name){return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
+function renderCards(){
+  const g=document.getElementById("cardGrid"); g.innerHTML="";
+  PLAYERS.forEach((p,idx)=>{
+    const s=(store[p.n]&&store[p.n].stats)||{};
+    const note=(store[p.n]&&store[p.n].note)||"";
+    const el=document.createElement("div");
+    el.className="fcard "+p.role; el.dataset.n=p.n;
+    el.innerHTML=`
+      <span class="line">${ROLE_LABEL[p.role]||p.pos}</span>
+      <span class="crest">${CREST(34,'c'+idx)}</span>
+      <div class="top">
+        <div class="rating"><div class="ovr" data-ovr>${ovr(p.n)}</div>
+          <div class="pos">${posList(p)[0]}</div>
+          ${posList(p).length>1?`<div class="pos2">${posList(p).slice(1).join(' · ')}</div>`:''}</div>
+        <div class="avatar">${initials(p.n)}</div>
+      </div>
+      <div class="fname">${p.n}</div>
+      <div class="fmeta">${p.age} jr · ${p.city}</div>
+      <div class="divider"></div>
+      <div class="stats">
+        ${STAT_KEYS.map(k=>`<div class="stat"><b>${k}</b>
+          <input data-stat="${k}" value="${s[k]!=null?s[k]:''}" placeholder="–"
+          oninput="recalc('${p.n}')"></div>`).join("")}
+      </div>
+      <div class="foot">
+        <div style="margin:6px 0 4px">
+          <span class="badge">${p.licence==="Ja"?"🚗 Rijdt":(p.car?"":"🚙 Geen auto")||"🚗"}</span>
+          <span class="badge">👕 ${p.shirt}</span>
+          ${p.noFlag?'<span class="badge">🚩 vlagt niet</span>':''}
+        </div>
+        ${(DEVGOALS[p.n]&&DEVGOALS[p.n].dev)?`<div style="font-size:11px;margin:2px 0 5px;line-height:1.3"><b>🎯 Doel:</b> ${DEVGOALS[p.n].dev}${DEVGOALS[p.n].link?` <span class="badge">${DEVGOALS[p.n].link}</span>`:''}</div>`:''}
+        <textarea placeholder="Metingen & video-notities (sprint 30m, max HR, xG, observaties)…">${note}</textarea>
+      </div>`;
+    g.appendChild(el);
+  });
+}
+function recalc(n){
+  const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`);
+  const tmp={}; STAT_KEYS.forEach(k=>tmp[k]=c.querySelector(`[data-stat='${k}']`).value);
+  store[n]=store[n]||{stats:{},note:""}; store[n].stats=tmp;
+  c.querySelector("[data-ovr]").textContent=ovr(n);
+}
+function flash(msg){
+  const d=document.createElement("div"); d.textContent=msg;
+  d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1200;padding:10px 20px;border-radius:999px;font-weight:700;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,.4)";
+  document.body.appendChild(d); setTimeout(()=>d.remove(),1400);
+}
+function exportData(){
+  saveStats();
+  const blob=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="sc_stiens_kaartjes_data.json"; a.click();
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));renderCards();renderMeasTable();renderDev();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
+  r.readAsText(f);
+}
+
+/* ---------------- SQUAD TABLE ---------------- */
+function renderSquad(){
+  const t=document.getElementById("squadTable");
+  t.innerHTML=`<tr><th>Naam</th><th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
+    <th class="center">Pos</th><th>Voorkeursposities</th><th class="center">Rijden</th><th class="center">Shirt</th><th>Prestatiedoel</th></tr>`+
+    PLAYERS.map(p=>`<tr>
+      <td><b>${p.n}</b></td><td class="center">${p.age}</td><td>${p.city}</td><td>${p.job}</td>
+      <td class="center">${p.pos}</td><td class="mini">${p.top}</td>
+      <td class="center">${p.car?'✅':(p.licence.includes('geen auto')?'🚙 geen auto':'❌')}</td>
+      <td class="center">${p.shirt}</td><td class="mini">${p.goal}</td></tr>`).join("");
+}
+
+/* ---------------- FAIR SCHEDULE ---------------- */
+let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],food:[]}
+let sched={pts:{},sub:{}};
+let tasksAssigned=false;
+
+// Build a fresh fixture skeleton from the config (clears any task assignments)
+function buildFixtures(){
+  const M=+document.getElementById("cfgMatches").value;
+  const startStr=document.getElementById("cfgStart").value;
+  const time=document.getElementById("cfgTime").value||"14:30";
+  const pattern=document.getElementById("cfgPattern").value;
+  const start=new Date(startStr+"T00:00:00");
+  fixtures=[];
+  for(let i=0;i<M;i++){
+    const d=new Date(start); d.setDate(d.getDate()+i*7);
+    fixtures.push({
+      date:d.toISOString().slice(0,10), time:time, opponent:"",
+      home: pattern==="allhome" ? true : (i%2===0),
+      drive:[],wash:[],flag:[],food:[]
+    });
+  }
+  tasksAssigned=false;
+  emptyLoad(); renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode();
+}
+
+function emptyLoad(){
+  sched={pts:{},sub:{}};
+  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+}
+
+// Fair task assignment over the current fixtures
+function assignTasks(){
+  if(!fixtures.length){buildFixtures();}
+  const nDrivers=+document.getElementById("cfgDrivers").value;
+  const nWash=+document.getElementById("cfgWash").value;
+  const pts={}, sub={};
+  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+  const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
+  const washPool=PLAYERS.map(p=>p.n);
+  const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
+  const foodPool=PLAYERS.map(p=>p.n);
+  function pick(pool,used,count){
+    const chosen=[];
+    for(let i=0;i<count;i++){
+      const cand=pool.filter(n=>!used.has(n));
+      if(!cand.length) break;
+      cand.sort((a,b)=> pts[a]-pts[b] || Math.random()-0.5);
+      const win=cand[0]; chosen.push(win); used.add(win); pts[win]++;
+    }
+    return chosen;
+  }
+  fixtures.forEach(f=>{
+    const used=new Set();
+    f.wash=pick(washPool,used,nWash); f.wash.forEach(n=>sub[n].wash++);
+    if(f.home){
+      f.drive=[];
+      f.flag=pick(flagPool,used,1); f.flag.forEach(n=>sub[n].flag++);
+      f.food=pick(foodPool,used,1); f.food.forEach(n=>sub[n].food++);   // eten alleen thuis
+    } else {
+      f.flag=[]; f.food=[];                                            // geen eten bij uitwedstrijden
+      f.drive=pick(drivers,used,nDrivers); f.drive.forEach(n=>sub[n].drive++);
+    }
+  });
+  sched={pts,sub}; tasksAssigned=true;
+  renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode();
+  flash("Taken eerlijk verdeeld ✓");
+}
+
+function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
+function renderSchedTable(){
+  const t=document.getElementById("schedTable");
+  t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
+    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlag/fluit</th><th>🟢 Eten/coörd.</th></tr>`+
+    fixtures.map((f,idx)=>`<tr>
+      <td class="center">${idx+1}</td>
+      <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
+      <td><input type="time" value="${f.time}" style="width:90px" onchange="fixtures[${idx}].time=this.value"></td>
+      <td><input type="text" value="${f.opponent.replace(/"/g,'&quot;')}" placeholder="tegenstander…" style="min-width:120px"
+           onchange="fixtures[${idx}].opponent=this.value"></td>
+      <td class="center"><select onchange="fixtures[${idx}].home=(this.value==='H')">
+           <option value="H" ${f.home?'selected':''}>Thuis</option>
+           <option value="U" ${!f.home?'selected':''}>Uit</option></select></td>
+      <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
+      <td>${names(f.wash)}</td>
+      <td>${f.home?names(f.flag):'<span class="mini">n.v.t.</span>'}</td>
+      <td>${f.home?names(f.food):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
+  // style the inline inputs
+  t.querySelectorAll("input,select").forEach(el=>{
+    el.style.background="var(--bg2)";el.style.color="var(--txt)";
+    el.style.border="1px solid var(--line)";el.style.borderRadius="6px";el.style.padding="5px 6px";el.style.fontSize="12.5px";
+  });
+}
+
+/* ---------------- ICS CALENDAR EXPORT ---------------- */
+function icsEscape(s){return (s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");}
+function dtStamp(dateStr,timeStr,addMin){
+  const d=new Date(dateStr+"T"+(timeStr||"14:30")+":00");
+  if(addMin) d.setMinutes(d.getMinutes()+addMin);
+  const p=n=>String(n).padStart(2,"0");
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"T"+p(d.getHours())+p(d.getMinutes())+"00";
+}
+function foldLine(line){ // RFC5545: fold lines >75 octets
+  let out=""; while(line.length>73){ out+=line.slice(0,73)+"\r\n "; line=line.slice(73);} return out+line;
+}
+function exportICS(){
+  if(!fixtures.length){alert("Maak eerst een rooster (klik op 'Nieuw rooster').");return;}
+  if(!tasksAssigned && !confirm("Er zijn nog geen taken verdeeld. Toch exporteren zonder taakverdeling?")) return;
+  const now=dtStamp(new Date().toISOString().slice(0,10),new Date().toTimeString().slice(0,5),0);
+  let ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//SC Stiens VR1//Teamdashboard//NL",
+           "CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:SC Stiens VR1 2026/2027"];
+  fixtures.forEach((f,idx)=>{
+    const tu=f.home?"Thuis":"Uit";
+    const opp=f.opponent.trim()||("Wedstrijd "+(idx+1));
+    const summary=`⚽ SC Stiens VR1 (${tu}) vs ${opp}`;
+    const descLines=[];
+    if(!f.home && f.drive.length) descLines.push("🔵 Rijden: "+f.drive.join(", "));
+    if(f.wash.length) descLines.push("🟣 Wassen: "+f.wash.join(", "));
+    if(f.home && f.flag.length) descLines.push("🟡 Vlaggen/fluiten: "+f.flag.join(", "));
+    if(f.food.length) descLines.push("🟢 Eten/wedstrijdcoördinator: "+f.food.join(", "));
+    const desc=descLines.join("\n")||"Nog geen taken verdeeld.";
+    const uid="scstiens-"+idx+"-"+f.date+"@dashboard";
+    ics.push("BEGIN:VEVENT");
+    ics.push("UID:"+uid);
+    ics.push("DTSTAMP:"+now);
+    ics.push("DTSTART:"+dtStamp(f.date,f.time,0));
+    ics.push("DTEND:"+dtStamp(f.date,f.time,120));
+    ics.push(foldLine("SUMMARY:"+icsEscape(summary)));
+    ics.push(foldLine("DESCRIPTION:"+icsEscape(desc)));
+    ics.push(foldLine("LOCATION:"+icsEscape(f.home?"Sportpark Stiens":("Uit — "+opp))));
+    ics.push("END:VEVENT");
+  });
+  ics.push("END:VCALENDAR");
+  const blob=new Blob([ics.join("\r\n")],{type:"text/calendar;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="SC_Stiens_VR1_2026-2027.ics"; a.click();
+  flash("Agenda geëxporteerd 📅");
+}
+function renderBalance(){
+  const b=document.getElementById("balance");
+  const max=Math.max(...Object.values(sched.pts),1);
+  b.innerHTML=PLAYERS.map(p=>{
+    const s=sched.sub[p.n], tot=sched.pts[p.n];
+    return `<div class="bar-row"><div>${p.n}${p.car?'':' <span class="mini">(geen auto)</span>'}</div>
+      <div class="bar"><span style="width:${tot/max*100}%"></span></div>
+      <div class="center"><b>${tot}</b></div></div>`;
+  }).join("");
+}
+function renderPerPlayer(){
+  const t=document.getElementById("perPlayer");
+  t.innerHTML=`<tr><th>Speelster</th><th class="center">🔵 Rijden</th><th class="center">🟣 Wassen</th>
+    <th class="center">🟡 Vlag/fluit</th><th class="center">🟢 Eten/coörd.</th><th class="center">Totaal</th></tr>`+
+    PLAYERS.map(p=>{const s=sched.sub[p.n];return `<tr>
+      <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
+      <td class="center">${s.flag}</td><td class="center">${s.food}</td>
+      <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
+}
+
+/* ---------------- METINGEN → STATS ---------------- */
+const MEAS_FIELDS=[
+  {k:"s5",lbl:"Sprint 5m (s)",step:"0.01",ph:"start"},
+  {k:"s15",lbl:"Sprint 15m (s)",step:"0.01",ph:"→PAC"},
+  {k:"s25",lbl:"Sprint 25m (s)",step:"0.01",ph:"volgehouden"},
+  {k:"cond",lbl:"Conditie-eindniveau",step:"0.1",ph:"→PHY"},
+  {k:"sho",lbl:"Afronden (1-10)",step:"0.5",ph:"→SHO"},
+  {k:"pas",lbl:"Passing (1-10)",step:"0.5",ph:"→PAS"},
+  {k:"dri",lbl:"Techniek (1-10)",step:"0.5",ph:"→DRI"},
+  {k:"def",lbl:"Verdedigen (1-10)",step:"0.5",ph:"→DEF"},
+];
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function statFromTime(t,fast,slow){ if(isNaN(t))return null; const f=(t-slow)/(fast-slow); return Math.round(clamp(50+f*49,1,99)); }
+function statFromCond(x,fast,slow){ if(isNaN(x))return null; const f=(x-slow)/(fast-slow); return Math.round(clamp(50+f*49,1,99)); }
+function statFromScore(v){ if(isNaN(v))return null; return Math.round(clamp(v/10*99,1,99)); }
+function getMeas(n){ store[n]=store[n]||{stats:{},note:"",meas:{}}; store[n].meas=store[n].meas||{}; return store[n].meas; }
+function applyMeas(){
+  const fast=+document.getElementById("anchFast").value, slow=+document.getElementById("anchSlow").value;
+  const cFast=+document.getElementById("condFast").value, cSlow=+document.getElementById("condSlow").value;
+  PLAYERS.forEach(p=>{
+    const m=getMeas(p.n); const s=store[p.n].stats=store[p.n].stats||{};
+    const pac=statFromTime(parseFloat(m.s15),fast,slow); if(pac!=null)s.PAC=pac;
+    const phy=statFromCond(parseFloat(m.cond),cFast,cSlow); if(phy!=null)s.PHY=phy;
+    const sho=statFromScore(parseFloat(m.sho)); if(sho!=null)s.SHO=sho;
+    const pas=statFromScore(parseFloat(m.pas)); if(pas!=null)s.PAS=pas;
+    const dri=statFromScore(parseFloat(m.dri)); if(dri!=null)s.DRI=dri;
+    const def=statFromScore(parseFloat(m.def)); if(def!=null)s.DEF=def;
+  });
+  renderCards(); renderMeasTable(); renderDev(); flash("Stats berekend uit metingen ✓");
+}
+function renderMeasTable(){
+  const t=document.getElementById("measTable");
+  t.innerHTML=`<tr><th>Speelster</th>${MEAS_FIELDS.map(f=>`<th class="center">${f.lbl}</th>`).join("")}
+    <th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">PHY</th>
+    <th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">OVR</th></tr>`+
+    PLAYERS.map(p=>{
+      const m=getMeas(p.n), s=(store[p.n]&&store[p.n].stats)||{};
+      return `<tr><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
+        MEAS_FIELDS.map(f=>`<td class="center"><input type="number" step="${f.step}" value="${m[f.k]!=null?m[f.k]:''}" placeholder="${f.ph}"
+          style="width:64px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
+          oninput="getMeas('${p.n.replace(/'/g,"\\'")}')['${f.k}']=this.value"></td>`).join("")+
+        `<td class="center" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center"><b>${s.PHY??'–'}</b></td>
+         <td class="center"><b>${s.SHO??'–'}</b></td><td class="center"><b>${s.PAS??'–'}</b></td>
+         <td class="center"><b>${s.DRI??'–'}</b></td><td class="center"><b>${s.DEF??'–'}</b></td>
+         <td class="center"><b>${ovr(p.n)}</b></td></tr>`;
+    }).join("");
+}
+
+/* ---------------- ONTWIKKELING / LEERDOELEN ---------------- */
+const STATUS_COLOR={open:"#9fb0d8",bezig:"#4aa3ff",behaald:"#37d67a"};
+function setGoalStatus(n,v){ getGoal(n).status=v; renderDev(); }
+function setGoalPct(n,v){ const g=getGoal(n); g.pct=+v;
+  const row=document.querySelector(`#devTable tr[data-n="${CSS.escape(n)}"]`);
+  if(row){ row.querySelector(".pctlbl").textContent=v+"%"; row.querySelector(".bar span").style.width=v+"%"; }
+}
+function renderDev(){
+  const t=document.getElementById("devTable");
+  t.innerHTML=`<tr><th>Speelster</th><th>Ontwikkelpunt (individueel)</th><th>Procesdoel</th>
+    <th class="center">Stat</th><th class="center">Huidig</th><th class="center">Status</th><th>Voortgang</th></tr>`+
+    PLAYERS.map(p=>{
+      const d=DEVGOALS[p.n]||{dev:"",proc:"",link:""}; const g=getGoal(p.n);
+      const s=(store[p.n]&&store[p.n].stats)||{};
+      const cur=d.link?(s[d.link]??"–"):"–";
+      return `<tr data-n="${p.n}">
+        <td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>
+        <td class="mini">${d.dev||'<i>nog invullen</i>'}</td>
+        <td class="mini">${d.proc||'—'}</td>
+        <td class="center">${d.link?`<span class="badge">${d.link}</span>`:'—'}</td>
+        <td class="center"><b>${cur}</b></td>
+        <td class="center"><select onchange="setGoalStatus('${p.n.replace(/'/g,"\\'")}',this.value)"
+            style="background:var(--bg2);color:${STATUS_COLOR[g.status]};border:1px solid var(--line);border-radius:6px;padding:5px;font-weight:600">
+            ${STATUS_OPTS.map(o=>`<option value="${o[0]}" ${g.status===o[0]?'selected':''}>${o[1]}</option>`).join("")}</select></td>
+        <td><div style="display:flex;align-items:center;gap:8px;min-width:180px">
+            <input type="range" min="0" max="100" step="5" value="${g.pct}" style="flex:1"
+              oninput="setGoalPct('${p.n.replace(/'/g,"\\'")}',this.value)">
+            <span class="pctlbl" style="width:38px;text-align:right"><b>${g.pct}%</b></span></div>
+            <div class="bar" style="margin-top:5px"><span style="width:${g.pct}%"></span></div></td>
+      </tr>`;
+    }).join("");
+}
+
+/* ---------------- BELASTBAARHEID ---------------- */
+function classify(p){
+  const j=p.job.toLowerCase(), h=(p.holiday||"").toLowerCase(); const tags=[];
+  if(/gymdoc|fysio|kok|verpleeg|sportkunde/.test(j))
+    tags.push({i:"🟢",t:"Fysiek/staand werk",a:"Cumulatieve dagbelasting — stem omvang & intensiteit van de training af, let op stapeling van vermoeidheid (slide 78)."});
+  if(/hrm|recruit|communicatie|advis|intercedent|veiligheidskunde|hotelschool|productieleider/.test(j))
+    tags.push({i:"🟡",t:"Overwegend zittend",a:"Risico structurele onderbelasting — extra activatie/warming-up en beweegprikkels naast de training (slide 79)."});
+  if(/verpleeg|zorg|kok|theater|film|productieleider|reclame/.test(j))
+    tags.push({i:"🔵",t:"Onregelmatige/avond-nachtdiensten",a:"Trainingsbelasting individueel afstemmen en tijdig plannen; communicatie is cruciaal (slide 78)."});
+  if(/stage|buitenland|reis|okt|nov|jan|septemb|engeland/.test(h))
+    tags.push({i:"🟣",t:"Langere afwezigheid / later beschikbaar",a:"Na terugkeer geleidelijke opbouw van trainingen én speelminuten; minder vaak/lang/intensief starten (slide 59–60)."});
+  if(!tags.length) tags.push({i:"⚪",t:"Geen bijzonderheden",a:"Standaard opbouw volgens periodiseringsmodel."});
+  return tags;
+}
+function renderBel(){
+  const t=document.getElementById("belTable");
+  t.innerHTML=`<tr><th>Speelster</th><th>Werk/studie</th><th>Zomer/afwezig</th><th>Signalen</th><th>Advies (KNVB)</th></tr>`+
+    PLAYERS.map(p=>{const c=classify(p);
+      return `<tr><td><b>${p.n}</b></td><td class="mini">${p.job}</td><td class="mini">${p.holiday||'—'}</td>
+        <td>${c.map(x=>`<span class="badge">${x.i} ${x.t}</span>`).join("<br>")}</td>
+        <td class="mini">${c.map(x=>x.a).join("<br>")}</td></tr>`;}).join("");
+}
+
+/* ---------------- PERIODISERING ---------------- */
+function vctForWeek(i,cycle){
+  const loop=(i%3)+1;
+  const block = cycle==6 ? Math.floor((i%6)/2) : (i%3);
+  if(block===0) return {focus:"Volhouden — grote partij (extensieve duur)",
+    main:"VCT 11v11 / 8v8 (overload)", sprintLoop:`Intervalloopvorm ${loop} (extensieve duur)`, ul:"7v7 / 5v5 — UL 50%"};
+  if(block===1) return {focus:"Sneller herstellen — middengroot (intensieve duur)",
+    main:"VCT 7v7 / 5v5", sprintLoop:`VsWr (sprints weinig rust) · loopvorm ${loop}`, ul:"4v4 / 3v3 — UL 50%"};
+  return {focus:"Explosiever handelen — klein (extensieve interval)",
+    main:"VCT 4v4 / 3v3", sprintLoop:`VsVr (sprints veel rust) · loopvorm ${loop}`, ul:"11v11 / 8v8 — UL 50%"};
+}
+function renderPeriode(){
+  const t=document.getElementById("periodeTable");
+  if(!fixtures.length){ t.innerHTML="<tr><td>Genereer eerst een wedstrijdschema op het tabblad <b>Taakschema's</b>.</td></tr>"; return; }
+  const cycle=+document.getElementById("cycleLen").value;
+  const trN=+document.getElementById("trPerWk").value;
+  t.innerHTML=`<tr><th class="center">Wk</th><th>Weekstart</th><th>Wedstrijd</th><th>Focus</th>
+    <th>Hoofdvorm VCT</th><th>Sprint/loopvorm</th><th>Underload (voor wed.)</th><th class="center">Tr./wk</th></tr>`+
+    fixtures.map((f,i)=>{
+      const v=vctForWeek(i,cycle);
+      const opp=(f.opponent||"").trim()||("Wedstrijd "+(i+1));
+      const tu=f.home?"(thuis)":"(uit)";
+      return `<tr><td class="center">${i+1}</td>
+        <td class="mini">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td>
+        <td class="mini">${opp} ${tu}</td>
+        <td>${v.focus}</td>
+        <td><span class="tag t-food">${v.main}</span></td>
+        <td class="mini">${v.sprintLoop}</td>
+        <td class="mini">${v.ul}</td>
+        <td class="center">${trN}×</td></tr>`;
+    }).join("");
+}
+
+/* ---------------- TABS ---------------- */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    document.getElementById(b.dataset.tab).classList.add("active");
+  };
+});
+
+/* ---------------- INIT ---------------- */
+renderCards(); renderSquad(); buildFixtures(); assignTasks();
+renderMeasTable(); renderDev(); renderBel(); renderPeriode();
+document.getElementById("crestHeader").innerHTML=CREST(66,'h');
+</script>
+</body>
+</html>
