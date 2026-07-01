@@ -1137,7 +1137,7 @@ function toggleQR(n,btn){ const box=btn.parentElement.querySelector(".qrbox");
   if(box.dataset.on){ box.innerHTML=""; box.dataset.on=""; return; }
   box.innerHTML=""; try{ new QRCode(box,{text:playerLink(n),width:120,height:120,colorDark:"#141416",colorLight:"#ffffff"}); box.dataset.on="1"; }catch(e){ box.textContent="QR-lib niet geladen"; } }
 function getPhone(n){ return (store[n]&&store[n].phone)||""; }
-function setPhone(n,v){ store[n]=store[n]||{stats:{},note:""}; store[n].phone=v; }
+function setPhone(n,v){ store[n]=store[n]||{stats:{},note:""}; store[n].phone=v; if(typeof backupPhonesLocal==="function") backupPhonesLocal(); }
 function sanitizePhone(raw){ let d=(raw||"").replace(/[^\d]/g,""); if(!d)return "";
   if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="31"+d.slice(1); return d; }
 function waMessage(n){ return "Hoi "+n+"! Dit is je persoonlijke maandelijkse check-in voor SC Stiens VR1 — hoe voel je je, mentaal & fysiek? "+
@@ -1416,24 +1416,16 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
-function collectState(){
-  // Telefoonnummers gaan NIET mee in de openbaar-leesbare blob; die staan in de staf-only tabel.
-  const clean={};
-  Object.keys(store).forEach(k=>{ const v=store[k];
-    if(v && typeof v==="object" && "phone" in v){ const c=Object.assign({},v); delete c.phone; clean[k]=c; }
-    else clean[k]=v; });
-  return {store:clean, fixtures:fixtures};
-}
+function collectState(){ return {store:store, fixtures:fixtures}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); }catch(e){} }
-// Telefoonnummers: alleen leesbaar/schrijfbaar voor ingelogde staf (aparte tabel staff_private).
-async function cloudSavePhones(){ if(!CLOUD||!isStaff) return;
-  const phones={}; PLAYERS.forEach(p=>{ if(store[p.n]&&store[p.n].phone) phones[p.n]=store[p.n].phone; });
-  try{ await sb.from("staff_private").upsert({id:"main",data:{phones},updated_at:new Date().toISOString()}); }catch(e){ console.warn("savePhones",e); } }
-async function cloudLoadPhones(){ if(!CLOUD||!isStaff) return;
-  try{ const {data}=await sb.from("staff_private").select("data").eq("id","main").maybeSingle();
-    const ph=(data&&data.data&&data.data.phones)||{};
-    PLAYERS.forEach(p=>{ if(ph[p.n]!=null){ store[p.n]=store[p.n]||{stats:{},note:""}; store[p.n].phone=ph[p.n]; } }); }catch(e){ console.warn("loadPhones",e); } }
+// Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
+function recoverPhonesFromLocal(){ if(!isStaff) return;
+  try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
+    PLAYERS.forEach(p=>{ if((!store[p.n]||!store[p.n].phone) && bak[p.n]){ store[p.n]=store[p.n]||{stats:{},note:""}; store[p.n].phone=bak[p.n]; } }); }catch(e){}
+}
+function backupPhonesLocal(){ try{ const bak={}; PLAYERS.forEach(p=>{ if(store[p.n]&&store[p.n].phone) bak[p.n]=store[p.n].phone; });
+  if(Object.keys(bak).length) localStorage.setItem("scstiens_phones_bak",JSON.stringify(bak)); }catch(e){} }
 // Alleen-lezen voor iedereen die niet als staf is ingelogd (alleen in cloud-modus).
 const STAFF_TABS=["mood","belasting","kas"];  // alleen zichtbaar als staf ingelogd is
 function applyStaffGate(){
@@ -1452,19 +1444,20 @@ async function cloudLoad(){
   if(!CLOUD) return;
   try{ const {data,error}=await sb.from("dashboard_state").select("data").eq("id","main").maybeSingle();
     if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
-  await cloudLoadPhones();
+  recoverPhonesFromLocal();
 }
 async function cloudSave(){
   if(!CLOUD) return true;
   if(!isStaff) return false;
+  backupPhonesLocal();
   try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
-    if(error){ console.warn(error); return false; } await cloudSavePhones(); return true; }catch(e){ console.warn("cloudSave",e); return false; }
+    if(error){ console.warn(error); return false; } return true; }catch(e){ console.warn("cloudSave",e); return false; }
 }
 function cloudSubscribe(){
   if(!CLOUD) return;
   sb.channel("state-main").on("postgres_changes",
     {event:"*",schema:"public",table:"dashboard_state",filter:"id=eq.main"},
-    async payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); await cloudLoadPhones(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
+    payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); recoverPhonesFromLocal(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
   ).subscribe();
 }
 async function refreshAuthUI(){
@@ -1482,7 +1475,7 @@ async function staffLogin(){
   const pass=prompt("Wachtwoord:"); if(!pass) return;
   const {error}=await sb.auth.signInWithPassword({email:email.trim(),password:pass});
   if(error){ alert("Inloggen mislukt: "+error.message); return; }
-  isStaff=true; await refreshAuthUI(); await cloudLoadPhones(); renderAll(); flash("Ingelogd als staf ✓");
+  isStaff=true; await refreshAuthUI(); recoverPhonesFromLocal(); renderAll(); flash("Ingelogd als staf ✓");
 }
 async function staffLogout(){ try{ await sb.auth.signOut(); }catch(e){} isStaff=false; clearPhones(); await refreshAuthUI(); renderAll(); flash("Uitgelogd"); }
 async function cloudInit(){
