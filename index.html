@@ -386,7 +386,7 @@
       <br><b>Vlaggen</b> (grensrechter) gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: iedereen vlagt minstens één keer
       (bij ≥ 16 wedstrijden komt de hele selectie aan bod). <b>Fluiten + wedstrijdcoördinator</b> is samengevoegd tot één taak bij
       thuiswedstrijden. <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
-      Amber vlagt/fluit niet (eigen voorkeur) en pakt daarom extra was-/eettaken op.
+      Amber fluit niet (eigen voorkeur) — ze vlagt wel gewoon mee en pakt daarnaast extra was-/eettaken op.
     </div>
 
     <div class="controls">
@@ -548,7 +548,7 @@ const PLAYERS = [
   {n:"Jetty De Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
   {n:"Sigrid", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
   {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
-  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Nee", car:false, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noFlag:true, noteExtra:"Wil niet fluiten/vlaggen; pakt vaker wedstrijdcoördinator op"},
+  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Nee", car:false, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; vlagt wel en pakt daarom extra andere taken op"},
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
 ];
 const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
@@ -680,7 +680,6 @@ function renderCards(){
           <span class="statval" data-stat="${k}">${s[k]!=null?s[k]:'–'}</span></div>`).join("")}
       </div>
       <div class="foot">
-        ${p.noFlag?'<div style="margin:6px 0 4px"><span class="badge">🚩 vlagt niet</span></div>':''}
         ${cardGoalHTML(p.n)}
         <textarea placeholder="Metingen & video-notities (sprint 30m, max HR, xG, observaties)…">${note}</textarea>
       </div>`;
@@ -761,8 +760,8 @@ function assignTasks(){
   PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,ref:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
-  const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
-  const refPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);   // fluiten + wedstrijdcoördinator (excl. wie niet wil fluiten)
+  const flagPool=PLAYERS.map(p=>p.n);                        // vlaggen: iedereen (ook Amber)
+  const refPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // fluiten + wedstrijdcoördinator (excl. wie niet wil fluiten)
   // Kies 1 speelster. Doel: eerlijk totaal + variatie (niet steeds hetzelfde klusje).
   //   balans-modus (standaard): (1) laagste totaal, (2) wie dit taaktype het minst deed,
   //   coverage-modus (vlaggen): (1) wie dit taaktype het minst deed, (2) laagste totaal.
