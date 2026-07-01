@@ -602,8 +602,8 @@ function getGoals(n){
   return store[n].goals;
 }
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-function addGoal(n){ getGoals(n).push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); }
-function removeGoal(n,i){ const g=getGoals(n); g.splice(i,1); if(!g.length)g.push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); }
+function addGoal(n){ getGoals(n).push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); scheduleSave(); }
+function removeGoal(n,i){ const g=getGoals(n); g.splice(i,1); if(!g.length)g.push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); scheduleSave(); }
 function setGoalField(n,i,field,val){ getGoals(n)[i][field]=val; if(field!=="text"){renderDev(); renderCards();} else {updateCardGoal(n);} }
 function setGoalStatus(n,i,v){ const g=getGoals(n)[i]; g.status=v; if(v==="behaald"&&g.pct<100)g.pct=100; renderDev(); renderCards(); }
 function setGoalPct(n,i,v,el){ getGoals(n)[i].pct=+v;
@@ -1302,8 +1302,8 @@ function renderRules(){ const t=document.getElementById("rulesTable"); if(!t)ret
       <td><button class="del" onclick="delRule(${i})">×</button></td></tr>`).join("");
   fillReasonSelect();
 }
-function addRule(){ kas().rules.push({reason:"Nieuwe reden",amount:1}); renderRules(); }
-function delRule(i){ kas().rules.splice(i,1); renderRules(); }
+function addRule(){ kas().rules.push({reason:"Nieuwe reden",amount:1}); renderRules(); scheduleSave(); }
+function delRule(i){ kas().rules.splice(i,1); renderRules(); scheduleSave(); }
 function fillReasonSelect(){ const s=document.getElementById("fReason"); if(!s)return; const cur=s.value;
   s.innerHTML=kas().rules.map(r=>`<option value="${(r.reason||'').replace(/"/g,'&quot;')}">${r.reason} (${eur(r.amount)})</option>`).join("");
   if(cur)s.value=cur; }
@@ -1313,13 +1313,13 @@ function fillKasPlayers(){ ["fPlayer","foodCook"].forEach(id=>{const s=document.
   s.innerHTML=PLAYERS.map(p=>`<option value="${p.n}">${p.n}</option>`).join(""); if(cur)s.value=cur;}); }
 
 function addFine(player,reason,amount,date){ kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false});
-  renderFines(); renderKasOverview(); flash("Boete: "+player); }
+  renderFines(); renderKasOverview(); scheduleSave(); flash("Boete: "+player); }
 function addFineFromForm(){ const p=document.getElementById("fPlayer").value; const reason=document.getElementById("fReason").value;
   const amount=+document.getElementById("fAmount").value; const date=document.getElementById("fDate").value||todayStr();
   if(!p||!amount){ alert("Kies een speelster en een bedrag."); return; }
   addFine(p,reason,amount,date); }
-function toggleFinePaid(id){ const f=kas().fines.find(x=>x.id===id); if(f)f.paid=!f.paid; renderFines(); renderKasOverview(); }
-function delFine(id){ kas().fines=kas().fines.filter(x=>x.id!==id); renderFines(); renderKasOverview(); }
+function toggleFinePaid(id){ const f=kas().fines.find(x=>x.id===id); if(f)f.paid=!f.paid; renderFines(); renderKasOverview(); scheduleSave(); }
+function delFine(id){ kas().fines=kas().fines.filter(x=>x.id!==id); renderFines(); renderKasOverview(); scheduleSave(); }
 function renderFines(){ const w=document.getElementById("finesList"); if(!w)return;
   const potPaid=kas().fines.filter(f=>f.paid).reduce((a,f)=>a+f.amount,0);
   const potOpen=kas().fines.filter(f=>!f.paid).reduce((a,f)=>a+f.amount,0);
@@ -1342,9 +1342,9 @@ function addFoodFromForm(){ const date=document.getElementById("foodDate").value
   if(!total||!shareWith.length){ alert("Vul een bedrag in en vink aan met wie je deelt."); return; }
   kas().food.push({id:uid(),date,cook,total,shareWith,paid:{}});
   document.getElementById("foodTotal").value="";
-  renderFood(); renderKasOverview(); flash("Eten: "+eur(total/shareWith.length)+" p.p."); }
-function toggleFoodPaid(id,name){ const f=kas().food.find(x=>x.id===id); if(f){f.paid[name]=!f.paid[name];} renderFood(); renderKasOverview(); }
-function delFood(id){ kas().food=kas().food.filter(x=>x.id!==id); renderFood(); renderKasOverview(); }
+  renderFood(); renderKasOverview(); scheduleSave(); flash("Eten: "+eur(total/shareWith.length)+" p.p."); }
+function toggleFoodPaid(id,name){ const f=kas().food.find(x=>x.id===id); if(f){f.paid[name]=!f.paid[name];} renderFood(); renderKasOverview(); scheduleSave(); }
+function delFood(id){ kas().food=kas().food.filter(x=>x.id!==id); renderFood(); renderKasOverview(); scheduleSave(); }
 function renderFood(){ const w=document.getElementById("foodList"); if(!w)return; const F=kas().food.slice().sort((a,b)=>a.date<b.date?1:-1);
   if(!F.length){ w.innerHTML='<p class="hint">Nog geen eten-uitgaven.</p>'; return; }
   w.innerHTML=F.map(f=>{ const per=f.total/f.shareWith.length;
@@ -1447,18 +1447,32 @@ async function cloudLoad(){
     if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
   recoverPhonesFromLocal();
 }
+let _lastSaveAt=0;
 async function cloudSave(){
   if(!CLOUD) return true;
   if(!isStaff) return false;
   backupPhonesLocal();
+  _lastSaveAt=Date.now();
   try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
-    if(error){ console.warn(error); return false; } return true; }catch(e){ console.warn("cloudSave",e); return false; }
+    if(error){ console.warn(error); return false; } _lastSaveAt=Date.now(); return true; }catch(e){ console.warn("cloudSave",e); return false; }
 }
+// ---- Automatisch opslaan: bewaart lokaal meteen en in de cloud kort na de laatste wijziging ----
+let _saveTimer=null;
+function scheduleSave(){
+  if(typeof persistLocal==="function") persistLocal();
+  if(!(typeof CLOUD!=="undefined" && CLOUD && isStaff)) return;
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{ cloudSave(); }, 1200);
+}
+document.addEventListener("input",  ()=>{ if(typeof isStaff!=="undefined" && isStaff) scheduleSave(); });
+document.addEventListener("change", ()=>{ if(typeof isStaff!=="undefined" && isStaff) scheduleSave(); });
 function cloudSubscribe(){
   if(!CLOUD) return;
   sb.channel("state-main").on("postgres_changes",
     {event:"*",schema:"public",table:"dashboard_state",filter:"id=eq.main"},
-    payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); recoverPhonesFromLocal(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
+    payload=>{ if(!(payload.new && payload.new.data)) return;
+      if(Date.now()-_lastSaveAt < 3000) return;   // eigen zojuist-opgeslagen wijziging: niet opnieuw renderen
+      applyState(payload.new.data); recoverPhonesFromLocal(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); }
   ).subscribe();
 }
 async function refreshAuthUI(){
