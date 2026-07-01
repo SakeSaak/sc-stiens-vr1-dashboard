@@ -680,11 +680,7 @@ function renderCards(){
           <span class="statval" data-stat="${k}">${s[k]!=null?s[k]:'–'}</span></div>`).join("")}
       </div>
       <div class="foot">
-        <div style="margin:6px 0 4px">
-          <span class="badge">${p.licence==="Ja"?"🚗 Rijdt":(p.car?"":"🚙 Geen auto")||"🚗"}</span>
-          <span class="badge">👕 ${p.shirt}</span>
-          ${p.noFlag?'<span class="badge">🚩 vlagt niet</span>':''}
-        </div>
+        ${p.noFlag?'<div style="margin:6px 0 4px"><span class="badge">🚩 vlagt niet</span></div>':''}
         ${cardGoalHTML(p.n)}
         <textarea placeholder="Metingen & video-notities (sprint 30m, max HR, xG, observaties)…">${note}</textarea>
       </div>`;
