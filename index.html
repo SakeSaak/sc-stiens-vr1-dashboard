@@ -140,6 +140,20 @@
   .authbar{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px;font-size:13px}
   .authmode{color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:999px}
   .authmode.ok{color:var(--green);border-color:rgba(55,214,122,.5)}
+  /* Alleen-lezen (niet ingelogd): geen bewerken/versturen; navigeren mag wel */
+  body.readonly .wrap input,
+  body.readonly .wrap select,
+  body.readonly .wrap textarea,
+  body.readonly .wrap .btn,
+  body.readonly .wrap .submit,
+  body.readonly .wrap .del,
+  body.readonly .wrap details summary{ pointer-events:none !important; }
+  body.readonly .wrap input,
+  body.readonly .wrap select,
+  body.readonly .wrap textarea{ opacity:.6 }
+  body.readonly .wrap .btn,
+  body.readonly .wrap .del,
+  body.readonly .wrap .submit{ opacity:.4; filter:grayscale(1) }
   .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
     padding:12px 14px;font-size:13px;color:#ffe6a8;line-height:1.55;margin-bottom:16px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -1377,39 +1391,60 @@ const CLOUD = !!(SUPA_URL && SUPA_KEY && window.supabase);
 let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
-function collectState(){ return {store:store, fixtures:fixtures}; }
-function applyState(st){ if(st && st.store) store=st.store; if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
+function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
+function collectState(){
+  // Telefoonnummers gaan NIET mee in de openbaar-leesbare blob; die staan in de staf-only tabel.
+  const clean={};
+  Object.keys(store).forEach(k=>{ const v=store[k];
+    if(v && typeof v==="object" && "phone" in v){ const c=Object.assign({},v); delete c.phone; clean[k]=c; }
+    else clean[k]=v; });
+  return {store:clean, fixtures:fixtures};
+}
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); }catch(e){} }
+// Telefoonnummers: alleen leesbaar/schrijfbaar voor ingelogde staf (aparte tabel staff_private).
+async function cloudSavePhones(){ if(!CLOUD||!isStaff) return;
+  const phones={}; PLAYERS.forEach(p=>{ if(store[p.n]&&store[p.n].phone) phones[p.n]=store[p.n].phone; });
+  try{ await sb.from("staff_private").upsert({id:"main",data:{phones},updated_at:new Date().toISOString()}); }catch(e){ console.warn("savePhones",e); } }
+async function cloudLoadPhones(){ if(!CLOUD||!isStaff) return;
+  try{ const {data}=await sb.from("staff_private").select("data").eq("id","main").maybeSingle();
+    const ph=(data&&data.data&&data.data.phones)||{};
+    PLAYERS.forEach(p=>{ if(ph[p.n]!=null){ store[p.n]=store[p.n]||{stats:{},note:""}; store[p.n].phone=ph[p.n]; } }); }catch(e){ console.warn("loadPhones",e); } }
+// Alleen-lezen voor iedereen die niet als staf is ingelogd (alleen in cloud-modus).
+function applyStaffGate(){ if(!CLOUD){ document.body.classList.remove("readonly"); return; } document.body.classList.toggle("readonly", !isStaff); }
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderKasAll();
+  applyStaffGate();
 }
 async function cloudLoad(){
   if(!CLOUD) return;
   try{ const {data,error}=await sb.from("dashboard_state").select("data").eq("id","main").maybeSingle();
     if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
+  await cloudLoadPhones();
 }
 async function cloudSave(){
   if(!CLOUD) return true;
   if(!isStaff) return false;
   try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
-    if(error){ console.warn(error); return false; } return true; }catch(e){ console.warn("cloudSave",e); return false; }
+    if(error){ console.warn(error); return false; } await cloudSavePhones(); return true; }catch(e){ console.warn("cloudSave",e); return false; }
 }
 function cloudSubscribe(){
   if(!CLOUD) return;
   sb.channel("state-main").on("postgres_changes",
     {event:"*",schema:"public",table:"dashboard_state",filter:"id=eq.main"},
-    payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
+    async payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); await cloudLoadPhones(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
   ).subscribe();
 }
 async function refreshAuthUI(){
   const bar=document.getElementById("authbar"); if(!bar) return;
-  if(!CLOUD){ bar.innerHTML='<span class="authmode">💾 Lokaal (niet gedeeld) — cloud nog niet ingesteld</span>'; return; }
+  if(!CLOUD){ bar.innerHTML='<span class="authmode">💾 Lokaal (niet gedeeld) — cloud nog niet ingesteld</span>'; applyStaffGate(); return; }
   try{ const {data}=await sb.auth.getSession(); isStaff=!!(data && data.session); }catch(e){ isStaff=false; }
   bar.innerHTML = isStaff
-    ? '<span class="authmode ok">✔ Ingelogd als staf — wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
-    : '<span class="authmode">👁 Alleen-lezen</span> <button class="btn" onclick="staffLogin()">🔒 Staf inloggen</button>';
+    ? '<span class="authmode ok">✔ Ingelogd als staf — je kunt bewerken; wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
+    : '<span class="authmode">👁 Alleen-lezen — log in als staf om te bewerken</span> <button class="btn" onclick="staffLogin()">🔒 Staf inloggen</button>';
+  applyStaffGate();
 }
 async function staffLogin(){
   if(!CLOUD){ alert("Cloud is nog niet geconfigureerd."); return; }
@@ -1417,9 +1452,9 @@ async function staffLogin(){
   const pass=prompt("Wachtwoord:"); if(!pass) return;
   const {error}=await sb.auth.signInWithPassword({email:email.trim(),password:pass});
   if(error){ alert("Inloggen mislukt: "+error.message); return; }
-  isStaff=true; await refreshAuthUI(); flash("Ingelogd als staf ✓");
+  isStaff=true; await refreshAuthUI(); await cloudLoadPhones(); renderAll(); flash("Ingelogd als staf ✓");
 }
-async function staffLogout(){ try{ await sb.auth.signOut(); }catch(e){} isStaff=false; refreshAuthUI(); flash("Uitgelogd"); }
+async function staffLogout(){ try{ await sb.auth.signOut(); }catch(e){} isStaff=false; clearPhones(); await refreshAuthUI(); renderAll(); flash("Uitgelogd"); }
 async function cloudInit(){
   await refreshAuthUI();
   if(CLOUD){ await cloudLoad(); renderAll(); cloudSubscribe(); }
