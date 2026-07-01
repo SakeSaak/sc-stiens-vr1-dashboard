@@ -169,6 +169,7 @@
   <button data-tab="belasting">Belastbaarheid</button>
   <button data-tab="periode">Periodisering</button>
   <button data-tab="schedule">Taakschema's</button>
+  <button data-tab="kas">Boetepot & kas</button>
 </nav>
 
 <div class="wrap">
@@ -417,6 +418,64 @@
       <label>&nbsp;<button class="btn" onclick="renderReminders()">🔄 Ververs</button></label>
     </div>
     <div id="remWrap" style="overflow:auto"></div>
+  </section>
+
+  <!-- ============ BOETEPOT & KAS ============ -->
+  <section id="kas">
+    <h2 class="sec">💰 Boetepot &amp; kas</h2>
+    <div class="note">
+      Houd de boetepot bij (taak niet gedaan, te laat, enz.) en verdeel de eten-kosten eerlijk over de speelsters. Per speelster zie je het
+      openstaande bedrag en kun je met één tik een <b>WhatsApp-betaalverzoek</b> sturen met jullie <b>Tikkie</b>-link erin.
+      Telefoonnummers komen uit <b>Gesteldheid → persoonlijke links</b>. Klik op <b>Opslaan</b> om wijzigingen met de staf te delen.
+    </div>
+
+    <details style="margin-bottom:14px">
+      <summary style="cursor:pointer;color:var(--gold);font-weight:600">⚙️ Instellingen &amp; boetereglement</summary>
+      <div class="controls" style="margin-top:10px">
+        <label>Tikkie-link (herbruikbaar) <input type="text" id="tikkieLink" placeholder="https://tikkie.me/pay/…" oninput="setTikkie(this.value)" style="min-width:260px"></label>
+        <label>&nbsp;<button class="btn" onclick="saveStats()">💾 Opslaan</button></label>
+      </div>
+      <p class="hint">Maak in de Tikkie-app een persoonlijke betaalverzoek-link aan en plak 'm hierboven. Wij zetten het bedrag in het WhatsApp-bericht.</p>
+      <div style="overflow:auto;max-width:520px"><table id="rulesTable"></table></div>
+      <button class="btn" style="margin-top:8px" onclick="addRule()">+ boeteregel</button>
+    </details>
+
+    <div class="grid2">
+      <div>
+        <h2 class="sec">🚩 Boete toevoegen</h2>
+        <div class="controls">
+          <label>Speelster <select id="fPlayer"></select></label>
+          <label>Reden <select id="fReason" onchange="fReasonChange()"></select></label>
+          <label>Bedrag € <input type="number" id="fAmount" step="0.5" style="width:80px"></label>
+          <label>Datum <input type="date" id="fDate"></label>
+          <label>&nbsp;<button class="btn primary" onclick="addFineFromForm()">+ Boete</button></label>
+        </div>
+      </div>
+      <div>
+        <h2 class="sec">🔗 Boete uit taakschema</h2>
+        <div class="controls"><label>Wedstrijd <select id="kasMatch" onchange="renderTaakBoetes()"></select></label></div>
+        <div id="taakBoetes" style="overflow:auto"></div>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-top:22px">🍝 Eten-kosten delen</h2>
+    <div class="controls">
+      <label>Datum <input type="date" id="foodDate"></label>
+      <label>Wie kookte/betaalde <select id="foodCook"></select></label>
+      <label>Totaalbedrag € <input type="number" id="foodTotal" step="0.5" style="width:90px"></label>
+      <label>&nbsp;<button class="btn primary" onclick="addFoodFromForm()">+ Toevoegen</button></label>
+    </div>
+    <p class="hint">Delen met (vink aan wie meebetaalt; de kok betaalt niet mee):
+      <button class="btn" style="padding:3px 8px" onclick="foodShareAll(true)">alle aan</button>
+      <button class="btn" style="padding:3px 8px" onclick="foodShareAll(false)">alle uit</button></p>
+    <div id="foodShareList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <div id="foodList" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:22px">📊 Openstaand per speelster</h2>
+    <div id="kasOverview" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:22px">🧾 Alle boetes</h2>
+    <div id="finesList" style="overflow:auto"></div>
   </section>
 
   <p class="foot-note">
@@ -1177,6 +1236,130 @@ document.querySelectorAll("nav button").forEach(b=>{
   };
 });
 
+/* ---------------- BOETEPOT & KAS ---------------- */
+const DEFAULT_RULES=[
+  {reason:"Taak niet uitgevoerd", amount:5},
+  {reason:"Te laat op training", amount:2},
+  {reason:"Te laat afgemeld (training)", amount:3},
+  {reason:"Te laat op wedstrijd", amount:5},
+  {reason:"Niet afgemeld / no-show", amount:10},
+  {reason:"Gele kaart", amount:2.5},
+  {reason:"Rode kaart", amount:5},
+  {reason:"Telefoon tijdens bespreking", amount:1},
+];
+const KIN="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px";
+function kas(){ if(!store.__kas)store.__kas={}; const k=store.__kas;
+  if(!Array.isArray(k.rules))k.rules=DEFAULT_RULES.map(r=>Object.assign({},r));
+  if(!Array.isArray(k.fines))k.fines=[]; if(!Array.isArray(k.food))k.food=[]; if(k.tikkie==null)k.tikkie=""; return k; }
+function setTikkie(v){ kas().tikkie=v; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function eur(x){ return "€ "+(Math.round((+x||0)*100)/100).toFixed(2).replace(".",","); }
+
+function renderRules(){ const t=document.getElementById("rulesTable"); if(!t)return;
+  t.innerHTML=`<tr><th>Reden</th><th class="center">Bedrag €</th><th></th></tr>`+
+    kas().rules.map((r,i)=>`<tr>
+      <td><input value="${(r.reason||'').replace(/"/g,'&quot;')}" oninput="kas().rules[${i}].reason=this.value;fillReasonSelect()" style="min-width:200px;${KIN}"></td>
+      <td class="center"><input type="number" step="0.5" value="${r.amount}" oninput="kas().rules[${i}].amount=+this.value;fillReasonSelect()" style="width:80px;${KIN};text-align:center"></td>
+      <td><button class="del" onclick="delRule(${i})">×</button></td></tr>`).join("");
+  fillReasonSelect();
+}
+function addRule(){ kas().rules.push({reason:"Nieuwe reden",amount:1}); renderRules(); }
+function delRule(i){ kas().rules.splice(i,1); renderRules(); }
+function fillReasonSelect(){ const s=document.getElementById("fReason"); if(!s)return; const cur=s.value;
+  s.innerHTML=kas().rules.map(r=>`<option value="${(r.reason||'').replace(/"/g,'&quot;')}">${r.reason} (${eur(r.amount)})</option>`).join("");
+  if(cur)s.value=cur; }
+function fReasonChange(){ const s=document.getElementById("fReason"); if(!s)return; const r=kas().rules.find(x=>x.reason===s.value);
+  if(r){const a=document.getElementById("fAmount"); if(a)a.value=r.amount;} }
+function fillKasPlayers(){ ["fPlayer","foodCook"].forEach(id=>{const s=document.getElementById(id); if(!s)return; const cur=s.value;
+  s.innerHTML=PLAYERS.map(p=>`<option value="${p.n}">${p.n}</option>`).join(""); if(cur)s.value=cur;}); }
+
+function addFine(player,reason,amount,date){ kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false});
+  renderFines(); renderKasOverview(); flash("Boete: "+player); }
+function addFineFromForm(){ const p=document.getElementById("fPlayer").value; const reason=document.getElementById("fReason").value;
+  const amount=+document.getElementById("fAmount").value; const date=document.getElementById("fDate").value||todayStr();
+  if(!p||!amount){ alert("Kies een speelster en een bedrag."); return; }
+  addFine(p,reason,amount,date); }
+function toggleFinePaid(id){ const f=kas().fines.find(x=>x.id===id); if(f)f.paid=!f.paid; renderFines(); renderKasOverview(); }
+function delFine(id){ kas().fines=kas().fines.filter(x=>x.id!==id); renderFines(); renderKasOverview(); }
+function renderFines(){ const w=document.getElementById("finesList"); if(!w)return;
+  const potPaid=kas().fines.filter(f=>f.paid).reduce((a,f)=>a+f.amount,0);
+  const potOpen=kas().fines.filter(f=>!f.paid).reduce((a,f)=>a+f.amount,0);
+  const F=kas().fines.slice().sort((a,b)=>a.date<b.date?1:-1);
+  w.innerHTML=`<p class="hint">💰 Pot ontvangen: <b style="color:var(--green)">${eur(potPaid)}</b> · nog open: <b style="color:var(--gold)">${eur(potOpen)}</b></p>`+
+    (F.length?`<table><tr><th>Datum</th><th>Speelster</th><th>Reden</th><th class="center">Bedrag</th><th class="center">Betaald</th><th></th></tr>`+
+      F.map(f=>`<tr><td class="mini">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td>
+        <td><b>${f.player}</b></td><td class="mini">${f.reason}</td><td class="center">${eur(f.amount)}</td>
+        <td class="center"><input type="checkbox" ${f.paid?"checked":""} onclick="toggleFinePaid('${f.id}')"></td>
+        <td><button class="del" onclick="delFine('${f.id}')">×</button></td></tr>`).join("")+`</table>`
+     :`<p class="hint">Nog geen boetes.</p>`);
+}
+
+function renderFoodShareList(){ const w=document.getElementById("foodShareList"); if(!w)return;
+  w.innerHTML=PLAYERS.map(p=>`<label class="badge" style="cursor:pointer"><input type="checkbox" class="foodshare" value="${p.n}" checked> ${p.n}</label>`).join(""); }
+function foodShareAll(on){ document.querySelectorAll(".foodshare").forEach(c=>c.checked=on); }
+function addFoodFromForm(){ const date=document.getElementById("foodDate").value||todayStr(); const cook=document.getElementById("foodCook").value;
+  const total=+document.getElementById("foodTotal").value;
+  const shareWith=[...document.querySelectorAll(".foodshare:checked")].map(c=>c.value).filter(n=>n!==cook);
+  if(!total||!shareWith.length){ alert("Vul een bedrag in en vink aan met wie je deelt."); return; }
+  kas().food.push({id:uid(),date,cook,total,shareWith,paid:{}});
+  document.getElementById("foodTotal").value="";
+  renderFood(); renderKasOverview(); flash("Eten: "+eur(total/shareWith.length)+" p.p."); }
+function toggleFoodPaid(id,name){ const f=kas().food.find(x=>x.id===id); if(f){f.paid[name]=!f.paid[name];} renderFood(); renderKasOverview(); }
+function delFood(id){ kas().food=kas().food.filter(x=>x.id!==id); renderFood(); renderKasOverview(); }
+function renderFood(){ const w=document.getElementById("foodList"); if(!w)return; const F=kas().food.slice().sort((a,b)=>a.date<b.date?1:-1);
+  if(!F.length){ w.innerHTML='<p class="hint">Nog geen eten-uitgaven.</p>'; return; }
+  w.innerHTML=F.map(f=>{ const per=f.total/f.shareWith.length;
+    return `<div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b>${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</b>
+        <span>🍝 ${eur(f.total)} — gekookt/betaald door <b>${f.cook}</b></span>
+        <span class="mini">${eur(per)} p.p. × ${f.shareWith.length}</span>
+        <button class="del" style="margin-left:auto" onclick="delFood('${f.id}')">× verwijder</button></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+        ${f.shareWith.map(n=>`<label class="badge" style="cursor:pointer;${f.paid[n]?'opacity:.5;text-decoration:line-through':''}">
+          <input type="checkbox" ${f.paid[n]?"checked":""} onclick="toggleFoodPaid('${f.id}','${n.replace(/'/g,"\\'")}')"> ${n}</label>`).join("")}
+      </div></div>`; }).join(""); }
+
+function fineOwed(n){ return kas().fines.filter(f=>f.player===n&&!f.paid).reduce((a,f)=>a+f.amount,0); }
+function foodOwed(n){ return kas().food.filter(f=>f.shareWith.includes(n)&&!f.paid[n]).reduce((a,f)=>a+f.total/f.shareWith.length,0); }
+function playerOwed(n){ return fineOwed(n)+foodOwed(n); }
+function payMsg(n,amount){ const t=kas().tikkie;
+  return "Hoi "+n+"! 🧾 Betaalverzoekje voor SC Stiens VR1 — openstaand: "+eur(amount)+" (boetes/eten). "+
+    (t?("Betaal makkelijk via Tikkie: "+t):"Vraag de penningmeester om de betaallink.")+" Bedankt! 🧡🖤"; }
+function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n,amt)); }
+function renderKasOverview(){ const w=document.getElementById("kasOverview"); if(!w)return;
+  const rows=PLAYERS.map(p=>({n:p.n,fine:fineOwed(p.n),food:foodOwed(p.n),tot:playerOwed(p.n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
+  if(!rows.length){ w.innerHTML='<p class="hint">Niemand heeft iets openstaan 🎉</p>'; return; }
+  const totalOpen=rows.reduce((a,r)=>a+r.tot,0);
+  w.innerHTML=`<p class="hint">Totaal openstaand: <b style="color:var(--gold)">${eur(totalOpen)}</b></p>`+
+    `<table><tr><th>Speelster</th><th class="center">Boetes</th><th class="center">Eten</th><th class="center">Totaal</th><th class="center">Betaalverzoek</th></tr>`+
+    rows.map(r=>`<tr><td><b>${r.n}</b></td><td class="center">${eur(r.fine)}</td><td class="center">${eur(r.food)}</td>
+      <td class="center"><b>${eur(r.tot)}</b></td>
+      <td class="center"><button class="btn" onclick="payRequest('${r.n.replace(/'/g,"\\'")}')" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td></tr>`).join("")+`</table>`;
+}
+
+const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",ref:"Fluiten/coörd.",food:"Eten"};
+function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)return; const cur=s.value;
+  s.innerHTML=(fixtures||[]).map((f,i)=>`<option value="${i}">${i+1}. ${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${f.home?"thuis":"uit"})</option>`).join("");
+  if(cur)s.value=cur; }
+function renderTaakBoetes(){ const w=document.getElementById("taakBoetes"); if(!w)return; const s=document.getElementById("kasMatch");
+  const fi=s?+s.value:0; const f=(fixtures||[])[fi]; if(!f){ w.innerHTML='<p class="hint">Geen wedstrijd.</p>'; return; }
+  const late=(kas().rules.find(r=>/te laat/i.test(r.reason))||{}).amount ?? 5;
+  const nd=(kas().rules.find(r=>/niet uitgevoerd/i.test(r.reason))||{}).amount ?? 5;
+  let html="";
+  Object.keys(KAS_TASKLBL).forEach(k=>{ (f[k]||[]).forEach(n=>{ const nEsc=n.replace(/'/g,"\\'"); const lbl=KAS_TASKLBL[k];
+    html+=`<div style="display:flex;gap:6px;align-items:center;margin:3px 0;flex-wrap:wrap"><span style="min-width:150px" class="mini">${lbl}: <b>${n}</b></span>
+      <button class="btn" style="padding:3px 8px" onclick="addFine('${nEsc}','${lbl} niet uitgevoerd',${nd},'${f.date}')">niet gedaan</button>
+      <button class="btn" style="padding:3px 8px" onclick="addFine('${nEsc}','${lbl} te laat',${late},'${f.date}')">te laat</button></div>`; }); });
+  w.innerHTML=html||'<p class="hint">Nog geen taken verdeeld voor deze wedstrijd (klik eerst op "Verdeel taken").</p>';
+}
+function renderKasAll(){
+  const tk=document.getElementById("tikkieLink"); if(tk)tk.value=kas().tikkie;
+  const fd=document.getElementById("fDate"); if(fd&&!fd.value)fd.value=todayStr();
+  const fod=document.getElementById("foodDate"); if(fod&&!fod.value)fod.value=todayStr();
+  renderRules(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes();
+}
+
 /* ---------------- CLOUD SYNC (Supabase) ---------------- */
 /* Vul deze twee in met je Supabase-gegevens (Project URL + anon public key). Leeg = lokaal (niet gedeeld). */
 const SUPA_URL="https://dvaheqgjjksynlqvgjla.supabase.co";
@@ -1191,7 +1374,7 @@ function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringi
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderKasAll();
 }
 async function cloudLoad(){
   if(!CLOUD) return;
@@ -1238,7 +1421,7 @@ const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=t
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 cloudInit();
