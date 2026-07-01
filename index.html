@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SC Stiens Vrouwen 1 — Teamdashboard 2026/2027</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     /* SC Stiens clubkleuren: zwart, oranje, geel */
@@ -124,6 +125,10 @@
   .gprog .pctlbl{width:40px;text-align:right;font-size:12px;font-weight:700;color:var(--muted)}
   .gprog .bar{flex:1;max-width:160px}
   .carddoel{font-size:11px;margin:2px 0 4px;line-height:1.3}
+  /* ---- Cloud/auth balk ---- */
+  .authbar{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px;font-size:13px}
+  .authmode{color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:999px}
+  .authmode.ok{color:var(--green);border-color:rgba(55,214,122,.5)}
   .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
     padding:12px 14px;font-size:13px;color:#ffe6a8;line-height:1.55;margin-bottom:16px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -141,6 +146,7 @@
       <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel</p>
     </div>
   </div>
+  <div id="authbar" class="authbar"></div>
 </header>
 
 <nav>
@@ -469,8 +475,12 @@ function saveStats(){
     STAT_KEYS.forEach(k=>{const v=c.querySelector(`[data-stat='${k}']`).value.trim(); store[n].stats[k]=v;});
     store[n].note=c.querySelector("textarea").value;
   });
-  localStorage.setItem("scstiens_stats",JSON.stringify(store));
-  flash("Opgeslagen ✓");
+  persistLocal();
+  if(typeof CLOUD!=="undefined" && CLOUD){
+    cloudSave().then(ok=>flash(ok?"Opgeslagen & gedeeld ✓":"Lokaal opgeslagen — log in als staf om te delen"));
+  } else {
+    flash("Opgeslagen ✓");
+  }
 }
 function ovr(n){
   const s=(store[n]&&store[n].stats)||{};
@@ -624,6 +634,8 @@ function assignTasks(){
   });
   sched={pts,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
   flash("Taken eerlijk & gevarieerd verdeeld ✓");
 }
 
@@ -902,10 +914,67 @@ document.querySelectorAll("nav button").forEach(b=>{
   };
 });
 
+/* ---------------- CLOUD SYNC (Supabase) ---------------- */
+/* Vul deze twee in met je Supabase-gegevens (Project URL + anon public key). Leeg = lokaal (niet gedeeld). */
+const SUPA_URL="https://dvaheqgjjksynlqvgjla.supabase.co";
+const SUPA_KEY="sb_publishable_IWI8mpvtljLfmZ99W8_xvA_XzMv64_I";
+const CLOUD = !!(SUPA_URL && SUPA_KEY && window.supabase);
+let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
+let isStaff=false;
+
+function collectState(){ return {store:store, fixtures:fixtures}; }
+function applyState(st){ if(st && st.store) store=st.store; if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
+function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); }catch(e){} }
+function renderAll(){
+  renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
+  renderMeasTable(); renderDev(); renderBel(); renderPeriode();
+}
+async function cloudLoad(){
+  if(!CLOUD) return;
+  try{ const {data,error}=await sb.from("dashboard_state").select("data").eq("id","main").maybeSingle();
+    if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
+}
+async function cloudSave(){
+  if(!CLOUD) return true;
+  if(!isStaff) return false;
+  try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
+    if(error){ console.warn(error); return false; } return true; }catch(e){ console.warn("cloudSave",e); return false; }
+}
+function cloudSubscribe(){
+  if(!CLOUD) return;
+  sb.channel("state-main").on("postgres_changes",
+    {event:"*",schema:"public",table:"dashboard_state",filter:"id=eq.main"},
+    payload=>{ if(payload.new && payload.new.data){ applyState(payload.new.data); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); } }
+  ).subscribe();
+}
+async function refreshAuthUI(){
+  const bar=document.getElementById("authbar"); if(!bar) return;
+  if(!CLOUD){ bar.innerHTML='<span class="authmode">💾 Lokaal (niet gedeeld) — cloud nog niet ingesteld</span>'; return; }
+  try{ const {data}=await sb.auth.getSession(); isStaff=!!(data && data.session); }catch(e){ isStaff=false; }
+  bar.innerHTML = isStaff
+    ? '<span class="authmode ok">✔ Ingelogd als staf — wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
+    : '<span class="authmode">👁 Alleen-lezen</span> <button class="btn" onclick="staffLogin()">🔒 Staf inloggen</button>';
+}
+async function staffLogin(){
+  if(!CLOUD){ alert("Cloud is nog niet geconfigureerd."); return; }
+  const email=prompt("Staf e-mail:"); if(!email) return;
+  const pass=prompt("Wachtwoord:"); if(!pass) return;
+  const {error}=await sb.auth.signInWithPassword({email:email.trim(),password:pass});
+  if(error){ alert("Inloggen mislukt: "+error.message); return; }
+  isStaff=true; await refreshAuthUI(); flash("Ingelogd als staf ✓");
+}
+async function staffLogout(){ try{ await sb.auth.signOut(); }catch(e){} isStaff=false; refreshAuthUI(); flash("Uitgelogd"); }
+async function cloudInit(){
+  await refreshAuthUI();
+  if(CLOUD){ await cloudLoad(); renderAll(); cloudSubscribe(); }
+}
+
 /* ---------------- INIT ---------------- */
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 renderMeasTable(); renderDev(); renderBel(); renderPeriode();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
+try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
+cloudInit();
 </script>
 </body>
 </html>
