@@ -24,6 +24,21 @@
   header h1 span{color:var(--gold)}
   header p{margin:6px 0 0;color:var(--muted);font-size:14px}
   .crestbig{filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+  /* Toegangs-slotscherm */
+  #lockscreen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:radial-gradient(900px 400px at 50% -120px, rgba(242,140,0,.18), transparent 70%),linear-gradient(160deg,#0c0c0e,#141416 60%,#0c0c0e)}
+  .lockbox{max-width:360px;width:100%;text-align:center;background:var(--card);border:1px solid var(--gold);
+    border-radius:16px;padding:26px 22px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .lockbox h1{margin:12px 0 4px;font-size:22px}
+  .lockbox h1 span{color:var(--gold)}
+  .lockbox p{color:var(--muted);font-size:14px;margin:0 0 16px}
+  .lockbox input{width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:10px;
+    padding:12px;font-size:16px;text-align:center;margin-bottom:10px}
+  .lockbox input:focus{outline:none;border-color:var(--gold)}
+  .lockbox button{width:100%;background:var(--gold);color:#1a1200;border:none;border-radius:10px;padding:12px;
+    font-size:16px;font-weight:800;cursor:pointer}
+  .lockbox .lockhint{font-size:12px;margin:14px 0 0}
+  #lockErr{color:var(--red);font-size:13px;min-height:18px;margin-top:6px}
   nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:16px 0 6px;padding:0 12px}
   nav button{background:var(--card);border:1px solid var(--line);color:var(--txt);
     padding:9px 16px;border-radius:999px;cursor:pointer;font-size:14px;transition:.15s}
@@ -163,6 +178,18 @@
 </style>
 </head>
 <body>
+<div id="lockscreen">
+  <div class="lockbox">
+    <span id="lockCrest"></span>
+    <h1><span>S.C. Stiens</span> VR1</h1>
+    <p>Teamdashboard — voer het teamwachtwoord in om verder te gaan.</p>
+    <input type="password" id="lockpw" placeholder="Wachtwoord" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doUnlock()">
+    <button onclick="doUnlock()">Toegang</button>
+    <div id="lockErr"></div>
+    <p class="lockhint">Vraag de staf om het teamwachtwoord.</p>
+  </div>
+</div>
 <header>
   <div class="headwrap">
     <span id="crestHeader" class="crestbig"></span>
@@ -1463,7 +1490,27 @@ async function cloudInit(){
   if(CLOUD){ await cloudLoad(); renderAll(); cloudSubscribe(); }
 }
 
+/* ---------------- TOEGANGS-SLOTSCHERM ---------------- */
+const ACCESS_HASH="b3b06831758a847d8f5ed025581d8d4401ec631ae44218d64a3f3bc24f9836b4";
+async function sha256hex(str){
+  const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function hideLock(){ const l=document.getElementById("lockscreen"); if(l) l.style.display="none"; }
+async function doUnlock(){
+  const inp=document.getElementById("lockpw"); const err=document.getElementById("lockErr");
+  try{ const h=await sha256hex(inp.value); if(h===ACCESS_HASH){ localStorage.setItem("scstiens_access",ACCESS_HASH); hideLock(); }
+    else { err.textContent="Onjuist wachtwoord."; inp.select(); } }
+  catch(e){ err.textContent="Kon niet controleren (open de site via https)."; }
+}
+function initLock(){
+  const cr=document.getElementById("lockCrest"); if(cr && typeof LOGO_SRC!=="undefined") cr.innerHTML='<img src="'+LOGO_SRC+'" width="64" alt="S.C. Stiens">';
+  if(localStorage.getItem("scstiens_access")===ACCESS_HASH){ hideLock(); }
+  else { const inp=document.getElementById("lockpw"); if(inp) inp.focus(); }
+}
+
 /* ---------------- INIT ---------------- */
+initLock();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
