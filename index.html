@@ -270,8 +270,10 @@
     <h2 class="sec" style="margin-top:22px">🔗 Zelf invullen: persoonlijke links (maandelijks)</h2>
     <div class="note">
       Elke speelster krijgt haar <b>eigen link of QR-code</b> waarmee ze de check-in zelf invult — zonder inloggen, op de telefoon.
-      Deel het linkje via de teamapp of hang de QR in de kleedkamer. De antwoorden zijn <b>vertrouwelijk</b> en alleen voor de staf zichtbaar.
-      Klik op <b>Check-ins ophalen</b> (als staf ingelogd) om de ingevulde check-ins in het overzicht te laden.
+      Vul per speelster haar <b>telefoonnummer</b> in en klik op de groene <b>WhatsApp</b>-knop: er opent een WhatsApp-bericht met haar link
+      al ingevuld — jij tikt alleen nog op verzenden. Of gebruik <b>Kopieer</b> / de <b>QR</b>. De antwoorden zijn <b>vertrouwelijk</b> en
+      alleen voor de staf zichtbaar. Klik op <b>Check-ins ophalen</b> (als staf ingelogd) om de ingevulde check-ins te laden.
+      <br><span class="mini">Let op: klik na het invullen van telefoonnummers op <b>Opslaan</b> zodat ze bewaard en gedeeld worden. Telefoonnummers worden met de staf gedeeld.</span>
     </div>
     <div class="controls"><button class="btn primary" onclick="fetchCheckins()">🔄 Check-ins ophalen</button></div>
     <div id="moodLinks"></div>
@@ -1016,13 +1018,25 @@ function copyLink(n){ navigator.clipboard.writeText(playerLink(n)).then(()=>flas
 function toggleQR(n,btn){ const box=btn.parentElement.querySelector(".qrbox");
   if(box.dataset.on){ box.innerHTML=""; box.dataset.on=""; return; }
   box.innerHTML=""; try{ new QRCode(box,{text:playerLink(n),width:120,height:120,colorDark:"#141416",colorLight:"#ffffff"}); box.dataset.on="1"; }catch(e){ box.textContent="QR-lib niet geladen"; } }
+function getPhone(n){ return (store[n]&&store[n].phone)||""; }
+function setPhone(n,v){ store[n]=store[n]||{stats:{},note:""}; store[n].phone=v; }
+function sanitizePhone(raw){ let d=(raw||"").replace(/[^\d]/g,""); if(!d)return "";
+  if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="31"+d.slice(1); return d; }
+function waMessage(n){ return "Hoi "+n+"! 🌡️ Dit is je persoonlijke maandelijkse check-in voor SC Stiens VR1 — hoe voel je je, mentaal & fysiek? "+
+  "Het duurt ~20 seconden en is vertrouwelijk (alleen de staf ziet het). Vul 'm hier in: "+playerLink(n)+" — alvast bedankt! 🧡"; }
+function openWA(n){ const num=sanitizePhone(getPhone(n));
+  if(!num){ alert("Vul eerst een telefoonnummer in bij "+n+"."); return; }
+  window.open("https://wa.me/"+num+"?text="+encodeURIComponent(waMessage(n)),"_blank"); }
 function renderMoodLinks(){
   const w=document.getElementById("moodLinks"); if(!w)return;
-  w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>Persoonlijke link</th><th></th><th class="center">QR</th></tr>`+
+  w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>📱 Telefoon</th><th>Persoonlijke link</th><th></th><th class="center">WhatsApp</th><th class="center">QR</th></tr>`+
     PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); return `<tr>
       <td><b>${p.n}</b></td>
-      <td><input readonly value="${playerLink(p.n)}" onclick="this.select()" style="width:100%;min-width:230px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:11px"></td>
+      <td><input value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${nEsc}',this.value)"
+        style="width:130px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px"></td>
+      <td><input readonly value="${playerLink(p.n)}" onclick="this.select()" style="width:100%;min-width:210px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:11px"></td>
       <td><button class="btn" onclick="copyLink('${nEsc}')">Kopieer</button></td>
+      <td class="center"><button class="btn" onclick="openWA('${nEsc}')" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td>
       <td class="center"><button class="btn" onclick="toggleQR('${nEsc}',this)">QR</button><div class="qrbox" style="margin-top:6px;display:inline-block"></div></td>
     </tr>`; }).join("")+`</table></div>`;
 }
