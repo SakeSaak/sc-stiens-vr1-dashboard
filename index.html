@@ -155,6 +155,10 @@
   .authbar{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px;font-size:13px}
   .authmode{color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:999px}
   .authmode.ok{color:var(--green);border-color:rgba(55,214,122,.5)}
+  .savestat{font-size:12px;color:var(--muted);transition:opacity .2s}
+  .savestat.pending{color:var(--gold)}
+  .savestat.saved{color:var(--green)}
+  .savestat.error{color:var(--red);font-weight:600}
   /* Alleen-lezen (niet ingelogd): geen bewerken/versturen; navigeren mag wel */
   body.readonly .wrap input,
   body.readonly .wrap select,
@@ -199,6 +203,7 @@
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
+  <div style="text-align:center;margin-top:6px"><span id="saveStatus" class="savestat"></span></div>
 </header>
 
 <nav>
@@ -1447,20 +1452,33 @@ async function cloudLoad(){
     if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
   recoverPhonesFromLocal();
 }
-let _lastSaveAt=0;
+let _lastSaveAt=0, _statusTimer=null;
+function setSaveStatus(state){
+  const el=document.getElementById("saveStatus"); if(!el) return;
+  if(!(CLOUD && isStaff)){ el.textContent=""; el.className="savestat"; return; }
+  clearTimeout(_statusTimer);
+  if(state==="pending"){ el.textContent="Bezig met opslaan…"; el.className="savestat pending"; }
+  else if(state==="saving"){ el.textContent="Opslaan…"; el.className="savestat pending"; }
+  else if(state==="saved"){ el.textContent="Opgeslagen ✓"; el.className="savestat saved";
+    _statusTimer=setTimeout(()=>{ el.textContent="Alle wijzigingen bewaard"; el.className="savestat"; },2500); }
+  else if(state==="error"){ el.textContent="Niet opgeslagen ✗ — probeer opnieuw"; el.className="savestat error"; }
+  else { el.textContent="Alle wijzigingen bewaard"; el.className="savestat"; }
+}
 async function cloudSave(){
   if(!CLOUD) return true;
   if(!isStaff) return false;
   backupPhonesLocal();
-  _lastSaveAt=Date.now();
+  _lastSaveAt=Date.now(); setSaveStatus("saving");
   try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
-    if(error){ console.warn(error); return false; } _lastSaveAt=Date.now(); return true; }catch(e){ console.warn("cloudSave",e); return false; }
+    if(error){ console.warn(error); setSaveStatus("error"); return false; } _lastSaveAt=Date.now(); setSaveStatus("saved"); return true; }
+  catch(e){ console.warn("cloudSave",e); setSaveStatus("error"); return false; }
 }
 // ---- Automatisch opslaan: bewaart lokaal meteen en in de cloud kort na de laatste wijziging ----
 let _saveTimer=null;
 function scheduleSave(){
   if(typeof persistLocal==="function") persistLocal();
   if(!(typeof CLOUD!=="undefined" && CLOUD && isStaff)) return;
+  setSaveStatus("pending");
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{ cloudSave(); }, 1200);
 }
@@ -1483,6 +1501,7 @@ async function refreshAuthUI(){
     ? '<span class="authmode ok">✔ Ingelogd als staf — je kunt bewerken; wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
     : '<span class="authmode">👁 Alleen-lezen — log in als staf om te bewerken</span> <button class="btn" onclick="staffLogin()">🔒 Staf inloggen</button>';
   applyStaffGate();
+  setSaveStatus();
 }
 async function staffLogin(){
   if(!CLOUD){ alert("Cloud is nog niet geconfigureerd."); return; }
