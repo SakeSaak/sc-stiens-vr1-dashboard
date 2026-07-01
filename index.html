@@ -261,10 +261,13 @@
   <section id="schedule">
     <h2 class="sec">Eerlijke taakschema's</h2>
     <div class="note">
-      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen/fluiten, eten &amp; wedstrijdcoördinator) telt als
-      1 punt. Bij elke taak wordt automatisch de speelster met de <b>minste punten</b> gekozen. Wie geen auto/rijbewijs heeft, kan niet
-      rijden en pakt dus <b>automatisch extra was-, vlag- of eettaken</b> op — zo eindigt iedereen op (bijna) evenveel punten.
-      Amber vlagt/fluit niet (eigen voorkeur) en wordt daarom vaker als wedstrijdcoördinator ingedeeld.
+      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen/fluiten, eten) telt als 1 punt. Bij elke taak wordt
+      automatisch de speelster met de <b>minste punten</b> gekozen. Wie geen auto/rijbewijs heeft, kan niet rijden en pakt dus
+      <b>automatisch extra was-, vlag- of eettaken</b> op — zo eindigt iedereen op (bijna) evenveel punten.
+      <br><b>Vlaggen/fluiten</b> gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: wie het minst heeft gevlagd is eerst aan de beurt,
+      zodat iedereen minstens één keer vlagt (bij ≥ 16 wedstrijden komt de hele selectie aan bod).
+      <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
+      Amber vlagt/fluit niet (eigen voorkeur) en pakt daarom extra was-/eettaken op.
     </div>
 
     <div class="controls">
@@ -547,15 +550,22 @@ function assignTasks(){
     }
     return chosen;
   }
+  // vlaggen: coverage-first — wie het minst heeft gevlagd is eerst aan de beurt (zo doet iedereen het minstens 1x)
+  function pickFlag(used){
+    const cand=flagPool.filter(n=>!used.has(n));
+    if(!cand.length) return [];
+    cand.sort((a,b)=> (sub[a].flag-sub[b].flag) || (pts[a]-pts[b]) || Math.random()-0.5);
+    const win=cand[0]; used.add(win); pts[win]++; return [win];
+  }
   fixtures.forEach(f=>{
     const used=new Set();
     f.wash=pick(washPool,used,nWash); f.wash.forEach(n=>sub[n].wash++);
+    f.flag=pickFlag(used); f.flag.forEach(n=>sub[n].flag++);            // vlaggen bij ELKE wedstrijd
     if(f.home){
       f.drive=[];
-      f.flag=pick(flagPool,used,1); f.flag.forEach(n=>sub[n].flag++);
-      f.food=pick(foodPool,used,1); f.food.forEach(n=>sub[n].food++);   // eten alleen thuis
+      f.food=pick(foodPool,used,2); f.food.forEach(n=>sub[n].food++);   // eten in tweetallen, alleen thuis
     } else {
-      f.flag=[]; f.food=[];                                            // geen eten bij uitwedstrijden
+      f.food=[];                                                        // geen eten bij uitwedstrijden
       f.drive=pick(drivers,used,nDrivers); f.drive.forEach(n=>sub[n].drive++);
     }
   });
@@ -580,8 +590,8 @@ function renderSchedTable(){
            <option value="U" ${!f.home?'selected':''}>Uit</option></select></td>
       <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
       <td>${names(f.wash)}</td>
-      <td>${f.home?names(f.flag):'<span class="mini">n.v.t.</span>'}</td>
-      <td>${f.home?names(f.food):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
+      <td>${names(f.flag)}</td>
+      <td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
   // style the inline inputs
   t.querySelectorAll("input,select").forEach(el=>{
     el.style.background="var(--bg2)";el.style.color="var(--txt)";
@@ -613,8 +623,8 @@ function exportICS(){
     const descLines=[];
     if(!f.home && f.drive.length) descLines.push("🔵 Rijden: "+f.drive.join(", "));
     if(f.wash.length) descLines.push("🟣 Wassen: "+f.wash.join(", "));
-    if(f.home && f.flag.length) descLines.push("🟡 Vlaggen/fluiten: "+f.flag.join(", "));
-    if(f.food.length) descLines.push("🟢 Eten/wedstrijdcoördinator: "+f.food.join(", "));
+    if(f.flag.length) descLines.push("🟡 Vlaggen/fluiten: "+f.flag.join(", "));
+    if(f.food.length) descLines.push("🟢 Eten voorbereiden (2-tal): "+f.food.join(" & "));
     const desc=descLines.join("\n")||"Nog geen taken verdeeld.";
     const uid="scstiens-"+idx+"-"+f.date+"@dashboard";
     ics.push("BEGIN:VEVENT");
