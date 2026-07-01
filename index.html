@@ -1241,14 +1241,11 @@ function renderPeriode(){
 }
 
 /* ---------------- TABS ---------------- */
-document.querySelectorAll("nav button").forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    document.getElementById(b.dataset.tab).classList.add("active");
-  };
-});
+function showTab(id){
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("active",x.dataset.tab===id));
+  document.querySelectorAll("section").forEach(x=>x.classList.toggle("active",x.id===id));
+}
+document.querySelectorAll("nav button").forEach(b=>{ b.onclick=()=>showTab(b.dataset.tab); });
 
 /* ---------------- BOETEPOT & KAS ---------------- */
 const DEFAULT_RULES=[
@@ -1411,7 +1408,13 @@ async function cloudLoadPhones(){ if(!CLOUD||!isStaff) return;
     const ph=(data&&data.data&&data.data.phones)||{};
     PLAYERS.forEach(p=>{ if(ph[p.n]!=null){ store[p.n]=store[p.n]||{stats:{},note:""}; store[p.n].phone=ph[p.n]; } }); }catch(e){ console.warn("loadPhones",e); } }
 // Alleen-lezen voor iedereen die niet als staf is ingelogd (alleen in cloud-modus).
-function applyStaffGate(){ if(!CLOUD){ document.body.classList.remove("readonly"); return; } document.body.classList.toggle("readonly", !isStaff); }
+const STAFF_TABS=["mood","belasting","kas"];  // alleen zichtbaar als staf ingelogd is
+function applyStaffGate(){
+  const locked = CLOUD && !isStaff;
+  document.body.classList.toggle("readonly", locked);
+  STAFF_TABS.forEach(id=>{ const btn=document.querySelector(`nav button[data-tab="${id}"]`); if(btn) btn.style.display = locked ? "none" : ""; });
+  if(locked){ const active=document.querySelector("section.active"); if(active && STAFF_TABS.includes(active.id)) showTab("cards"); }
+}
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
