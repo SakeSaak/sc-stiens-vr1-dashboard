@@ -1100,7 +1100,7 @@ function setPhone(n,v){ store[n]=store[n]||{stats:{},note:""}; store[n].phone=v;
 function sanitizePhone(raw){ let d=(raw||"").replace(/[^\d]/g,""); if(!d)return "";
   if(d.startsWith("00")) d=d.slice(2); else if(d.startsWith("0")) d="31"+d.slice(1); return d; }
 function waMessage(n){ return "Hoi "+n+"! Dit is je persoonlijke maandelijkse check-in voor SC Stiens VR1 — hoe voel je je, mentaal & fysiek? "+
-  "Het duurt ~20 seconden en is vertrouwelijk (alleen de staf ziet het). Vul 'm hier in: "+playerLink(n)+" — alvast bedankt! ⚽"; }
+  "Het duurt ~20 seconden en is vertrouwelijk (alleen de staf ziet het). Vul 'm hier in: "+playerLink(n)+" — alvast bedankt!"; }
 function openWAmsg(n,msg){ const num=sanitizePhone(getPhone(n));
   if(!num){ alert("Vul eerst een telefoonnummer in bij "+n+" (tabblad Gesteldheid → persoonlijke links)."); return; }
   window.open("https://wa.me/"+num+"?text="+encodeURIComponent(msg),"_blank"); }
@@ -1110,7 +1110,7 @@ function taskReminderMsg(name,taskText,dateStr,opp,home){
   const d=new Date(dateStr+"T00:00:00");
   const ds=d.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"});
   const wed = opp ? ("de wedstrijd "+(home?"thuis":"uit")+" tegen "+opp) : ("de wedstrijd ("+(home?"thuis":"uit")+")");
-  return "Hoi "+name+"! Kleine herinnering: op "+ds+" heb je een teamtaak bij SC Stiens VR1 — "+taskText+" bij "+wed+". Alvast bedankt! 💪";
+  return "Hoi "+name+"! Kleine herinnering: op "+ds+" heb je een teamtaak bij SC Stiens VR1 — "+taskText+" bij "+wed+". Alvast bedankt!";
 }
 function remindTask(n,code,fi){
   const f=fixtures[fi]; if(!f)return; const opp=(f.opponent||"").trim();
@@ -1334,7 +1334,7 @@ function payMsg(n){
   const t=kas().tikkie;
   return "Hoi "+n+"! Betaalverzoekje voor SC Stiens VR1:\n"+items.join("\n")+
     "\nTotaal: "+eur(playerOwed(n))+".\n"+
-    (t?("Betaal makkelijk via Tikkie: "+t):"Vraag de penningmeester om de betaallink.")+" Bedankt! ⚽"; }
+    (t?("Betaal makkelijk via Tikkie: "+t):"Vraag de penningmeester om de betaallink.")+" Bedankt!"; }
 function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n)); }
 function renderKasOverview(){ const w=document.getElementById("kasOverview"); if(!w)return;
   const rows=PLAYERS.map(p=>({n:p.n,fine:fineOwed(p.n),food:foodOwed(p.n),tot:playerOwed(p.n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
