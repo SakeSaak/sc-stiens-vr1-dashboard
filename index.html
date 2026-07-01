@@ -103,6 +103,27 @@
   .bar{height:16px;background:var(--bg2);border-radius:999px;overflow:hidden}
   .bar span{display:block;height:100%;background:linear-gradient(90deg,#4aa3ff,#37d67a)}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 0}
+  /* ---- Ontwikkeling ---- */
+  .devplayer{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .devhead{display:flex;align-items:center;gap:8px;font-size:15px;margin-bottom:8px}
+  .donebadge{font-size:11px;font-weight:700;color:var(--green);background:rgba(55,214,122,.14);
+    border:1px solid rgba(55,214,122,.4);padding:2px 8px;border-radius:999px}
+  .devgoal{border-top:1px solid var(--line);padding:9px 0 7px}
+  .devgoal.done{opacity:.72}
+  .devgoal.done .gtext{text-decoration:line-through;text-decoration-color:var(--green)}
+  .gline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .gline .check{width:16px;color:var(--green);font-weight:900;text-align:center}
+  .gtext{flex:1;min-width:200px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px;font-size:13px}
+  .glink,.gstatus{background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px;font-size:12.5px;font-weight:600}
+  .curstat{font-size:11px;color:var(--muted);min-width:58px}
+  .del{background:transparent;border:none;color:var(--red);font-size:18px;cursor:pointer;line-height:1;padding:0 4px}
+  .del:hover{color:#ff4d4d}
+  .gprog{display:flex;align-items:center;gap:9px;margin-top:6px}
+  .gprog input[type=range]{flex:1;accent-color:var(--gold)}
+  .gprog .pctlbl{width:40px;text-align:right;font-size:12px;font-weight:700;color:var(--muted)}
+  .gprog .bar{flex:1;max-width:160px}
+  .carddoel{font-size:11px;margin:2px 0 4px;line-height:1.3}
   .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
     padding:12px 14px;font-size:13px;color:#ffe6a8;line-height:1.55;margin-bottom:16px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -205,7 +226,7 @@
     </div>
     <div class="toolbar"><button class="btn primary" onclick="saveStats()">💾 Opslaan</button></div>
     <div style="overflow:auto">
-      <table id="devTable"></table>
+      <div id="devWrap"></div>
     </div>
   </section>
 
@@ -401,8 +422,38 @@ const DEVGOALS = {
   "Amber Merkx":{dev:"Met links, betere keuzes voor de goal, acties durven",proc:"Meer acties durven, meer assists/goals",link:"SHO"},
   "Alyssa Visser":{dev:"",proc:"",link:""},
 };
-const STATUS_OPTS=[["open","Open"],["bezig","Bezig"],["behaald","Behaald"]];
-function getGoal(n){ store[n]=store[n]||{stats:{},note:""}; store[n].goal=store[n].goal||{status:"open",pct:0}; return store[n].goal; }
+const STATUS_OPTS=[["open","Open"],["bezig","Bezig"],["behaald","Behaald ✓"]];
+// Doelen per speelster als lijst — start vanuit de vragenlijst, meerdere doelen mogelijk.
+function getGoals(n){
+  store[n]=store[n]||{stats:{},note:""};
+  if(!Array.isArray(store[n].goals)){
+    const d=DEVGOALS[n]||{dev:"",proc:"",link:""};
+    const legacy=store[n].goal||{status:"open",pct:0};
+    store[n].goals=[{text:d.dev||"",proc:d.proc||"",link:d.link||"",status:legacy.status||"open",pct:legacy.pct||0}];
+  }
+  return store[n].goals;
+}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function addGoal(n){ getGoals(n).push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); }
+function removeGoal(n,i){ const g=getGoals(n); g.splice(i,1); if(!g.length)g.push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); }
+function setGoalField(n,i,field,val){ getGoals(n)[i][field]=val; if(field!=="text"){renderDev(); renderCards();} else {updateCardGoal(n);} }
+function setGoalStatus(n,i,v){ const g=getGoals(n)[i]; g.status=v; if(v==="behaald"&&g.pct<100)g.pct=100; renderDev(); renderCards(); }
+function setGoalPct(n,i,v,el){ getGoals(n)[i].pct=+v;
+  if(el){const box=el.closest(".gprog"); if(box){box.querySelector(".pctlbl").textContent=v+"%"; box.querySelector(".bar span").style.width=v+"%";}} }
+// Doelregel op het FIFA-kaartje: toont het actieve doel + hoeveel er al behaald zijn.
+function cardGoalHTML(n){
+  const goals=getGoals(n);
+  const act=goals.find(g=>g.status!=="behaald" && (g.text||"").trim());
+  const done=goals.filter(g=>g.status==="behaald").length;
+  let h="";
+  if(act){
+    h=`<div class="carddoel"><b>🎯 Doel:</b> ${esc(act.text)}${act.link?` <span class="badge">${act.link}</span>`:''}</div>`;
+  } else if(goals.some(g=>(g.text||"").trim())){
+    h=`<div class="carddoel"><b style="color:var(--green)">✓ Alle doelen behaald</b></div>`;
+  }
+  if(done>0) h+=`<div class="mini" style="opacity:.85;margin:0 0 3px">✓ ${done} behaald</div>`;
+  return h;
+}
 
 /* ---------------- SC STIENS EMBLEEM ---------------- */
 const ROLE_LABEL={gk:"Keeper",def:"Verdediging",mid:"Middenveld",att:"Aanval"};
@@ -458,7 +509,7 @@ function renderCards(){
           <span class="badge">👕 ${p.shirt}</span>
           ${p.noFlag?'<span class="badge">🚩 vlagt niet</span>':''}
         </div>
-        ${(DEVGOALS[p.n]&&DEVGOALS[p.n].dev)?`<div style="font-size:11px;margin:2px 0 5px;line-height:1.3"><b>🎯 Doel:</b> ${DEVGOALS[p.n].dev}${DEVGOALS[p.n].link?` <span class="badge">${DEVGOALS[p.n].link}</span>`:''}</div>`:''}
+        ${cardGoalHTML(p.n)}
         <textarea placeholder="Metingen & video-notities (sprint 30m, max HR, xG, observaties)…">${note}</textarea>
       </div>`;
     g.appendChild(el);
@@ -683,19 +734,44 @@ function statFromTime(t,fast,slow){ if(isNaN(t))return null; const f=(t-slow)/(f
 function statFromCond(x,fast,slow){ if(isNaN(x))return null; const f=(x-slow)/(fast-slow); return Math.round(clamp(50+f*49,1,99)); }
 function statFromScore(v){ if(isNaN(v))return null; return Math.round(clamp(v/10*99,1,99)); }
 function getMeas(n){ store[n]=store[n]||{stats:{},note:"",meas:{}}; store[n].meas=store[n].meas||{}; return store[n].meas; }
-function applyMeas(){
+// bereken de 6 stats voor 1 speelster uit haar metingen + de anchors
+function computePlayerStats(n){
   const fast=+document.getElementById("anchFast").value, slow=+document.getElementById("anchSlow").value;
   const cFast=+document.getElementById("condFast").value, cSlow=+document.getElementById("condSlow").value;
-  PLAYERS.forEach(p=>{
-    const m=getMeas(p.n); const s=store[p.n].stats=store[p.n].stats||{};
-    const pac=statFromTime(parseFloat(m.s15),fast,slow); if(pac!=null)s.PAC=pac;
-    const phy=statFromCond(parseFloat(m.cond),cFast,cSlow); if(phy!=null)s.PHY=phy;
-    const sho=statFromScore(parseFloat(m.sho)); if(sho!=null)s.SHO=sho;
-    const pas=statFromScore(parseFloat(m.pas)); if(pas!=null)s.PAS=pas;
-    const dri=statFromScore(parseFloat(m.dri)); if(dri!=null)s.DRI=dri;
-    const def=statFromScore(parseFloat(m.def)); if(def!=null)s.DEF=def;
-  });
+  const m=getMeas(n); const s=store[n].stats=store[n].stats||{};
+  let v;
+  v=statFromTime(parseFloat(m.s15),fast,slow); if(v!=null)s.PAC=v;
+  v=statFromCond(parseFloat(m.cond),cFast,cSlow); if(v!=null)s.PHY=v;
+  v=statFromScore(parseFloat(m.sho)); if(v!=null)s.SHO=v;
+  v=statFromScore(parseFloat(m.pas)); if(v!=null)s.PAS=v;
+  v=statFromScore(parseFloat(m.dri)); if(v!=null)s.DRI=v;
+  v=statFromScore(parseFloat(m.def)); if(v!=null)s.DEF=v;
+}
+function applyMeas(){
+  PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderMeasTable(); renderDev(); flash("Stats berekend uit metingen ✓");
+}
+// LIVE: tijdens het invullen van een meting meteen de kaart + tabel bijwerken (zonder focus te verliezen)
+function measInput(n,k,val){
+  getMeas(n)[k]=val;
+  computePlayerStats(n);
+  updateCardStats(n);       // kaartje meteen bij
+  updateMeasComputed(n);    // berekende kolommen in deze rij
+  renderDev();              // 'Huidig'-waarde bij de doelen
+}
+function updateCardStats(n){
+  const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`);
+  if(!c) return;
+  const s=(store[n]&&store[n].stats)||{};
+  STAT_KEYS.forEach(k=>{const inp=c.querySelector(`[data-stat="${k}"]`); if(inp && document.activeElement!==inp) inp.value=(s[k]!=null?s[k]:'');});
+  const o=c.querySelector('[data-ovr]'); if(o) o.textContent=ovr(n);
+}
+function updateMeasComputed(n){
+  const row=document.querySelector(`#measTable tr[data-n="${CSS.escape(n)}"]`);
+  if(!row) return;
+  const s=(store[n]&&store[n].stats)||{};
+  ["PAC","PHY","SHO","PAS","DRI","DEF"].forEach(k=>{const c=row.querySelector(`.comp[data-c="${k}"] b`); if(c)c.textContent=(s[k]??'–');});
+  const o=row.querySelector('.comp[data-c="OVR"] b'); if(o)o.textContent=ovr(n);
 }
 function renderMeasTable(){
   const t=document.getElementById("measTable");
@@ -703,49 +779,61 @@ function renderMeasTable(){
     <th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">PHY</th>
     <th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">OVR</th></tr>`+
     PLAYERS.map(p=>{
-      const m=getMeas(p.n), s=(store[p.n]&&store[p.n].stats)||{};
-      return `<tr><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
+      const m=getMeas(p.n), s=(store[p.n]&&store[p.n].stats)||{}; const nEsc=p.n.replace(/'/g,"\\'");
+      return `<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
         MEAS_FIELDS.map(f=>`<td class="center"><input type="number" step="${f.step}" value="${m[f.k]!=null?m[f.k]:''}" placeholder="${f.ph}"
           style="width:64px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
-          oninput="getMeas('${p.n.replace(/'/g,"\\'")}')['${f.k}']=this.value"></td>`).join("")+
-        `<td class="center" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center"><b>${s.PHY??'–'}</b></td>
-         <td class="center"><b>${s.SHO??'–'}</b></td><td class="center"><b>${s.PAS??'–'}</b></td>
-         <td class="center"><b>${s.DRI??'–'}</b></td><td class="center"><b>${s.DEF??'–'}</b></td>
-         <td class="center"><b>${ovr(p.n)}</b></td></tr>`;
+          oninput="measInput('${nEsc}','${f.k}',this.value)"></td>`).join("")+
+        `<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td>
+         <td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td>
+         <td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td>
+         <td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
     }).join("");
 }
 
 /* ---------------- ONTWIKKELING / LEERDOELEN ---------------- */
-const STATUS_COLOR={open:"#9fb0d8",bezig:"#4aa3ff",behaald:"#37d67a"};
-function setGoalStatus(n,v){ getGoal(n).status=v; renderDev(); }
-function setGoalPct(n,v){ const g=getGoal(n); g.pct=+v;
-  const row=document.querySelector(`#devTable tr[data-n="${CSS.escape(n)}"]`);
-  if(row){ row.querySelector(".pctlbl").textContent=v+"%"; row.querySelector(".bar span").style.width=v+"%"; }
-}
+const STATUS_COLOR={open:"#b7b7c4",bezig:"#5aa9ff",behaald:"#37d67a"};
+// Actief doel (voor op de kaart) = eerste doel dat nog niet behaald is en tekst heeft.
+function activeGoal(n){ const g=getGoals(n); return g.find(x=>x.status!=="behaald" && (x.text||"").trim()); }
+function updateCardGoal(n){ renderCards(); }
 function renderDev(){
-  const t=document.getElementById("devTable");
-  t.innerHTML=`<tr><th>Speelster</th><th>Ontwikkelpunt (individueel)</th><th>Procesdoel</th>
-    <th class="center">Stat</th><th class="center">Huidig</th><th class="center">Status</th><th>Voortgang</th></tr>`+
-    PLAYERS.map(p=>{
-      const d=DEVGOALS[p.n]||{dev:"",proc:"",link:""}; const g=getGoal(p.n);
-      const s=(store[p.n]&&store[p.n].stats)||{};
-      const cur=d.link?(s[d.link]??"–"):"–";
-      return `<tr data-n="${p.n}">
-        <td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>
-        <td class="mini">${d.dev||'<i>nog invullen</i>'}</td>
-        <td class="mini">${d.proc||'—'}</td>
-        <td class="center">${d.link?`<span class="badge">${d.link}</span>`:'—'}</td>
-        <td class="center"><b>${cur}</b></td>
-        <td class="center"><select onchange="setGoalStatus('${p.n.replace(/'/g,"\\'")}',this.value)"
-            style="background:var(--bg2);color:${STATUS_COLOR[g.status]};border:1px solid var(--line);border-radius:6px;padding:5px;font-weight:600">
-            ${STATUS_OPTS.map(o=>`<option value="${o[0]}" ${g.status===o[0]?'selected':''}>${o[1]}</option>`).join("")}</select></td>
-        <td><div style="display:flex;align-items:center;gap:8px;min-width:180px">
-            <input type="range" min="0" max="100" step="5" value="${g.pct}" style="flex:1"
-              oninput="setGoalPct('${p.n.replace(/'/g,"\\'")}',this.value)">
-            <span class="pctlbl" style="width:38px;text-align:right"><b>${g.pct}%</b></span></div>
-            <div class="bar" style="margin-top:5px"><span style="width:${g.pct}%"></span></div></td>
-      </tr>`;
-    }).join("");
+  const wrap=document.getElementById("devWrap"); wrap.innerHTML="";
+  PLAYERS.forEach(p=>{
+    const goals=getGoals(p.n); const s=(store[p.n]&&store[p.n].stats)||{};
+    const nEsc=p.n.replace(/'/g,"\\'");
+    const done=goals.filter(g=>g.status==="behaald").length;
+    const block=document.createElement("div"); block.className="devplayer";
+    block.innerHTML=
+      `<div class="devhead"><b>${p.n}</b> <span class="mini">${p.pos}</span>
+        ${done?`<span class="donebadge">✓ ${done} behaald</span>`:''}
+        <button class="btn" style="margin-left:auto;padding:5px 11px" onclick="addGoal('${nEsc}')">+ nieuw doel</button></div>`+
+      goals.map((g,i)=>{
+        const beh=g.status==="behaald";
+        const cur=g.link?(s[g.link]??"–"):"–";
+        return `<div class="devgoal${beh?' done':''}">
+          <div class="gline">
+            <span class="check">${beh?'✓':''}</span>
+            <input class="gtext" value="${esc(g.text)}" placeholder="ontwikkelpunt / leerdoel…"
+              oninput="setGoalField('${nEsc}',${i},'text',this.value)">
+            <select class="glink" title="gekoppelde stat" onchange="setGoalField('${nEsc}',${i},'link',this.value)">
+              <option value="">— stat —</option>
+              ${STAT_KEYS.map(k=>`<option value="${k}" ${g.link===k?'selected':''}>${k}</option>`).join("")}
+            </select>
+            <span class="curstat">${g.link?g.link+': '+cur:''}</span>
+            <select class="gstatus" style="color:${STATUS_COLOR[g.status]}" onchange="setGoalStatus('${nEsc}',${i},this.value)">
+              ${STATUS_OPTS.map(o=>`<option value="${o[0]}" ${g.status===o[0]?'selected':''}>${o[1]}</option>`).join("")}
+            </select>
+            <button class="del" title="verwijderen" onclick="removeGoal('${nEsc}',${i})">×</button>
+          </div>
+          <div class="gprog">
+            <input type="range" min="0" max="100" step="5" value="${g.pct}" oninput="setGoalPct('${nEsc}',${i},this.value,this)">
+            <span class="pctlbl">${g.pct}%</span>
+            <div class="bar"><span style="width:${g.pct}%"></span></div>
+          </div>
+        </div>`;
+      }).join("");
+    wrap.appendChild(block);
+  });
 }
 
 /* ---------------- BELASTBAARHEID ---------------- */
