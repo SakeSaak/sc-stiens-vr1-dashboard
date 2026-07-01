@@ -125,6 +125,15 @@
   .gprog .pctlbl{width:40px;text-align:right;font-size:12px;font-weight:700;color:var(--muted)}
   .gprog .bar{flex:1;max-width:160px}
   .carddoel{font-size:11px;margin:2px 0 4px;line-height:1.3}
+  /* ---- Moodmeter ---- */
+  .moodgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+  .moodchip{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-left-width:5px;border-radius:10px;padding:9px 12px}
+  .moodchip .face{font-size:26px}
+  .moodchip .mname{font-weight:600;font-size:13px}
+  .moodchip .mscore{font-size:12px;color:var(--muted)}
+  .moodchip .flag{margin-left:auto;font-size:10px;font-weight:700;color:var(--red);
+    background:rgba(255,122,122,.15);border:1px solid rgba(255,122,122,.4);padding:2px 7px;border-radius:999px}
   /* ---- Cloud/auth balk ---- */
   .authbar{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:10px;font-size:13px}
   .authmode{color:var(--muted);background:var(--card);border:1px solid var(--line);padding:5px 12px;border-radius:999px}
@@ -154,6 +163,7 @@
   <button data-tab="squad">Selectieoverzicht</button>
   <button data-tab="metingen">Metingen</button>
   <button data-tab="ontwikkeling">Ontwikkeling</button>
+  <button data-tab="mood">Gesteldheid</button>
   <button data-tab="belasting">Belastbaarheid</button>
   <button data-tab="periode">Periodisering</button>
   <button data-tab="schedule">Taakschema's</button>
@@ -228,6 +238,32 @@
     <div style="overflow:auto">
       <div id="devWrap"></div>
     </div>
+  </section>
+
+  <!-- ============ GESTELDHEID / MOODMETER ============ -->
+  <section id="mood">
+    <h2 class="sec">🌡️ Gesteldheid (mentaal &amp; fysiek)</h2>
+    <div class="note">
+      Een laagdrempelige <b>check-in</b> om het welzijn van de speelsters te volgen — zoals de KNVB adviseert om zowel de mentale als de
+      fysieke toestand in de gaten te houden. Kies een datum en scoor per speelster op een schaal van <b>1 (slecht) t/m 5 (top)</b>.
+      Dit is een hulpmiddel voor het gesprek, geen medische beoordeling. Zie je structureel lage scores, ga dan het gesprek aan en verwijs
+      zo nodig naar passende ondersteuning.
+    </div>
+    <div class="controls">
+      <label>📅 Datum <input type="date" id="moodDate" onchange="renderMoodTable()"></label>
+      <label>&nbsp;<button class="btn" onclick="saveStats()">💾 Opslaan</button></label>
+    </div>
+    <p class="hint" style="margin-top:-4px">Mentaal: Stemming, Slaap, Rust/kalmte · Fysiek: Energie, Spieren (fris). De gemiddelde score bepaalt de kleur en het gezichtje.</p>
+    <div style="overflow:auto"><table id="moodTable"></table></div>
+
+    <h2 class="sec" style="margin-top:22px">👥 Teamoverzicht (aandacht bovenaan)</h2>
+    <div id="moodTeam" class="moodgrid"></div>
+
+    <h2 class="sec" style="margin-top:22px">📈 Verloop over tijd</h2>
+    <div class="controls">
+      <label>Speelster <select id="moodProgPlayer" onchange="renderMoodProgress()"></select></label>
+    </div>
+    <div id="moodProgWrap" style="overflow:auto"></div>
   </section>
 
   <!-- ============ BELASTBAARHEID ============ -->
@@ -539,7 +575,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));PLAYERS.forEach(p=>computePlayerStats(p.n));renderCards();renderMeasTable();fillProgPlayers();renderProgress();renderDev();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
+  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));PLAYERS.forEach(p=>computePlayerStats(p.n));renderCards();renderMeasTable();fillProgPlayers();renderProgress();renderDev();renderMoodAll();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
   r.readAsText(f);
 }
 
@@ -868,6 +904,77 @@ function renderDev(){
   });
 }
 
+/* ---------------- GESTELDHEID / MOODMETER ---------------- */
+const WELL=[
+  {k:"mood",  lbl:"Stemming", emoji:"😊", groep:"mentaal"},
+  {k:"sleep", lbl:"Slaap",    emoji:"😴", groep:"mentaal"},
+  {k:"calm",  lbl:"Rust/kalmte", emoji:"🧘", groep:"mentaal"},
+  {k:"energy",lbl:"Energie",  emoji:"⚡", groep:"fysiek"},
+  {k:"muscle",lbl:"Spieren (fris)", emoji:"💪", groep:"fysiek"},
+];
+function moodDate(){ const el=document.getElementById("moodDate"); return (el&&el.value)?el.value:todayStr(); }
+function getWell(n){ store[n]=store[n]||{stats:{},note:""}; if(!Array.isArray(store[n].wellbeing))store[n].wellbeing=[]; return store[n].wellbeing; }
+function wellSession(n,date,create){ const ws=getWell(n); let s=ws.find(x=>x.date===date);
+  if(!s&&create){ s={date,vals:{}}; ws.push(s); ws.sort((a,b)=>a.date<b.date?-1:1);} return s; }
+function wellScore(n,date){ const s=wellSession(n,date,false); if(!s)return null;
+  const v=WELL.map(w=>parseFloat(s.vals[w.k])).filter(x=>!isNaN(x)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
+function moodFace(sc){ if(sc==null)return "·"; return sc>=4.5?"😄":sc>=3.5?"🙂":sc>=2.5?"😐":sc>=1.5?"😟":"😣"; }
+function moodColor(sc){ if(sc==null)return "var(--line)"; return sc>=4?"var(--green)":sc>=3?"var(--gold)":"var(--red)"; }
+function moodInput(n,k,val){ const s=wellSession(n,moodDate(),true); s.vals[k]=val;
+  const row=document.querySelector(`#moodTable tr[data-n="${CSS.escape(n)}"]`);
+  if(row){ const sc=wellScore(n,moodDate()); const f=row.querySelector(".mface"); const b=row.querySelector(".mscoreb");
+    if(f)f.textContent=moodFace(sc); if(b)b.textContent=(sc!=null?sc.toFixed(1):"–"); if(f)f.style.color=moodColor(sc); }
+  renderMoodTeam();
+}
+function renderMoodTable(){
+  const t=document.getElementById("moodTable"); if(!t)return; const date=moodDate();
+  const ment=WELL.filter(w=>w.groep==="mentaal"), fys=WELL.filter(w=>w.groep==="fysiek");
+  t.innerHTML=`<tr><th rowspan="2">Speelster</th><th class="center" colspan="${ment.length}" style="border-left:2px solid var(--line)">🧠 Mentaal</th>
+    <th class="center" colspan="${fys.length}" style="border-left:2px solid var(--line)">💪 Fysiek</th>
+    <th class="center" colspan="2" style="border-left:2px solid var(--gold)">Score</th></tr>
+    <tr>${ment.map((w,i)=>`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''}>${w.emoji}<br>${w.lbl}</th>`).join("")}
+    ${fys.map((w,i)=>`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''}>${w.emoji}<br>${w.lbl}</th>`).join("")}
+    <th class="center" style="border-left:2px solid var(--gold)">😊</th><th class="center">gem.</th></tr>`+
+    PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); const s=wellSession(p.n,date,false); const v=(s&&s.vals)||{}; const sc=wellScore(p.n,date);
+      const cell=w=>`<td class="center" ${w===WELL[0]||w.k==="energy"?'style="border-left:2px solid var(--line)"':''}><input type="number" min="1" max="5" step="1" value="${v[w.k]!=null?v[w.k]:''}" placeholder="1-5"
+        style="width:52px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
+        oninput="moodInput('${nEsc}','${w.k}',this.value)"></td>`;
+      return `<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
+        ment.map(cell).join("")+fys.map(cell).join("")+
+        `<td class="center" style="border-left:2px solid var(--gold)"><span class="mface" style="font-size:20px;color:${moodColor(sc)}">${moodFace(sc)}</span></td>
+         <td class="center"><b class="mscoreb">${sc!=null?sc.toFixed(1):"–"}</b></td></tr>`;
+    }).join("");
+}
+function renderMoodTeam(){
+  const wrap=document.getElementById("moodTeam"); if(!wrap)return; const date=moodDate();
+  const rows=PLAYERS.map(p=>({n:p.n,sc:wellScore(p.n,date)}));
+  rows.sort((a,b)=>{ if(a.sc==null&&b.sc==null)return 0; if(a.sc==null)return 1; if(b.sc==null)return -1; return a.sc-b.sc; });
+  wrap.innerHTML=rows.map(r=>`<div class="moodchip" style="border-left-color:${moodColor(r.sc)}">
+      <span class="face">${moodFace(r.sc)}</span>
+      <div><div class="mname">${r.n}</div><div class="mscore">${r.sc!=null?r.sc.toFixed(1)+" / 5":"nog geen invoer"}</div></div>
+      ${(r.sc!=null&&r.sc<3)?'<span class="flag">let op</span>':''}
+    </div>`).join("");
+}
+function fillMoodPlayers(){ const sel=document.getElementById("moodProgPlayer"); if(!sel)return; const cur=sel.value;
+  sel.innerHTML=PLAYERS.map(p=>`<option value="${p.n}">${p.n}</option>`).join(""); if(cur)sel.value=cur; }
+function renderMoodProgress(){
+  const wrap=document.getElementById("moodProgWrap"); if(!wrap)return;
+  const sel=document.getElementById("moodProgPlayer"); const n=(sel&&sel.value)||PLAYERS[0].n;
+  const ws=getWell(n).slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(!ws.length){ wrap.innerHTML='<p class="hint">Nog geen check-ins voor deze speelster.</p>'; return; }
+  let prev=null;
+  wrap.innerHTML=`<table><tr><th>Datum</th>${WELL.map(w=>`<th class="center">${w.emoji}</th>`).join("")}<th class="center" style="border-left:2px solid var(--gold)">Gem.</th><th class="center">😊</th><th class="center">Δ</th></tr>`+
+    ws.map(s=>{ const sc=wellScore(n,s.date);
+      let d='—'; if(sc!=null&&prev!=null){const df=+(sc-prev).toFixed(1); d=df>0?'<span style="color:var(--green)">▲ +'+df+'</span>':df<0?'<span style="color:var(--red)">▼ '+df+'</span>':'0';}
+      if(sc!=null)prev=sc;
+      return `<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})}</td>`+
+        WELL.map(w=>`<td class="center">${s.vals[w.k]!=null&&s.vals[w.k]!==""?s.vals[w.k]:'–'}</td>`).join("")+
+        `<td class="center" style="border-left:2px solid var(--gold)"><b style="color:${moodColor(sc)}">${sc!=null?sc.toFixed(1):'–'}</b></td>
+         <td class="center" style="font-size:16px">${moodFace(sc)}</td><td class="center">${d}</td></tr>`;
+    }).join("")+`</table>`;
+}
+function renderMoodAll(){ renderMoodTable(); renderMoodTeam(); fillMoodPlayers(); renderMoodProgress(); }
+
 /* ---------------- BELASTBAARHEID ---------------- */
 function classify(p){
   const j=p.job.toLowerCase(), h=(p.holiday||"").toLowerCase(); const tags=[];
@@ -948,7 +1055,7 @@ function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringi
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderBel(); renderPeriode();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode();
 }
 async function cloudLoad(){
   if(!CLOUD) return;
@@ -994,7 +1101,8 @@ async function cloudInit(){
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderBel(); renderPeriode();
+const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 cloudInit();
