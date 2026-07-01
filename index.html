@@ -261,12 +261,13 @@
   <section id="schedule">
     <h2 class="sec">Eerlijke taakschema's</h2>
     <div class="note">
-      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen/fluiten, eten) telt als 1 punt. Bij elke taak wordt
-      automatisch de speelster met de <b>minste punten</b> gekozen. Wie geen auto/rijbewijs heeft, kan niet rijden en pakt dus
-      <b>automatisch extra was-, vlag- of eettaken</b> op — zo eindigt iedereen op (bijna) evenveel punten.
-      <br><b>Vlaggen/fluiten</b> gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: wie het minst heeft gevlagd is eerst aan de beurt,
-      zodat iedereen minstens één keer vlagt (bij ≥ 16 wedstrijden komt de hele selectie aan bod).
-      <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
+      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen, fluiten&nbsp;+&nbsp;coördinator, eten) telt als 1 punt.
+      Er wordt automatisch gekozen op basis van de <b>minste punten</b> (eerlijk totaal) én wie dat klusje het minst deed (variatie),
+      zodat het niet eentonig wordt. Wie geen auto/rijbewijs heeft, kan niet rijden en pakt automatisch extra was-/eettaken op —
+      zo eindigt iedereen op (bijna) evenveel punten.
+      <br><b>Vlaggen</b> (grensrechter) gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: iedereen vlagt minstens één keer
+      (bij ≥ 16 wedstrijden komt de hele selectie aan bod). <b>Fluiten + wedstrijdcoördinator</b> is samengevoegd tot één taak bij
+      thuiswedstrijden. <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
       Amber vlagt/fluit niet (eigen voorkeur) en pakt daarom extra was-/eettaken op.
     </div>
 
@@ -318,7 +319,7 @@
         <p class="mini">Doel: alle balken even lang. Verschil van hooguit 1 punt is normaal bij oneven aantallen.</p>
         <div class="balance" id="balance"></div>
         <div class="legend">
-          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen/fluiten</span><span>🟢 Eten/coördinator</span>
+          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen</span><span>🔔 Fluiten/coörd.</span><span>🟢 Eten</span>
         </div>
       </div>
     </div>
@@ -517,7 +518,7 @@ function buildFixtures(){
     fixtures.push({
       date:d.toISOString().slice(0,10), time:time, opponent:"",
       home: pattern==="allhome" ? true : (i%2===0),
-      drive:[],wash:[],flag:[],food:[]
+      drive:[],wash:[],flag:[],ref:[],food:[]
     });
   }
   tasksAssigned=false;
@@ -526,7 +527,7 @@ function buildFixtures(){
 
 function emptyLoad(){
   sched={pts:{},sub:{}};
-  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,ref:0,food:0};});
 }
 
 // Fair task assignment over the current fixtures
@@ -535,10 +536,11 @@ function assignTasks(){
   const nDrivers=+document.getElementById("cfgDrivers").value;
   const nWash=+document.getElementById("cfgWash").value;
   const pts={}, sub={}, lastAny={}, partner={};
-  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
+  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,ref:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
+  const refPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);   // fluiten + wedstrijdcoördinator (excl. wie niet wil fluiten)
   // Kies 1 speelster. Doel: eerlijk totaal + variatie (niet steeds hetzelfde klusje).
   //   balans-modus (standaard): (1) laagste totaal, (2) wie dit taaktype het minst deed,
   //   coverage-modus (vlaggen): (1) wie dit taaktype het minst deed, (2) laagste totaal.
@@ -559,12 +561,13 @@ function assignTasks(){
     const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[];  // vlaggen bij ELKE wedstrijd, coverage-first
     if(f.home){
       f.drive=[];
+      const rf=pickOne(refPool,used,"ref",idx); f.ref=rf?[rf]:[];        // fluiten + wedstrijdcoördinator (thuis)
       const a=pickOne(allPool,used,"food",idx);                         // eten in tweetallen (roterende partners)
       const b=pickOne(allPool,used,"food",idx,new Set(a?[partner[a]]:[]));
       f.food=[a,b].filter(Boolean);
       if(a&&b){partner[a]=b; partner[b]=a;}
     } else {
-      f.food=[];                                                        // geen eten bij uitwedstrijden
+      f.ref=[]; f.food=[];                                              // geen fluiter/coörd. of eten bij uitwedstrijden
       f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx); if(d)f.drive.push(d);}
     }
   });
@@ -577,7 +580,7 @@ function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
-    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlag/fluit</th><th>🟢 Eten/coörd.</th></tr>`+
+    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🔔 Fluiten/coörd.</th><th>🟢 Eten</th></tr>`+
     fixtures.map((f,idx)=>`<tr>
       <td class="center">${idx+1}</td>
       <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
@@ -590,6 +593,7 @@ function renderSchedTable(){
       <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
       <td>${names(f.wash)}</td>
       <td>${names(f.flag)}</td>
+      <td>${f.home?names(f.ref):'<span class="mini">n.v.t. (uit)</span>'}</td>
       <td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
   // style the inline inputs
   t.querySelectorAll("input,select").forEach(el=>{
@@ -622,7 +626,8 @@ function exportICS(){
     const descLines=[];
     if(!f.home && f.drive.length) descLines.push("🔵 Rijden: "+f.drive.join(", "));
     if(f.wash.length) descLines.push("🟣 Wassen: "+f.wash.join(", "));
-    if(f.flag.length) descLines.push("🟡 Vlaggen/fluiten: "+f.flag.join(", "));
+    if(f.flag.length) descLines.push("🟡 Vlaggen: "+f.flag.join(", "));
+    if(f.ref.length) descLines.push("🔔 Fluiten + wedstrijdcoördinator: "+f.ref.join(", "));
     if(f.food.length) descLines.push("🟢 Eten voorbereiden (2-tal): "+f.food.join(" & "));
     const desc=descLines.join("\n")||"Nog geen taken verdeeld.";
     const uid="scstiens-"+idx+"-"+f.date+"@dashboard";
@@ -655,10 +660,10 @@ function renderBalance(){
 function renderPerPlayer(){
   const t=document.getElementById("perPlayer");
   t.innerHTML=`<tr><th>Speelster</th><th class="center">🔵 Rijden</th><th class="center">🟣 Wassen</th>
-    <th class="center">🟡 Vlag/fluit</th><th class="center">🟢 Eten/coörd.</th><th class="center">Totaal</th></tr>`+
+    <th class="center">🟡 Vlaggen</th><th class="center">🔔 Fluiten/coörd.</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
     PLAYERS.map(p=>{const s=sched.sub[p.n];return `<tr>
       <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
-      <td class="center">${s.flag}</td><td class="center">${s.food}</td>
+      <td class="center">${s.flag}</td><td class="center">${s.ref}</td><td class="center">${s.food}</td>
       <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
 }
 
