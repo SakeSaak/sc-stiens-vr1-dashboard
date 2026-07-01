@@ -1323,10 +1323,19 @@ function renderFood(){ const w=document.getElementById("foodList"); if(!w)return
 function fineOwed(n){ return kas().fines.filter(f=>f.player===n&&!f.paid).reduce((a,f)=>a+f.amount,0); }
 function foodOwed(n){ return kas().food.filter(f=>f.shareWith.includes(n)&&!f.paid[n]).reduce((a,f)=>a+f.total/f.shareWith.length,0); }
 function playerOwed(n){ return fineOwed(n)+foodOwed(n); }
-function payMsg(n,amount){ const t=kas().tikkie;
-  return "Hoi "+n+"! 🧾 Betaalverzoekje voor SC Stiens VR1 — openstaand: "+eur(amount)+" (boetes/eten). "+
+function payMsg(n){
+  const items=[];
+  kas().fines.filter(f=>f.player===n&&!f.paid).forEach(f=>{
+    const d=new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+    items.push("• "+f.reason+" ("+d+") — "+eur(f.amount)); });
+  kas().food.filter(f=>f.shareWith.includes(n)&&!f.paid[n]).forEach(f=>{
+    const d=new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+    items.push("• Eten "+d+" (gekookt door "+f.cook+") — "+eur(f.total/f.shareWith.length)); });
+  const t=kas().tikkie;
+  return "Hoi "+n+"! 🧾 Betaalverzoekje voor SC Stiens VR1:\n"+items.join("\n")+
+    "\nTotaal: "+eur(playerOwed(n))+".\n"+
     (t?("Betaal makkelijk via Tikkie: "+t):"Vraag de penningmeester om de betaallink.")+" Bedankt! 🧡🖤"; }
-function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n,amt)); }
+function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n)); }
 function renderKasOverview(){ const w=document.getElementById("kasOverview"); if(!w)return;
   const rows=PLAYERS.map(p=>({n:p.n,fine:fineOwed(p.n),food:foodOwed(p.n),tot:playerOwed(p.n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
   if(!rows.length){ w.innerHTML='<p class="hint">Niemand heeft iets openstaan 🎉</p>'; return; }
