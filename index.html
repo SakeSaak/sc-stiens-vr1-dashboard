@@ -312,10 +312,10 @@
     <h2 class="sec" style="margin-top:22px">🔗 Zelf invullen: persoonlijke links (maandelijks)</h2>
     <div class="note">
       Elke speelster krijgt haar <b>eigen link of QR-code</b> waarmee ze de check-in zelf invult — zonder inloggen, op de telefoon.
-      Vul per speelster haar <b>telefoonnummer</b> in en klik op de groene <b>WhatsApp</b>-knop: er opent een WhatsApp-bericht met haar link
-      al ingevuld — jij tikt alleen nog op verzenden. Of gebruik <b>Kopieer</b> / de <b>QR</b>. De antwoorden zijn <b>vertrouwelijk</b> en
-      alleen voor de staf zichtbaar. Klik op <b>Check-ins ophalen</b> (als staf ingelogd) om de ingevulde check-ins te laden.
-      <br><span class="mini">Let op: klik na het invullen van telefoonnummers op <b>Opslaan</b> zodat ze bewaard en gedeeld worden. Telefoonnummers worden met de staf gedeeld.</span>
+      Klik op de groene <b>WhatsApp</b>-knop: er opent een WhatsApp-bericht met haar link al ingevuld — jij tikt alleen nog op verzenden.
+      Of gebruik <b>Kopieer</b> / de <b>QR</b>. De antwoorden zijn <b>vertrouwelijk</b> en alleen voor de staf zichtbaar.
+      Klik op <b>Check-ins ophalen</b> (als staf ingelogd) om de ingevulde check-ins te laden.
+      <br><span class="mini">Telefoonnummers vul je in bij <b>Selectieoverzicht</b>; de WhatsApp-knop gebruikt die automatisch.</span>
     </div>
     <div class="controls"><button class="btn primary" onclick="fetchCheckins()">🔄 Check-ins ophalen</button></div>
     <div id="moodLinks"></div>
@@ -709,13 +709,16 @@ function importData(ev){
 /* ---------------- SQUAD TABLE ---------------- */
 function renderSquad(){
   const t=document.getElementById("squadTable");
-  t.innerHTML=`<tr><th>Naam</th><th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
+  t.innerHTML=`<tr><th>Naam</th><th>📱 Telefoon</th><th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
     <th class="center">Pos</th><th>Voorkeursposities</th><th class="center">Rijden</th><th class="center">Shirt</th><th>Prestatiedoel</th></tr>`+
-    PLAYERS.map(p=>`<tr>
-      <td><b>${p.n}</b></td><td class="center">${p.age}</td><td>${p.city}</td><td>${p.job}</td>
+    PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); return `<tr>
+      <td><b>${p.n}</b></td>
+      <td><input type="text" value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${nEsc}',this.value)"
+        style="width:130px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px"></td>
+      <td class="center">${p.age}</td><td>${p.city}</td><td>${p.job}</td>
       <td class="center">${p.pos}</td><td class="mini">${p.top}</td>
       <td class="center">${p.car?'✅':(p.licence.includes('geen auto')?'🚙 geen auto':'❌')}</td>
-      <td class="center">${p.shirt}</td><td class="mini">${p.goal}</td></tr>`).join("");
+      <td class="center">${p.shirt}</td><td class="mini">${p.goal}</td></tr>`; }).join("");
 }
 
 /* ---------------- FAIR SCHEDULE ---------------- */
@@ -1186,11 +1189,9 @@ function renderReminders(){
 }
 function renderMoodLinks(){
   const w=document.getElementById("moodLinks"); if(!w)return;
-  w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>📱 Telefoon</th><th>Persoonlijke link</th><th></th><th class="center">WhatsApp</th><th class="center">QR</th></tr>`+
+  w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>Persoonlijke link</th><th></th><th class="center">WhatsApp</th><th class="center">QR</th></tr>`+
     PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); return `<tr>
       <td><b>${p.n}</b></td>
-      <td><input value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${nEsc}',this.value)"
-        style="width:130px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:12px"></td>
       <td><input readonly value="${playerLink(p.n)}" onclick="this.select()" style="width:100%;min-width:210px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:11px"></td>
       <td><button class="btn" onclick="copyLink('${nEsc}')">Kopieer</button></td>
       <td class="center"><button class="btn" onclick="openWA('${nEsc}')" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td>
