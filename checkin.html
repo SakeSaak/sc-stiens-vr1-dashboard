@@ -28,6 +28,9 @@
   .scale button.sel{background:linear-gradient(150deg,var(--gold),var(--yellow));color:#1a1200;border-color:var(--gold);transform:scale(1.05)}
   .scalenums{display:flex;gap:7px;margin-top:3px}
   .scalenums span{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+  .q input[type=text],.q input[type=number]{width:100%;background:var(--bg);color:var(--txt);
+    border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:15px}
+  .q input:focus{border-color:var(--gold);outline:none}
   .submit{width:100%;padding:14px;border:none;border-radius:12px;background:var(--gold);color:#1a1200;
     font-size:16px;font-weight:800;cursor:pointer;margin-top:6px}
   .submit:disabled{opacity:.5;cursor:default}
@@ -77,6 +80,14 @@ function render(){
       <div class="scale">${[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}" onclick="pick('${q.k}',${v},this)">${FACES[v]}</button>`).join("")}</div>
       <div class="scalenums"><span>1 · ${q.lo}</span><span></span><span></span><span></span><span>5 · ${q.hi}</span></div>
     </div>`).join("")}
+    <div class="q">
+      <div class="lbl"><span class="em">🩹</span> Heb je een blessure? Zo ja, waaraan?</div>
+      <input id="injury" type="text" placeholder="Bijv. enkel, hamstring, knie… (laat leeg als je fit bent)">
+    </div>
+    <div class="q">
+      <div class="lbl"><span class="em">⏱️</span> Geschat herstel (weken)</div>
+      <input id="recovery" type="number" min="0" step="1" placeholder="0 = geen / al fit">
+    </div>
     <button class="submit" id="submitBtn" disabled onclick="submitCheckin()">Versturen</button>
     <div id="err"></div>
   </div>`;
@@ -90,12 +101,15 @@ function pick(k,v,btn){
 async function submitCheckin(){
   const btn=document.getElementById("submitBtn"); btn.disabled=true; btn.textContent="Versturen…";
   const today=new Date().toISOString().slice(0,10);
-  const {error}=await sb.from("mood_checkins").insert({token:token, player:naam||null, date:today, vals:answers});
+  const injury=(document.getElementById("injury").value||"").trim();
+  const recEl=document.getElementById("recovery"); const recovery=(recEl.value!=="")?+recEl.value:"";
+  const vals=Object.assign({},answers,{injury:injury,recovery:recovery});
+  const {error}=await sb.from("mood_checkins").insert({token:token, player:naam||null, date:today, vals:vals});
   if(error){
     document.getElementById("err").innerHTML='<p class="err">Er ging iets mis bij het versturen. Probeer het straks nog eens.</p>';
     btn.disabled=false; btn.textContent="Versturen"; return;
   }
-  const avg=Object.values(answers).reduce((a,b)=>a+b,0)/QUESTIONS.length;
+  const avg=QUESTIONS.reduce((a,q)=>a+(answers[q.k]||0),0)/QUESTIONS.length;
   document.getElementById("app").innerHTML=`<div class="done">
     <div class="big">${FACES[Math.round(avg)]}</div>
     <h2>Bedankt${naam?(", "+naam):""}!</h2>

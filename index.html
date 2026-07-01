@@ -942,7 +942,8 @@ function renderMoodTable(){
   const ment=WELL.filter(w=>w.groep==="mentaal"), fys=WELL.filter(w=>w.groep==="fysiek");
   t.innerHTML=`<tr><th rowspan="2">Speelster</th><th class="center" colspan="${ment.length}" style="border-left:2px solid var(--line)">🧠 Mentaal</th>
     <th class="center" colspan="${fys.length}" style="border-left:2px solid var(--line)">💪 Fysiek</th>
-    <th class="center" colspan="2" style="border-left:2px solid var(--gold)">Score</th></tr>
+    <th class="center" colspan="2" style="border-left:2px solid var(--gold)">Score</th>
+    <th rowspan="2" style="border-left:2px solid var(--line)">🩹 Blessure (waar?)</th><th rowspan="2" class="center">Herstel<br>(wk)</th></tr>
     <tr>${ment.map((w,i)=>`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''}>${w.emoji}<br>${w.lbl}</th>`).join("")}
     ${fys.map((w,i)=>`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''}>${w.emoji}<br>${w.lbl}</th>`).join("")}
     <th class="center" style="border-left:2px solid var(--gold)">😊</th><th class="center">gem.</th></tr>`+
@@ -953,16 +954,23 @@ function renderMoodTable(){
       return `<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`+
         ment.map(cell).join("")+fys.map(cell).join("")+
         `<td class="center" style="border-left:2px solid var(--gold)"><span class="mface" style="font-size:20px;color:${moodColor(sc)}">${moodFace(sc)}</span></td>
-         <td class="center"><b class="mscoreb">${sc!=null?sc.toFixed(1):"–"}</b></td></tr>`;
+         <td class="center"><b class="mscoreb">${sc!=null?sc.toFixed(1):"–"}</b></td>
+         <td style="border-left:2px solid var(--line)"><input type="text" value="${(v.injury||'').replace(/"/g,'&quot;')}" placeholder="geen"
+           style="min-width:120px;width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px" oninput="moodInput('${nEsc}','injury',this.value)"></td>
+         <td class="center"><input type="number" min="0" step="1" value="${v.recovery!=null&&v.recovery!==''?v.recovery:''}" placeholder="–"
+           style="width:56px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center" oninput="moodInput('${nEsc}','recovery',this.value)"></td></tr>`;
     }).join("");
 }
 function renderMoodTeam(){
   const wrap=document.getElementById("moodTeam"); if(!wrap)return; const date=moodDate();
-  const rows=PLAYERS.map(p=>({n:p.n,sc:wellScore(p.n,date)}));
-  rows.sort((a,b)=>{ if(a.sc==null&&b.sc==null)return 0; if(a.sc==null)return 1; if(b.sc==null)return -1; return a.sc-b.sc; });
-  wrap.innerHTML=rows.map(r=>`<div class="moodchip" style="border-left-color:${moodColor(r.sc)}">
-      <span class="face">${moodFace(r.sc)}</span>
-      <div><div class="mname">${r.n}</div><div class="mscore">${r.sc!=null?r.sc.toFixed(1)+" / 5":"nog geen invoer"}</div></div>
+  const rows=PLAYERS.map(p=>{ const s=wellSession(p.n,date,false); const v=(s&&s.vals)||{};
+    return {n:p.n,sc:wellScore(p.n,date),injury:(v.injury||"").trim(),rec:v.recovery}; });
+  rows.sort((a,b)=>{ if(a.injury&&!b.injury)return -1; if(!a.injury&&b.injury)return 1;
+    if(a.sc==null&&b.sc==null)return 0; if(a.sc==null)return 1; if(b.sc==null)return -1; return a.sc-b.sc; });
+  wrap.innerHTML=rows.map(r=>`<div class="moodchip" style="border-left-color:${r.injury?'#ffb74d':moodColor(r.sc)}">
+      <span class="face">${r.injury?'🩹':moodFace(r.sc)}</span>
+      <div><div class="mname">${r.n}</div>
+        <div class="mscore">${r.sc!=null?r.sc.toFixed(1)+" / 5":"nog geen invoer"}${r.injury?` · 🩹 ${r.injury}${(r.rec!=null&&r.rec!=='')?' ('+r.rec+' wk)':''}`:''}</div></div>
       ${(r.sc!=null&&r.sc<3)?'<span class="flag">let op</span>':''}
     </div>`).join("");
 }
@@ -974,14 +982,16 @@ function renderMoodProgress(){
   const ws=getWell(n).slice().sort((a,b)=>a.date<b.date?-1:1);
   if(!ws.length){ wrap.innerHTML='<p class="hint">Nog geen check-ins voor deze speelster.</p>'; return; }
   let prev=null;
-  wrap.innerHTML=`<table><tr><th>Datum</th>${WELL.map(w=>`<th class="center">${w.emoji}</th>`).join("")}<th class="center" style="border-left:2px solid var(--gold)">Gem.</th><th class="center">😊</th><th class="center">Δ</th></tr>`+
+  wrap.innerHTML=`<table><tr><th>Datum</th>${WELL.map(w=>`<th class="center">${w.emoji}</th>`).join("")}<th class="center" style="border-left:2px solid var(--gold)">Gem.</th><th class="center">😊</th><th class="center">Δ</th><th style="border-left:2px solid var(--line)">🩹 Blessure</th></tr>`+
     ws.map(s=>{ const sc=wellScore(n,s.date);
       let d='—'; if(sc!=null&&prev!=null){const df=+(sc-prev).toFixed(1); d=df>0?'<span style="color:var(--green)">▲ +'+df+'</span>':df<0?'<span style="color:var(--red)">▼ '+df+'</span>':'0';}
       if(sc!=null)prev=sc;
+      const inj=(s.vals.injury||"").trim();
       return `<tr><td>${new Date(s.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})}</td>`+
         WELL.map(w=>`<td class="center">${s.vals[w.k]!=null&&s.vals[w.k]!==""?s.vals[w.k]:'–'}</td>`).join("")+
         `<td class="center" style="border-left:2px solid var(--gold)"><b style="color:${moodColor(sc)}">${sc!=null?sc.toFixed(1):'–'}</b></td>
-         <td class="center" style="font-size:16px">${moodFace(sc)}</td><td class="center">${d}</td></tr>`;
+         <td class="center" style="font-size:16px">${moodFace(sc)}</td><td class="center">${d}</td>
+         <td class="mini" style="border-left:2px solid var(--line)">${inj?('🩹 '+inj+((s.vals.recovery!=null&&s.vals.recovery!=='')?' ('+s.vals.recovery+' wk)':'')):'–'}</td></tr>`;
     }).join("")+`</table>`;
 }
 /* Persoonlijke check-in links per speelster (zelf invullen, zonder inloggen) */
