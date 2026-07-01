@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SC Stiens Vrouwen 1 — Teamdashboard 2026/2027</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
   :root{
     /* SC Stiens clubkleuren: zwart, oranje, geel */
@@ -264,6 +265,16 @@
       <label>Speelster <select id="moodProgPlayer" onchange="renderMoodProgress()"></select></label>
     </div>
     <div id="moodProgWrap" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:22px">🔗 Zelf invullen: persoonlijke links (maandelijks)</h2>
+    <div class="note">
+      Elke speelster krijgt haar <b>eigen link of QR-code</b> waarmee ze de check-in zelf invult — zonder inloggen, op de telefoon.
+      Deel het linkje via de teamapp of hang de QR in de kleedkamer. De antwoorden zijn <b>vertrouwelijk</b> en alleen voor de staf zichtbaar.
+      Klik op <b>Check-ins ophalen</b> (als staf ingelogd) om de ingevulde check-ins in het overzicht te laden.
+    </div>
+    <div class="controls"><button class="btn primary" onclick="fetchCheckins()">🔄 Check-ins ophalen</button></div>
+    <div id="moodLinks"></div>
+
   </section>
 
   <!-- ============ BELASTBAARHEID ============ -->
@@ -973,7 +984,55 @@ function renderMoodProgress(){
          <td class="center" style="font-size:16px">${moodFace(sc)}</td><td class="center">${d}</td></tr>`;
     }).join("")+`</table>`;
 }
-function renderMoodAll(){ renderMoodTable(); renderMoodTeam(); fillMoodPlayers(); renderMoodProgress(); }
+/* Persoonlijke check-in links per speelster (zelf invullen, zonder inloggen) */
+const MOOD_TOKENS={
+  "Mare":"5db55518dd",
+  "Esmee Terpstra":"b9b69b68b8",
+  "Renske":"87dd3186c9",
+  "Maja":"dee8c7aace",
+  "Nynke":"96d79632bf",
+  "Coby Keizer":"97e9684f7e",
+  "Grietine Bergsma":"2c2dc9cb37",
+  "Iris":"82c3ff87d7",
+  "Merle":"1d559fbf61",
+  "Sacha":"b997c9a0a1",
+  "Arwen Kuipers":"67b54f35fa",
+  "Esmee Diekstra":"26e2647248",
+  "Jetty De Ruiter":"c352c082ea",
+  "Sigrid":"3b59dc1907",
+  "Bente":"a15a705621",
+  "Amber Merkx":"9bed865663",
+  "Alyssa Visser":"8513ff3563",
+};
+function checkinBase(){ return location.origin.replace(/\/$/,"")+"/checkin.html"; }
+function playerLink(n){ return checkinBase()+"?p="+encodeURIComponent(MOOD_TOKENS[n]||"")+"&naam="+encodeURIComponent(n); }
+function copyLink(n){ navigator.clipboard.writeText(playerLink(n)).then(()=>flash("Link gekopieerd ✓"),()=>flash("Kopiëren mislukt")); }
+function toggleQR(n,btn){ const box=btn.parentElement.querySelector(".qrbox");
+  if(box.dataset.on){ box.innerHTML=""; box.dataset.on=""; return; }
+  box.innerHTML=""; try{ new QRCode(box,{text:playerLink(n),width:120,height:120,colorDark:"#141416",colorLight:"#ffffff"}); box.dataset.on="1"; }catch(e){ box.textContent="QR-lib niet geladen"; } }
+function renderMoodLinks(){
+  const w=document.getElementById("moodLinks"); if(!w)return;
+  w.innerHTML=`<div style="overflow:auto"><table><tr><th>Speelster</th><th>Persoonlijke link</th><th></th><th class="center">QR</th></tr>`+
+    PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); return `<tr>
+      <td><b>${p.n}</b></td>
+      <td><input readonly value="${playerLink(p.n)}" onclick="this.select()" style="width:100%;min-width:230px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px;font-size:11px"></td>
+      <td><button class="btn" onclick="copyLink('${nEsc}')">Kopieer</button></td>
+      <td class="center"><button class="btn" onclick="toggleQR('${nEsc}',this)">QR</button><div class="qrbox" style="margin-top:6px;display:inline-block"></div></td>
+    </tr>`; }).join("")+`</table></div>`;
+}
+async function fetchCheckins(){
+  if(typeof CLOUD==="undefined" || !CLOUD){ alert("Cloud is niet actief."); return; }
+  if(!isStaff){ alert("Log eerst in als staf (balk bovenaan) om de check-ins te bekijken."); return; }
+  const {data,error}=await sb.from("mood_checkins").select("token,player,date,vals").order("date",{ascending:true});
+  if(error){ alert("Ophalen mislukt: "+error.message); return; }
+  const tok2name={}; Object.keys(MOOD_TOKENS).forEach(n=>tok2name[MOOD_TOKENS[n]]=n);
+  let cnt=0;
+  (data||[]).forEach(row=>{ const n=tok2name[row.token]||row.player; if(!n||!PLAYERS.some(p=>p.n===n))return;
+    const ws=getWell(n); let s=ws.find(x=>x.date===row.date); if(!s){ s={date:row.date,vals:{}}; ws.push(s); }
+    s.vals=Object.assign({},s.vals,row.vals||{}); ws.sort((a,b)=>a.date<b.date?-1:1); cnt++; });
+  renderMoodAll(); flash(cnt+" check-in(s) geladen ✓");
+}
+function renderMoodAll(){ renderMoodTable(); renderMoodTeam(); fillMoodPlayers(); renderMoodProgress(); renderMoodLinks(); }
 
 /* ---------------- BELASTBAARHEID ---------------- */
 function classify(p){
