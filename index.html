@@ -534,44 +534,43 @@ function assignTasks(){
   if(!fixtures.length){buildFixtures();}
   const nDrivers=+document.getElementById("cfgDrivers").value;
   const nWash=+document.getElementById("cfgWash").value;
-  const pts={}, sub={};
-  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+  const pts={}, sub={}, lastAny={}, partner={};
+  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
-  const washPool=PLAYERS.map(p=>p.n);
+  const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
-  const foodPool=PLAYERS.map(p=>p.n);
-  function pick(pool,used,count){
-    const chosen=[];
-    for(let i=0;i<count;i++){
-      const cand=pool.filter(n=>!used.has(n));
-      if(!cand.length) break;
-      cand.sort((a,b)=> pts[a]-pts[b] || Math.random()-0.5);
-      const win=cand[0]; chosen.push(win); used.add(win); pts[win]++;
-    }
-    return chosen;
+  // Kies 1 speelster. Doel: eerlijk totaal + variatie (niet steeds hetzelfde klusje).
+  //   balans-modus (standaard): (1) laagste totaal, (2) wie dit taaktype het minst deed,
+  //   coverage-modus (vlaggen): (1) wie dit taaktype het minst deed, (2) laagste totaal.
+  //   Daarna: vermijd (bv. vorige eet-partner) → wie het langst geen taak had → willekeur.
+  function pickOne(pool,used,taskKey,idx,avoid,cov){
+    const cand=pool.filter(n=>!used.has(n));
+    if(!cand.length) return null;
+    const av=x=>(avoid&&avoid.has(x))?1:0;
+    cand.sort((a,b)=> cov
+      ? ( (sub[a][taskKey]-sub[b][taskKey]) || (pts[a]-pts[b]) || (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5) )
+      : ( (pts[a]-pts[b]) || (sub[a][taskKey]-sub[b][taskKey]) || (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5) )
+    );
+    const w=cand[0]; used.add(w); pts[w]++; sub[w][taskKey]++; lastAny[w]=idx; return w;
   }
-  // vlaggen: coverage-first — wie het minst heeft gevlagd is eerst aan de beurt (zo doet iedereen het minstens 1x)
-  function pickFlag(used){
-    const cand=flagPool.filter(n=>!used.has(n));
-    if(!cand.length) return [];
-    cand.sort((a,b)=> (sub[a].flag-sub[b].flag) || (pts[a]-pts[b]) || Math.random()-0.5);
-    const win=cand[0]; used.add(win); pts[win]++; return [win];
-  }
-  fixtures.forEach(f=>{
+  fixtures.forEach((f,idx)=>{
     const used=new Set();
-    f.wash=pick(washPool,used,nWash); f.wash.forEach(n=>sub[n].wash++);
-    f.flag=pickFlag(used); f.flag.forEach(n=>sub[n].flag++);            // vlaggen bij ELKE wedstrijd
+    f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx); if(w)f.wash.push(w);}
+    const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[];  // vlaggen bij ELKE wedstrijd, coverage-first
     if(f.home){
       f.drive=[];
-      f.food=pick(foodPool,used,2); f.food.forEach(n=>sub[n].food++);   // eten in tweetallen, alleen thuis
+      const a=pickOne(allPool,used,"food",idx);                         // eten in tweetallen (roterende partners)
+      const b=pickOne(allPool,used,"food",idx,new Set(a?[partner[a]]:[]));
+      f.food=[a,b].filter(Boolean);
+      if(a&&b){partner[a]=b; partner[b]=a;}
     } else {
       f.food=[];                                                        // geen eten bij uitwedstrijden
-      f.drive=pick(drivers,used,nDrivers); f.drive.forEach(n=>sub[n].drive++);
+      f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx); if(d)f.drive.push(d);}
     }
   });
   sched={pts,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode();
-  flash("Taken eerlijk verdeeld ✓");
+  flash("Taken eerlijk & gevarieerd verdeeld ✓");
 }
 
 function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
