@@ -71,6 +71,7 @@
   .stat b{font-weight:800;color:var(--yellow)}
   .stat input{width:40px;background:#f4f4f6;border:none;border-radius:5px;
     text-align:center;font-weight:800;color:#111;font-size:13px;padding:2px}
+  .stat .statval{min-width:26px;text-align:right;font-weight:800;color:var(--yellow);font-size:15px}
   .foot{margin-top:auto;padding-top:8px}
   .foot textarea{width:100%;border:1px solid rgba(242,140,0,.35);border-radius:7px;background:rgba(0,0,0,.35);
     color:#f4f4f6;font-size:11px;padding:6px;resize:vertical;min-height:34px;font-family:inherit}
@@ -180,9 +181,9 @@
       <label class="btn" style="cursor:pointer">⬆︎ Importeer<input type="file" accept=".json" onchange="importData(event)" hidden></label>
       <button class="btn" onclick="window.print()">🖨 Print / PDF</button>
     </div>
-    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR staan op <b>–</b> tot je metingen en video-analyses hebt.
-      Vul de vakjes in zodra de data binnen is; de OVR berekent zichzelf uit het gemiddelde. In het onderste vak van elke kaart kun je
-      meetgegevens / video-notities kwijt (bv. sprinttijd 30m, max hartslag, xG, key observaties). Klik daarna op <b>Opslaan</b>.</p>
+    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR worden <b>automatisch berekend uit de metingen</b> en zijn hier
+      niet handmatig aan te passen — vul de tests in op het tabblad <b>Metingen</b>. Tot er metingen zijn, staan ze op <b>–</b>. In het
+      onderste vak van elke kaart kun je wel losse video-notities kwijt (bv. observaties, xG). Klik daarna op <b>Opslaan</b>.</p>
     <div class="cards" id="cardGrid"></div>
   </section>
 
@@ -511,10 +512,10 @@ function CREST(w,id){ const h=Math.round(w*1.317); return `<img src="${LOGO_SRC}
 let store = loadStats();
 function loadStats(){ try{return JSON.parse(localStorage.getItem("scstiens_stats"))||{}}catch(e){return {}} }
 function saveStats(){
+  // Stats komen uitsluitend uit de metingen (niet handmatig). Hier alleen de video-notitie opslaan.
   document.querySelectorAll(".fcard").forEach(c=>{
     const n=c.dataset.n; store[n]=store[n]||{stats:{},note:""};
-    STAT_KEYS.forEach(k=>{const v=c.querySelector(`[data-stat='${k}']`).value.trim(); store[n].stats[k]=v;});
-    store[n].note=c.querySelector("textarea").value;
+    const ta=c.querySelector("textarea"); if(ta) store[n].note=ta.value;
   });
   persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD){
@@ -551,8 +552,7 @@ function renderCards(){
       <div class="divider"></div>
       <div class="stats">
         ${STAT_KEYS.map(k=>`<div class="stat"><b>${k}</b>
-          <input data-stat="${k}" value="${s[k]!=null?s[k]:''}" placeholder="–"
-          oninput="recalc('${p.n}')"></div>`).join("")}
+          <span class="statval" data-stat="${k}">${s[k]!=null?s[k]:'–'}</span></div>`).join("")}
       </div>
       <div class="foot">
         <div style="margin:6px 0 4px">
@@ -566,12 +566,8 @@ function renderCards(){
     g.appendChild(el);
   });
 }
-function recalc(n){
-  const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`);
-  const tmp={}; STAT_KEYS.forEach(k=>tmp[k]=c.querySelector(`[data-stat='${k}']`).value);
-  store[n]=store[n]||{stats:{},note:""}; store[n].stats=tmp;
-  c.querySelector("[data-ovr]").textContent=ovr(n);
-}
+// Stats zijn niet handmatig aanpasbaar meer; ze komen uit de metingen. (recalc bewust leeg gelaten)
+function recalc(n){}
 function flash(msg){
   const d=document.createElement("div"); d.textContent=msg;
   d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1200;padding:10px 20px;border-radius:999px;font-weight:700;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,.4)";
@@ -816,7 +812,7 @@ function measInput(n,k,val){
 }
 function updateCardStats(n){ const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`); if(!c)return;
   const s=(store[n]&&store[n].stats)||{};
-  STAT_KEYS.forEach(k=>{const inp=c.querySelector(`[data-stat="${k}"]`); if(inp&&document.activeElement!==inp)inp.value=(s[k]!=null?s[k]:'');});
+  STAT_KEYS.forEach(k=>{const el=c.querySelector(`[data-stat="${k}"]`); if(el)el.textContent=(s[k]!=null?s[k]:'–');});
   const o=c.querySelector('[data-ovr]'); if(o)o.textContent=ovr(n);
 }
 function updateMeasComputed(n){ const row=document.querySelector(`#measTable tr[data-n="${CSS.escape(n)}"]`); if(!row)return;
