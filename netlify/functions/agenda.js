@@ -34,12 +34,13 @@ exports.handler = async () => {
 
   const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//SC Stiens VR1//Agenda//NL","CALSCALE:GREGORIAN",
            "METHOD:PUBLISH","X-WR-CALNAME:SC Stiens VR1","X-WR-TIMEZONE:Europe/Amsterdam","REFRESH-INTERVAL;VALUE=DURATION:PT2H","X-PUBLISHED-TTL:PT2H"];
-  function ev(uid,summary,dateStr,timeStr,durMin,desc){
+  function ev(uid,summary,dateStr,timeStr,durMin,desc,alarm){
     L.push("BEGIN:VEVENT"); L.push("UID:"+uid); L.push("DTSTAMP:"+now);
     if(timeStr){ L.push("DTSTART:"+dtLocal(dateStr,timeStr,0)); L.push("DTEND:"+dtLocal(dateStr,timeStr,durMin||90)); }
     else { L.push("DTSTART;VALUE=DATE:"+dtDate(dateStr)); }
     L.push(fold("SUMMARY:"+esc(summary)));
     if(desc) L.push(fold("DESCRIPTION:"+esc(desc)));
+    if(alarm){ L.push("BEGIN:VALARM","ACTION:DISPLAY",fold("DESCRIPTION:"+esc(summary)),"TRIGGER:"+alarm,"END:VALARM"); }
     L.push("END:VEVENT");
   }
 
@@ -74,7 +75,7 @@ exports.handler = async () => {
     {mon:"2026-07-20", t:"Zomertraining week 5 (20–26 juli)", d:"2–3 trainingen. Tr.9: duurloop 6×5 min (~5:30/km). Tr.10: sprints 8×30/20/10 m. Extra: duurloop 2×12 min (~6:00/km)."},
     {mon:"2026-07-27", t:"Zomertraining week 6 (27–31 juli)", d:"2–3 trainingen. Tr.11: 12×1 min (~5:00/km). Tr.12: 2×8×100 m (~25 sec). Extra: fartlek 20 min (6× 1 min versnellen)."}
   ];
-  SUMMER.forEach((s,i)=>{ ev("z"+i+"-"+s.mon+"@scstiens", "🏃 "+s.t, s.mon, "", 0, s.d); });
+  SUMMER.forEach((s,i)=>{ ev("z"+i+"-"+s.mon+"@scstiens", "🏃 "+s.t, s.mon, "", 0, s.d, "PT9H"); });  // herinnering ma 09:00
 
   L.push("END:VCALENDAR");
   return {
