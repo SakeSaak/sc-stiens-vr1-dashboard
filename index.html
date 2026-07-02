@@ -454,7 +454,7 @@
         <p class="mini">Doel: alle balken even lang. Verschil van hooguit 1 punt is normaal bij oneven aantallen.</p>
         <div class="balance" id="balance"></div>
         <div class="legend">
-          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen</span><span>🔔 Fluiten (jeugd)</span><span>📋 Wedstr.coörd.</span><span>🟢 Eten</span>
+          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen</span><span>🟢 Eten</span>
         </div>
       </div>
     </div>
@@ -481,6 +481,20 @@
       <label>&nbsp;<button class="btn" onclick="renderReminders()">🔄 Ververs</button></label>
     </div>
     <div id="remWrap" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:26px">🔔 Verenigingstaken jeugd (fluiten &amp; wedstrijdcoördinatie)</h2>
+    <div class="note">
+      Deze taken staan <b>los van de wedstrijden van VR1</b> — de vereniging levert hiervoor een eigen schema aan. Voeg de datums toe
+      zodra ze bekend zijn en klik op <b>Verdeel verenigingstaken</b>. Ze worden eerlijk geroteerd, <b>speelsters zonder auto/rijbewijs
+      krijgen voorrang</b> (zodat het rijden voor de rest eerlijk blijft), Amber doet geen fluiten (wel coördinatie), en afwezigheid telt mee.
+    </div>
+    <div class="controls">
+      <label>Datum toevoegen <input type="date" id="clubDate"></label>
+      <label>&nbsp;<button class="btn" onclick="addClubDate()">➕ Toevoegen</button></label>
+      <label>&nbsp;<button class="btn primary" onclick="assignClubDuties()">⚖️ Verdeel verenigingstaken</button></label>
+      <label>&nbsp;<button class="btn" onclick="reassignClubDuties()">🔄 Alles opnieuw</button></label>
+    </div>
+    <div id="clubTable" style="overflow:auto"></div>
   </section>
 
   <!-- ============ BOETEPOT & KAS ============ -->
@@ -741,7 +755,8 @@ function renderSquad(){
 }
 
 /* ---------------- FAIR SCHEDULE ---------------- */
-let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]}
+let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],food:[]}
+let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coord:[]}] — eigen datumlijst
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
@@ -786,7 +801,7 @@ function buildFixtures(){
 
 function emptyLoad(){
   sched={pts:{},sub:{}};
-  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,fluit:0,coord:0,food:0};});
+  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,food:0};});
 }
 
 // Fair task assignment over the current fixtures
@@ -812,24 +827,19 @@ function assignTasks(){
   const minWash=+((document.getElementById("cfgMinWash")||{}).value||0);
   const minFood=+((document.getElementById("cfgMinFood")||{}).value||0);
   const pts={}, sub={}, lastAny={}, partner={};
-  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,fluit:0,coord:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
-  const carSet=new Set(PLAYERS.filter(p=>p.car).map(p=>p.n));
+  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.map(p=>p.n);                        // vlaggen: iedereen (ook Amber)
-  const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);   // fluiten (jeugd): excl. wie niet wil fluiten (Amber)
-  const coordPool=PLAYERS.map(p=>p.n);                       // wedstrijdcoördinatie (jeugd): iedereen
   // Kies 1 speelster. Volgorde: (1) afwezigen uitgesloten, (2) onder het minimum voor dit klusje eerst,
-  //   (3) eerlijke rotatie: wie dit klusje het minst deed, (4) niet-rijders eerst bij fluiten/coörd,
-  //   (5) laagste totaal (balans), (6) vermijd eet-partner, (7) langst geen taak, (8) willekeur.
+  //   (3) eerlijke rotatie: wie dit klusje het minst deed, (4) laagste totaal (balans), (5) vermijd eet-partner, (6) langst geen taak, (7) willekeur.
   function pickOne(pool,used,key,idx,o){ o=o||{};
     const cand=pool.filter(n=>!used.has(n) && !isAbsent(n,o.date));
     if(!cand.length) return null;
     const av=x=>(o.avoid&&o.avoid.has(x))?1:0;
     const bm=x=>(o.min && sub[x][key]<o.min)?0:1;
-    const nd=x=>o.nonDriver?(carSet.has(x)?1:0):0;
     cand.sort((a,b)=>
-      (bm(a)-bm(b)) || (sub[a][key]-sub[b][key]) || (nd(a)-nd(b)) ||
+      (bm(a)-bm(b)) || (sub[a][key]-sub[b][key]) ||
       (pts[a]-pts[b]) || (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5)
     );
     const w=cand[0]; used.add(w); pts[w]++; sub[w][key]++; lastAny[w]=idx; return w;
@@ -839,13 +849,9 @@ function assignTasks(){
     arr.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n][key]++; lastAny[n]=idx; used.add(n); } }); return true; }
   fixtures.forEach((f,idx)=>{
     const used=new Set(); const D=f.date;
-    const zaterdag=new Date(D+"T00:00:00").getDay()===6;     // jeugd-verenigingstaken alleen op zaterdag
     if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
     if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }   // vlaggen: eerlijke rotatie
-    if(zaterdag){
-      if(!keep(f.fluit,"fluit",idx,used)){ const fu=pickOne(fluitPool,used,"fluit",idx,{nonDriver:true,date:D}); f.fluit=fu?[fu]:[]; }
-      if(!keep(f.coord,"coord",idx,used)){ const co=pickOne(coordPool,used,"coord",idx,{nonDriver:true,date:D}); f.coord=co?[co]:[]; }
-    } else { if(!(f.fluit&&f.fluit.length))f.fluit=[]; if(!(f.coord&&f.coord.length))f.coord=[]; }
+    f.fluit=[]; f.coord=[];   // fluiten/coördinatie zijn losse verenigingstaken (eigen rooster, niet aan onze wedstrijd)
     if(f.home){
       f.drive=[];
       if(!keep(f.food,"food",idx,used)){                                // eten in tweetallen (roterende partners), min. per persoon
@@ -876,7 +882,7 @@ function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
-    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🔔 Fluiten (jeugd)</th><th>📋 Wedstr.coörd.</th><th>🟢 Eten</th></tr>`+
+    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🟢 Eten</th></tr>`+
     fixtures.map((f,idx)=>`<tr>
       <td class="center">${idx+1}</td>
       <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
@@ -889,8 +895,6 @@ function renderSchedTable(){
       <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
       <td>${names(f.wash)}</td>
       <td>${names(f.flag)}</td>
-      <td>${(f.fluit&&f.fluit.length)?names(f.fluit):'<span class="mini">n.v.t.</span>'}</td>
-      <td>${(f.coord&&f.coord.length)?names(f.coord):'<span class="mini">n.v.t.</span>'}</td>
       <td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
   // style the inline inputs
   t.querySelectorAll("input,select").forEach(el=>{
@@ -924,8 +928,6 @@ function exportICS(){
     if(!f.home && f.drive.length) descLines.push("🔵 Rijden: "+f.drive.join(", "));
     if(f.wash.length) descLines.push("🟣 Wassen: "+f.wash.join(", "));
     if(f.flag.length) descLines.push("🟡 Vlaggen: "+f.flag.join(", "));
-    if(f.fluit&&f.fluit.length) descLines.push("🔔 Fluiten (jeugd): "+f.fluit.join(", "));
-    if(f.coord&&f.coord.length) descLines.push("📋 Wedstrijdcoördinatie (jeugd): "+f.coord.join(", "));
     if(f.food.length) descLines.push("🟢 Eten voorbereiden (2-tal): "+f.food.join(" & "));
     const desc=descLines.join("\n")||"Nog geen taken verdeeld.";
     const uid="scstiens-"+idx+"-"+f.date+"@dashboard";
@@ -958,10 +960,10 @@ function renderBalance(){
 function renderPerPlayer(){
   const t=document.getElementById("perPlayer");
   t.innerHTML=`<tr><th>Speelster</th><th class="center">🔵 Rijden</th><th class="center">🟣 Wassen</th>
-    <th class="center">🟡 Vlaggen</th><th class="center">🔔 Fluiten</th><th class="center">📋 Coörd.</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
+    <th class="center">🟡 Vlaggen</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
     PLAYERS.map(p=>{const s=sched.sub[p.n];return `<tr>
       <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
-      <td class="center">${s.flag}</td><td class="center">${s.fluit}</td><td class="center">${s.coord}</td><td class="center">${s.food}</td>
+      <td class="center">${s.flag}</td><td class="center">${s.food}</td>
       <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
 }
 
@@ -1243,6 +1245,52 @@ function remindTask(n,code,fi){
   else { const mate=(f.food||[]).filter(x=>x!==n); task="het eten voorbereiden"+(mate.length?(" (samen met "+mate.join(" & ")+")"):""); }
   openWAmsg(n, taskReminderMsg(n,task,f.date,opp,f.home));
 }
+/* ---- Verenigingstaken jeugd (fluiten & wedstrijdcoördinatie) — eigen datumlijst ---- */
+function addClubDate(){
+  const el=document.getElementById("clubDate"); const d=el&&el.value; if(!d){ alert("Kies een datum."); return; }
+  if(clubDuties.some(x=>x.date===d)){ alert("Die datum staat er al in."); return; }
+  clubDuties.push({date:d,fluit:[],coord:[]}); clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+  if(el)el.value=""; renderClubDuties(); scheduleSave();
+}
+function delClubDate(i){ clubDuties.splice(i,1); renderClubDuties(); scheduleSave(); }
+function assignClubDuties(){
+  const cnt={}, last={}; PLAYERS.forEach(p=>{cnt[p.n]={fluit:0,coord:0,tot:0}; last[p.n]=-99;});
+  const carSet=new Set(PLAYERS.filter(p=>p.car).map(p=>p.n));
+  const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);   // Amber niet
+  const coordPool=PLAYERS.map(p=>p.n);
+  function pick(pool,used,key,idx,date){
+    const cand=pool.filter(n=>!used.has(n) && !isAbsent(n,date)); if(!cand.length) return null;
+    cand.sort((a,b)=> (cnt[a][key]-cnt[b][key]) || ((carSet.has(a)?1:0)-(carSet.has(b)?1:0)) || (cnt[a].tot-cnt[b].tot) || (last[a]-last[b]) || (Math.random()-0.5));
+    const w=cand[0]; used.add(w); cnt[w][key]++; cnt[w].tot++; last[w]=idx; return w;
+  }
+  function keep(arr,key,idx,used){ if(!(arr&&arr.length))return false; arr.forEach(n=>{ if(cnt[n]){cnt[n][key]++;cnt[n].tot++;last[n]=idx;used.add(n);} }); return true; }
+  clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+  clubDuties.forEach((d,idx)=>{ const used=new Set();
+    if(!keep(d.fluit,"fluit",idx,used)){ const f=pick(fluitPool,used,"fluit",idx,d.date); d.fluit=f?[f]:[]; }
+    if(!keep(d.coord,"coord",idx,used)){ const c=pick(coordPool,used,"coord",idx,d.date); d.coord=c?[c]:[]; }
+  });
+  renderClubDuties(); scheduleSave(); flash("Verenigingstaken verdeeld — bestaande behouden ✓");
+}
+function reassignClubDuties(){ if(!confirm("Alle verenigingstaken opnieuw verdelen? Bestaande verdeling gaat verloren.")) return;
+  clubDuties.forEach(d=>{ d.fluit=[]; d.coord=[]; }); assignClubDuties(); }
+function remindClub(n,code,ci){ const d=clubDuties[ci]; if(!d)return;
+  const ds=new Date(d.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long"});
+  const task = code==="fluit" ? "fluiten bij de jeugd (bv. MO13)" : "wedstrijdcoördinatie voor de jeugdwedstrijden (tot ~12:00)";
+  openWAmsg(n, "Hoi "+n+"! Kleine herinnering: op "+ds+" heb je een verenigingstaak bij SC Stiens — "+task+". Alvast bedankt!");
+}
+function renderClubDuties(){
+  const w=document.getElementById("clubTable"); if(!w)return;
+  if(!clubDuties.length){ w.innerHTML='<p class="hint">Nog geen data. Voeg hierboven de datums toe zodra het verenigingsschema bekend is, en klik op <b>Verdeel verenigingstaken</b>.</p>'; return; }
+  w.innerHTML=`<table><tr><th>Datum</th><th>🔔 Fluiten</th><th></th><th>📋 Wedstr.coörd.</th><th></th><th></th></tr>`+
+    clubDuties.map((d,i)=>{ const fl=(d.fluit&&d.fluit[0])||"", co=(d.coord&&d.coord[0])||"";
+      const wa=(n,code)=>n?`<button class="btn" style="padding:3px 8px;background:#25D366;color:#0b3d1e;border-color:#25D366" onclick="remindClub('${n.replace(/'/g,"\\'")}','${code}',${i})">WhatsApp</button>`:'';
+      return `<tr>
+        <td>${new Date(d.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</td>
+        <td><b>${fl||'—'}</b></td><td>${wa(fl,"fluit")}</td>
+        <td><b>${co||'—'}</b></td><td>${wa(co,"coord")}</td>
+        <td><button class="del" onclick="delClubDate(${i})" title="datum verwijderen">×</button></td></tr>`;
+    }).join("")+`</table>`;
+}
 function renderReminders(){
   const wrap=document.getElementById("remWrap"); if(!wrap)return;
   const wEl=document.getElementById("remWindow"); const win=+((wEl&&wEl.value)||14);
@@ -1251,17 +1299,24 @@ function renderReminders(){
   const rows=[];
   (fixtures||[]).forEach((f,fi)=>{ const d=new Date(f.date+"T00:00:00"); if(d<today||d>end)return;
     const add=(arr,code)=>(arr||[]).forEach(n=>rows.push({n,code,fi,date:f.date,opp:(f.opponent||"").trim(),home:f.home}));
-    add(f.drive,"drive"); add(f.wash,"wash"); add(f.flag,"flag"); add(f.fluit,"fluit"); add(f.coord,"coord"); add(f.food,"food");
+    add(f.drive,"drive"); add(f.wash,"wash"); add(f.flag,"flag"); add(f.food,"food");
   });
-  if(!rows.length){ wrap.innerHTML='<p class="hint">Geen taken in dit venster. Vul de wedstrijddata in en klik op <b>Verdeel taken</b>, of vergroot het venster.</p>'; return; }
+  (clubDuties||[]).forEach((d,ci)=>{ const dt=new Date(d.date+"T00:00:00"); if(dt<today||dt>end)return;
+    (d.fluit||[]).forEach(n=>rows.push({n,code:"cfluit",ci,date:d.date,club:true}));
+    (d.coord||[]).forEach(n=>rows.push({n,code:"ccoord",ci,date:d.date,club:true}));
+  });
+  if(!rows.length){ wrap.innerHTML='<p class="hint">Geen taken in dit venster. Vul de wedstrijddata / verenigingsdata in en verdeel de taken, of vergroot het venster.</p>'; return; }
   rows.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
-  const LB={drive:"🔵 Rijden",wash:"🟣 Wassen",flag:"🟡 Vlaggen",fluit:"🔔 Fluiten (jeugd)",coord:"📋 Wedstr.coörd.",food:"🟢 Eten"};
-  wrap.innerHTML=`<table><tr><th>Datum</th><th>Wedstrijd</th><th>Speelster</th><th>Taak</th><th class="center">Herinner</th></tr>`+
+  const LB={drive:"🔵 Rijden",wash:"🟣 Wassen",flag:"🟡 Vlaggen",food:"🟢 Eten",cfluit:"🔔 Fluiten (jeugd)",ccoord:"📋 Wedstr.coörd."};
+  wrap.innerHTML=`<table><tr><th>Datum</th><th>Wat</th><th>Speelster</th><th>Taak</th><th class="center">Herinner</th></tr>`+
     rows.map(r=>{ const nEsc=r.n.replace(/'/g,"\\'");
+      const btn = r.club
+        ? `<button class="btn" onclick="remindClub('${nEsc}','${r.code==="cfluit"?"fluit":"coord"}',${r.ci})" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button>`
+        : `<button class="btn" onclick="remindTask('${nEsc}','${r.code}',${r.fi})" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button>`;
+      const wat = r.club ? '<span class="mini">Verenigingstaak (jeugd)</span>' : `<span class="mini">${r.opp||("Wedstrijd "+(r.fi+1))} (${r.home?"thuis":"uit"})</span>`;
       return `<tr><td>${new Date(r.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</td>
-        <td class="mini">${r.opp||("Wedstrijd "+(r.fi+1))} (${r.home?"thuis":"uit"})</td>
-        <td><b>${r.n}</b></td><td>${LB[r.code]||r.code}</td>
-        <td class="center"><button class="btn" onclick="remindTask('${nEsc}','${r.code}',${r.fi})" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td></tr>`;
+        <td>${wat}</td><td><b>${r.n}</b></td><td>${LB[r.code]||r.code}</td>
+        <td class="center">${btn}</td></tr>`;
     }).join("")+`</table>`;
 }
 function renderMoodLinks(){
@@ -1463,7 +1518,7 @@ function renderKasOverview(){ const w=document.getElementById("kasOverview"); if
       <td class="center"><button class="btn" onclick="payRequest('${r.n.replace(/'/g,"\\'")}')" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td></tr>`).join("")+`</table>`;
 }
 
-const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",fluit:"Fluiten",coord:"Wedstr.coörd.",food:"Eten"};
+const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",food:"Eten"};
 function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)return; const cur=s.value;
   s.innerHTML=(fixtures||[]).map((f,i)=>`<option value="${i}">${i+1}. ${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${f.home?"thuis":"uit"})</option>`).join("");
   if(cur)s.value=cur; }
@@ -1494,9 +1549,9 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; }
-function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); }catch(e){} }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties}; }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; }
+function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
   try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
@@ -1517,7 +1572,7 @@ function applyStaffGate(){
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderKasAll();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderKasAll();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -1616,9 +1671,10 @@ const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=t
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderKasAll();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
+try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
 cloudInit();
 </script>
 </body>
