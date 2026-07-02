@@ -415,6 +415,9 @@
         <button class="btn" onclick="buildFixtures()">🆕 Nieuw rooster</button>
       </label>
       <label>&nbsp;
+        <button class="btn" onclick="loadProgram()">📋 Laad voorbereidingsprogramma</button>
+      </label>
+      <label>&nbsp;
         <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel taken</button>
       </label>
       <label>&nbsp;
@@ -722,7 +725,26 @@ function renderSquad(){
 }
 
 /* ---------------- FAIR SCHEDULE ---------------- */
-let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],food:[]}
+let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],ref:[],food:[]}
+// Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
+const PROGRAM_FIXTURES=[
+  {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
+  {date:"2026-08-22", time:"14:00", opponent:"Harkemase Boys VR1 (oefen)", home:true},
+  {date:"2026-08-29", time:"14:30", opponent:"Beker ronde 1 — nog invullen", home:true},
+  {date:"2026-09-02", time:"19:00", opponent:"Beker ronde 2 (di/wo/do) — nog invullen", home:true},
+  {date:"2026-09-05", time:"14:30", opponent:"Beker ronde 3 — nog invullen", home:true},
+  {date:"2026-09-12", time:"14:30", opponent:"Competitie 1 — nog invullen", home:true},
+];
+function loadProgram(){
+  if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
+  fixtures=PROGRAM_FIXTURES.map(f=>({date:f.date,time:f.time,opponent:f.opponent,home:f.home,drive:[],wash:[],flag:[],ref:[],food:[]}));
+  tasksAssigned=false;
+  renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders();
+  if(typeof fillKasMatch==="function"){ fillKasMatch(); renderTaakBoetes(); }
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+  flash("Voorbereidingsprogramma geladen ✓");
+}
 let sched={pts:{},sub:{}};
 let tasksAssigned=false;
 
