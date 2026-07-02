@@ -209,6 +209,7 @@
 <nav>
   <button data-tab="cards" class="active">FIFA-kaartjes</button>
   <button data-tab="squad">Selectieoverzicht</button>
+  <button data-tab="agenda">Agenda</button>
   <button data-tab="metingen">Metingen</button>
   <button data-tab="ontwikkeling">Ontwikkeling</button>
   <button data-tab="mood">Gesteldheid</button>
@@ -507,20 +508,26 @@
     </div>
     <div id="trainTable" style="overflow:auto"></div>
 
-    <h2 class="sec" style="margin-top:26px">📅 Teamagenda — abonneren (live)</h2>
+  </section>
+
+  <!-- ============ AGENDA (publiek) ============ -->
+  <section id="agenda">
+    <h2 class="sec">📅 Agenda — alle activiteiten</h2>
     <div class="note">
-      Eén gedeelde agenda met <b>wedstrijden, teamtrainingen én taken</b>. Speelsters <b>abonneren</b> zich op de link hieronder in hun
-      agenda-app (Apple Agenda, Outlook of Google). Wijzig je iets in het dashboard, dan komt dat vanzelf in hun agenda — agenda-apps
-      verversen een geabonneerde agenda periodiek (meestal elke paar uur), dus niet per direct maar wel automatisch.
+      Alle <b>wedstrijden, teamtrainingen en verenigingstaken</b> op één plek. Abonneer je op de agenda hieronder, dan staat alles
+      automatisch in je eigen agenda (Apple, Outlook of Google) en komen wijzigingen vanzelf mee (meestal binnen een paar uur).
     </div>
     <div class="controls">
       <input id="agendaUrl" readonly value="" onclick="this.select()" style="min-width:320px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px">
       <button class="btn" onclick="copyAgendaUrl()">Kopieer link</button>
-      <a id="agendaSub" class="btn" href="#" style="text-decoration:none">➕ Abonneren (Apple/Outlook)</a>
+      <a id="agendaSub" class="btn primary" href="#" style="text-decoration:none">➕ Abonneren (Apple/iPhone)</a>
     </div>
-    <p class="hint">Apple Agenda / iPhone: klik op <b>Abonneren</b> (opent via webcal). Outlook/Google: kies "Agenda toevoegen → Via URL/abonneren" en plak de gekopieerde link.
-      <br>Wijzigingen komen <b>automatisch</b> mee, maar niet per direct: de agenda-app haalt een geabonneerde agenda periodiek op (meestal elke paar uur).
-      Meteen zien? In Apple Agenda: trek het scherm naar beneden om te verversen (of Instellingen → Agenda → Accounts → deze agenda → Ververs op "elk uur").</p>
+    <p class="hint">iPhone/Apple: klik op <b>Abonneren</b>. Outlook/Google: "Agenda toevoegen → Via URL / abonneren" en plak de gekopieerde link.
+      Wijzigingen komen automatisch mee, maar niet per direct (de app ververst periodiek; in Apple Agenda kun je naar beneden trekken om te verversen).</p>
+    <div class="controls" style="margin-top:6px">
+      <label>Toon <select id="agFilter" onchange="renderAgenda()"><option value="up">Aankomend</option><option value="all">Hele seizoen</option></select></label>
+    </div>
+    <div id="agendaList" style="overflow:auto;margin-top:6px"></div>
   </section>
 
   <!-- ============ BOETEPOT & KAS ============ -->
@@ -819,6 +826,43 @@ function initAgendaUrl(){ const u=agendaHttpUrl();
   const inp=document.getElementById("agendaUrl"); if(inp)inp.value=u;
   const a=document.getElementById("agendaSub"); if(a)a.href=u.replace(/^https?:/,"webcal:"); }
 function copyAgendaUrl(){ navigator.clipboard.writeText(agendaHttpUrl()).then(()=>flash("Agenda-link gekopieerd ✓"),()=>flash("Kopiëren mislukt")); }
+const AG_SUMMER=[
+  {date:"2026-06-22",title:"Zomertraining week 1 (22–28 juni)"},
+  {date:"2026-06-29",title:"Zomertraining week 2 (29 juni–5 juli)"},
+  {date:"2026-07-06",title:"Zomertraining week 3 (6–12 juli)"},
+  {date:"2026-07-13",title:"Zomertraining week 4 (13–19 juli)"},
+  {date:"2026-07-20",title:"Zomertraining week 5 (20–26 juli)"},
+  {date:"2026-07-27",title:"Zomertraining week 6 (27–31 juli)"},
+];
+function renderAgenda(){
+  const w=document.getElementById("agendaList"); if(!w)return;
+  const filt=((document.getElementById("agFilter")||{}).value)||"up";
+  const today=todayStr(); const items=[];
+  (trainings||[]).forEach(t=>{ if(t&&t.date) items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:""}); });
+  (fixtures||[]).forEach((f,i)=>{ if(!f||!f.date)return;
+    const tu=f.home===true?"Thuis":f.home===false?"Uit":"n.t.b.";
+    const opp=(f.opponent||"").trim()||("Wedstrijd "+(i+1)); const parts=[];
+    if(f.home===false && f.drive&&f.drive.length) parts.push("🚗 "+f.drive.join(", "));
+    if(f.wash&&f.wash.length) parts.push("🧺 "+f.wash.join(", "));
+    if(f.flag&&f.flag.length) parts.push("🚩 "+f.flag.join(", "));
+    if(f.home===true && f.food&&f.food.length) parts.push("🍝 "+f.food.join(" & "));
+    items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · ")});
+  });
+  (clubDuties||[]).forEach(c=>{ if(!c||!c.date)return; const parts=[];
+    if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")); if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
+    items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · ")});
+  });
+  AG_SUMMER.forEach(s=>items.push({date:s.date,time:"",icon:"🏃",cat:"Zomertraining",title:s.title,det:"2 trainingen deze week — eigen dagen"}));
+  let list=items.filter(x=> filt==="all" ? true : x.date>=today);
+  list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
+  if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
+  w.innerHTML=`<table><tr><th>Datum</th><th>Tijd</th><th>Activiteit</th><th>Details</th></tr>`+
+    list.map(x=>`<tr>
+      <td class="mini">${new Date(x.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</td>
+      <td class="mini">${x.time||"—"}</td>
+      <td>${x.icon} <b>${x.title}</b> <span class="mini">· ${x.cat}</span></td>
+      <td class="mini">${x.det||""}</td></tr>`).join("")+`</table>`;
+}
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
@@ -1631,7 +1675,7 @@ function backupPhonesLocal(){ try{ const bak={}; PLAYERS.forEach(p=>{ if(store[p
 // Als er lokaal wél nummers zijn maar in de cloud niet: schrijf ze terug naar de gedeelde data.
 function healPhones(){ if(!(CLOUD && isStaff)) return; if(PLAYERS.some(p=>store[p.n]&&store[p.n].phone)) scheduleSave(); }
 // Alleen-lezen voor iedereen die niet als staf is ingelogd (alleen in cloud-modus).
-const STAFF_TABS=["mood","belasting","kas"];  // alleen zichtbaar als staf ingelogd is
+const STAFF_TABS=["mood","belasting","kas","schedule"];  // alleen zichtbaar als staf ingelogd is
 function applyStaffGate(){
   const locked = CLOUD && !isStaff;
   document.body.classList.toggle("readonly", locked);
@@ -1641,7 +1685,7 @@ function applyStaffGate(){
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderKasAll();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderAgenda(); renderKasAll();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -1740,7 +1784,7 @@ const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=t
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderKasAll();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
