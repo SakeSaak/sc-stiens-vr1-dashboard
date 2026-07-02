@@ -383,10 +383,10 @@
       Er wordt automatisch gekozen op basis van de <b>minste punten</b> (eerlijk totaal) én wie dat klusje het minst deed (variatie),
       zodat het niet eentonig wordt. Wie geen auto/rijbewijs heeft, kan niet rijden en pakt automatisch extra was-/eettaken op —
       zo eindigt iedereen op (bijna) evenveel punten.
-      <br><b>Vlaggen</b> (grensrechter) gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: iedereen vlagt minstens één keer
-      (bij ≥ 16 wedstrijden komt de hele selectie aan bod). <b>Fluiten + wedstrijdcoördinator</b> is samengevoegd tot één taak bij
-      thuiswedstrijden. <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
-      Amber fluit niet (eigen voorkeur) — ze vlagt wel gewoon mee en pakt daarnaast extra was-/eettaken op.
+      <br><b>Vlaggen</b> (grensrechter bij ónze wedstrijd) gebeurt bij <b>elke</b> wedstrijd en is <b>coverage-first</b>: iedereen vlagt minstens één keer.
+      <b>Fluiten</b> en <b>Wedstrijdcoördinatie</b> zijn twee losse <b>verenigingstaken voor de jeugd</b> (bv. MO13 fluiten of aanspreekpunt tot ~12:00) —
+      ze horen niet bij onze eigen wedstrijd en worden alleen op <b>zaterdagen</b> verdeeld. <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> samen voorbereid.
+      Amber fluit niet (eigen voorkeur) — ze vlagt en coördineert wel gewoon mee.
     </div>
 
     <div class="controls">
@@ -440,7 +440,7 @@
         <p class="mini">Doel: alle balken even lang. Verschil van hooguit 1 punt is normaal bij oneven aantallen.</p>
         <div class="balance" id="balance"></div>
         <div class="legend">
-          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen</span><span>🔔 Fluiten/coörd.</span><span>🟢 Eten</span>
+          <span>🔵 Rijden</span><span>🟣 Wassen</span><span>🟡 Vlaggen</span><span>🔔 Fluiten (jeugd)</span><span>📋 Wedstr.coörd.</span><span>🟢 Eten</span>
         </div>
       </div>
     </div>
@@ -725,7 +725,7 @@ function renderSquad(){
 }
 
 /* ---------------- FAIR SCHEDULE ---------------- */
-let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],ref:[],food:[]}
+let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]}
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
@@ -737,7 +737,7 @@ const PROGRAM_FIXTURES=[
 ];
 function loadProgram(){
   if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
-  fixtures=PROGRAM_FIXTURES.map(f=>({date:f.date,time:f.time,opponent:f.opponent,home:f.home,drive:[],wash:[],flag:[],ref:[],food:[]}));
+  fixtures=PROGRAM_FIXTURES.map(f=>({date:f.date,time:f.time,opponent:f.opponent,home:f.home,drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]}));
   tasksAssigned=false;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders();
   if(typeof fillKasMatch==="function"){ fillKasMatch(); renderTaakBoetes(); }
@@ -761,7 +761,7 @@ function buildFixtures(){
     fixtures.push({
       date:d.toISOString().slice(0,10), time:time, opponent:"",
       home: pattern==="allhome" ? true : (i%2===0),
-      drive:[],wash:[],flag:[],ref:[],food:[]
+      drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]
     });
   }
   tasksAssigned=false;
@@ -770,7 +770,7 @@ function buildFixtures(){
 
 function emptyLoad(){
   sched={pts:{},sub:{}};
-  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,ref:0,food:0};});
+  PLAYERS.forEach(p=>{sched.pts[p.n]=0; sched.sub[p.n]={drive:0,wash:0,flag:0,fluit:0,coord:0,food:0};});
 }
 
 // Fair task assignment over the current fixtures
@@ -779,11 +779,12 @@ function assignTasks(){
   const nDrivers=+document.getElementById("cfgDrivers").value;
   const nWash=+document.getElementById("cfgWash").value;
   const pts={}, sub={}, lastAny={}, partner={};
-  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,ref:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
+  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,fluit:0,coord:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.map(p=>p.n);                        // vlaggen: iedereen (ook Amber)
-  const refPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // fluiten + wedstrijdcoördinator (excl. wie niet wil fluiten)
+  const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);   // fluiten (jeugd): excl. wie niet wil fluiten (Amber)
+  const coordPool=PLAYERS.map(p=>p.n);                       // wedstrijdcoördinatie (jeugd): iedereen
   // Kies 1 speelster. Doel: eerlijk totaal + variatie (niet steeds hetzelfde klusje).
   //   balans-modus (standaard): (1) laagste totaal, (2) wie dit taaktype het minst deed,
   //   coverage-modus (vlaggen): (1) wie dit taaktype het minst deed, (2) laagste totaal.
@@ -800,17 +801,21 @@ function assignTasks(){
   }
   fixtures.forEach((f,idx)=>{
     const used=new Set();
+    const zaterdag=new Date(f.date+"T00:00:00").getDay()===6;    // jeugd-verenigingstaken alleen op zaterdag
     f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx); if(w)f.wash.push(w);}
-    const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[];  // vlaggen bij ELKE wedstrijd, coverage-first
+    const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[];  // vlaggen bij ELKE wedstrijd (eigen wedstrijd), coverage-first
+    if(zaterdag){                                                 // verenigingstaken jeugd, los van thuis/uit
+      const fu=pickOne(fluitPool,used,"fluit",idx,null,true); f.fluit=fu?[fu]:[];   // fluiten (bv. MO13)
+      const co=pickOne(coordPool,used,"coord",idx,null,true); f.coord=co?[co]:[];   // wedstrijdcoördinatie jeugd (tot ~12u)
+    } else { f.fluit=[]; f.coord=[]; }
     if(f.home){
       f.drive=[];
-      const rf=pickOne(refPool,used,"ref",idx); f.ref=rf?[rf]:[];        // fluiten + wedstrijdcoördinator (thuis)
       const a=pickOne(allPool,used,"food",idx);                         // eten in tweetallen (roterende partners)
       const b=pickOne(allPool,used,"food",idx,new Set(a?[partner[a]]:[]));
       f.food=[a,b].filter(Boolean);
       if(a&&b){partner[a]=b; partner[b]=a;}
     } else {
-      f.ref=[]; f.food=[];                                              // geen fluiter/coörd. of eten bij uitwedstrijden
+      f.food=[];                                                        // geen eten bij uitwedstrijden
       f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx); if(d)f.drive.push(d);}
     }
   });
@@ -825,7 +830,7 @@ function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
-    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🔔 Fluiten/coörd.</th><th>🟢 Eten</th></tr>`+
+    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🔔 Fluiten (jeugd)</th><th>📋 Wedstr.coörd.</th><th>🟢 Eten</th></tr>`+
     fixtures.map((f,idx)=>`<tr>
       <td class="center">${idx+1}</td>
       <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
@@ -838,7 +843,8 @@ function renderSchedTable(){
       <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
       <td>${names(f.wash)}</td>
       <td>${names(f.flag)}</td>
-      <td>${f.home?names(f.ref):'<span class="mini">n.v.t. (uit)</span>'}</td>
+      <td>${(f.fluit&&f.fluit.length)?names(f.fluit):'<span class="mini">n.v.t.</span>'}</td>
+      <td>${(f.coord&&f.coord.length)?names(f.coord):'<span class="mini">n.v.t.</span>'}</td>
       <td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
   // style the inline inputs
   t.querySelectorAll("input,select").forEach(el=>{
@@ -872,7 +878,8 @@ function exportICS(){
     if(!f.home && f.drive.length) descLines.push("🔵 Rijden: "+f.drive.join(", "));
     if(f.wash.length) descLines.push("🟣 Wassen: "+f.wash.join(", "));
     if(f.flag.length) descLines.push("🟡 Vlaggen: "+f.flag.join(", "));
-    if(f.ref.length) descLines.push("🔔 Fluiten + wedstrijdcoördinator: "+f.ref.join(", "));
+    if(f.fluit&&f.fluit.length) descLines.push("🔔 Fluiten (jeugd): "+f.fluit.join(", "));
+    if(f.coord&&f.coord.length) descLines.push("📋 Wedstrijdcoördinatie (jeugd): "+f.coord.join(", "));
     if(f.food.length) descLines.push("🟢 Eten voorbereiden (2-tal): "+f.food.join(" & "));
     const desc=descLines.join("\n")||"Nog geen taken verdeeld.";
     const uid="scstiens-"+idx+"-"+f.date+"@dashboard";
@@ -905,10 +912,10 @@ function renderBalance(){
 function renderPerPlayer(){
   const t=document.getElementById("perPlayer");
   t.innerHTML=`<tr><th>Speelster</th><th class="center">🔵 Rijden</th><th class="center">🟣 Wassen</th>
-    <th class="center">🟡 Vlaggen</th><th class="center">🔔 Fluiten/coörd.</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
+    <th class="center">🟡 Vlaggen</th><th class="center">🔔 Fluiten</th><th class="center">📋 Coörd.</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
     PLAYERS.map(p=>{const s=sched.sub[p.n];return `<tr>
       <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
-      <td class="center">${s.flag}</td><td class="center">${s.ref}</td><td class="center">${s.food}</td>
+      <td class="center">${s.flag}</td><td class="center">${s.fluit}</td><td class="center">${s.coord}</td><td class="center">${s.food}</td>
       <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
 }
 
@@ -1183,8 +1190,9 @@ function remindTask(n,code,fi){
   let task;
   if(code==="drive") task="rijden naar de uitwedstrijd";
   else if(code==="wash") task="de wedstrijdshirts wassen";
-  else if(code==="flag") task="vlaggen (grensrechter)";
-  else if(code==="ref") task="fluiten + wedstrijdcoördinator zijn";
+  else if(code==="flag") task="vlaggen (grensrechter) bij onze wedstrijd";
+  else if(code==="fluit") task="fluiten bij de jeugd (bv. MO13)";
+  else if(code==="coord") task="wedstrijdcoördinatie voor de jeugdwedstrijden (tot ~12:00)";
   else { const mate=(f.food||[]).filter(x=>x!==n); task="het eten voorbereiden"+(mate.length?(" (samen met "+mate.join(" & ")+")"):""); }
   openWAmsg(n, taskReminderMsg(n,task,f.date,opp,f.home));
 }
@@ -1196,11 +1204,11 @@ function renderReminders(){
   const rows=[];
   (fixtures||[]).forEach((f,fi)=>{ const d=new Date(f.date+"T00:00:00"); if(d<today||d>end)return;
     const add=(arr,code)=>(arr||[]).forEach(n=>rows.push({n,code,fi,date:f.date,opp:(f.opponent||"").trim(),home:f.home}));
-    add(f.drive,"drive"); add(f.wash,"wash"); add(f.flag,"flag"); add(f.ref,"ref"); add(f.food,"food");
+    add(f.drive,"drive"); add(f.wash,"wash"); add(f.flag,"flag"); add(f.fluit,"fluit"); add(f.coord,"coord"); add(f.food,"food");
   });
   if(!rows.length){ wrap.innerHTML='<p class="hint">Geen taken in dit venster. Vul de wedstrijddata in en klik op <b>Verdeel taken</b>, of vergroot het venster.</p>'; return; }
   rows.sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
-  const LB={drive:"🔵 Rijden",wash:"🟣 Wassen",flag:"🟡 Vlaggen",ref:"🔔 Fluiten/coörd.",food:"🟢 Eten"};
+  const LB={drive:"🔵 Rijden",wash:"🟣 Wassen",flag:"🟡 Vlaggen",fluit:"🔔 Fluiten (jeugd)",coord:"📋 Wedstr.coörd.",food:"🟢 Eten"};
   wrap.innerHTML=`<table><tr><th>Datum</th><th>Wedstrijd</th><th>Speelster</th><th>Taak</th><th class="center">Herinner</th></tr>`+
     rows.map(r=>{ const nEsc=r.n.replace(/'/g,"\\'");
       return `<tr><td>${new Date(r.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</td>
@@ -1408,7 +1416,7 @@ function renderKasOverview(){ const w=document.getElementById("kasOverview"); if
       <td class="center"><button class="btn" onclick="payRequest('${r.n.replace(/'/g,"\\'")}')" style="background:#25D366;color:#0b3d1e;border-color:#25D366;font-weight:700">WhatsApp</button></td></tr>`).join("")+`</table>`;
 }
 
-const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",ref:"Fluiten/coörd.",food:"Eten"};
+const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",fluit:"Fluiten",coord:"Wedstr.coörd.",food:"Eten"};
 function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)return; const cur=s.value;
   s.innerHTML=(fixtures||[]).map((f,i)=>`<option value="${i}">${i+1}. ${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${f.home?"thuis":"uit"})</option>`).join("");
   if(cur)s.value=cur; }
