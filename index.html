@@ -924,7 +924,7 @@ function statsAsOf(n,date){ const out={};
   const all=STAT_KEYS.map(s=>out[s]).filter(v=>v!=null);
   out.OVR=(all.length===6)?Math.round(all.reduce((a,b)=>a+b,0)/6):null; return out;
 }
-function computePlayerStats(n){ const s=store[n].stats=store[n].stats||{}; const cur=statsAsOf(n,null);
+function computePlayerStats(n){ store[n]=store[n]||{stats:{},note:""}; const s=store[n].stats=store[n].stats||{}; const cur=statsAsOf(n,null);
   STAT_KEYS.forEach(k=>{ if(cur[k]!=null) s[k]=cur[k]; }); }
 function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); renderDev(); flash("Stats herberekend ✓"); }
 
