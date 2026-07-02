@@ -761,10 +761,10 @@ let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coo
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
   {date:"2026-08-22", time:"14:00", opponent:"Harkemase Boys VR1 (oefen)", home:true},
-  {date:"2026-08-29", time:"14:30", opponent:"Beker ronde 1 — nog invullen", home:true},
-  {date:"2026-09-02", time:"19:00", opponent:"Beker ronde 2 (di/wo/do) — nog invullen", home:true},
-  {date:"2026-09-05", time:"14:30", opponent:"Beker ronde 3 — nog invullen", home:true},
-  {date:"2026-09-12", time:"14:30", opponent:"Competitie 1 — nog invullen", home:true},
+  {date:"2026-08-29", time:"", opponent:"", home:null},   // bekerronde 1 — thuis/uit nog onbekend
+  {date:"2026-09-02", time:"", opponent:"", home:null},   // bekerronde 2 (di/wo/do)
+  {date:"2026-09-05", time:"", opponent:"", home:null},   // bekerronde 3
+  {date:"2026-09-12", time:"", opponent:"", home:null},   // competitie 1
 ];
 function loadProgram(){
   if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
@@ -848,6 +848,7 @@ function assignTasks(){
   function keep(arr,key,idx,used){ if(!(arr&&arr.length))return false;
     arr.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n][key]++; lastAny[n]=idx; used.add(n); } }); return true; }
   fixtures.forEach((f,idx)=>{
+    if(f.home!==true && f.home!==false){ f.drive=f.drive||[]; f.wash=f.wash||[]; f.flag=f.flag||[]; f.food=f.food||[]; return; }  // thuis/uit onbekend → nog niet verdelen
     const used=new Set(); const D=f.date;
     if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
     if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }   // vlaggen: eerlijke rotatie
@@ -879,6 +880,11 @@ function reassignAll(){
 }
 
 function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
+function setFixtureHome(idx,val){ const f=fixtures[idx]; if(!f)return;
+  f.home = val==='H'?true : val==='U'?false : null;
+  if(f.home===null){ f.drive=[]; f.wash=[]; f.flag=[]; f.food=[]; }   // onbekend: nog geen taken
+  renderSchedTable(); renderReminders(); if(typeof scheduleSave==="function") scheduleSave();
+}
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
@@ -889,13 +895,14 @@ function renderSchedTable(){
       <td><input type="time" value="${f.time}" style="width:90px" onchange="fixtures[${idx}].time=this.value"></td>
       <td><input type="text" value="${f.opponent.replace(/"/g,'&quot;')}" placeholder="tegenstander…" style="min-width:120px"
            onchange="fixtures[${idx}].opponent=this.value"></td>
-      <td class="center"><select onchange="fixtures[${idx}].home=(this.value==='H')">
-           <option value="H" ${f.home?'selected':''}>Thuis</option>
-           <option value="U" ${!f.home?'selected':''}>Uit</option></select></td>
-      <td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td>
-      <td>${names(f.wash)}</td>
-      <td>${names(f.flag)}</td>
-      <td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td></tr>`).join("");
+      <td class="center"><select onchange="setFixtureHome(${idx},this.value)">
+           <option value="?" ${(f.home!==true&&f.home!==false)?'selected':''}>? n.t.b.</option>
+           <option value="H" ${f.home===true?'selected':''}>Thuis</option>
+           <option value="U" ${f.home===false?'selected':''}>Uit</option></select></td>
+      ${(f.home===true||f.home===false)
+        ? `<td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td><td>${names(f.wash)}</td><td>${names(f.flag)}</td><td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td>`
+        : `<td colspan="4"><span class="mini">⏳ nog te bepalen — kies eerst thuis/uit, daarna Verdeel openstaande taken</span></td>`
+      }</tr>`).join("");
   // style the inline inputs
   t.querySelectorAll("input,select").forEach(el=>{
     el.style.background="var(--bg2)";el.style.color="var(--txt)";
