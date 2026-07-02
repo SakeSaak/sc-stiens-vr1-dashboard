@@ -142,6 +142,8 @@
   .gprog .pctlbl{width:40px;text-align:right;font-size:12px;font-weight:700;color:var(--muted)}
   .gprog .bar{flex:1;max-width:160px}
   .carddoel{font-size:11px;margin:2px 0 4px;line-height:1.3}
+  .cardinjury{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:rgba(255,90,90,.92);
+    border:1px solid #ff7a7a;border-radius:999px;padding:2px 10px}
   /* ---- Moodmeter ---- */
   .moodgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
   .moodchip{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
@@ -691,6 +693,19 @@ function cardGoalHTML(n){
   if(done>0) h+=`<div class="mini" style="opacity:.85;margin:0 0 3px">✓ ${done} behaald</div>`;
   return h;
 }
+// Blessure uit de laatste check-in: 🩹 op de kaart als de meest recente meting een blessure meldt.
+function currentInjury(n){
+  const ws=(store[n]&&store[n].wellbeing)||[];
+  if(!ws.length) return null;
+  const last=ws.slice().sort((a,b)=>a.date<b.date?1:-1)[0];
+  const inj=((last&&last.vals&&last.vals.injury)||"").trim();
+  if(!inj) return null;
+  const rec=(last.vals.recovery!=null && last.vals.recovery!=="")?last.vals.recovery:null;
+  return {injury:inj, recovery:rec};
+}
+function injuryBadgeHTML(n){ const ci=currentInjury(n); if(!ci) return "";
+  return `<div style="text-align:center;margin:0 0 6px"><span class="cardinjury">🩹 Geblesseerd${ci.injury?(" — "+esc(ci.injury)):""}${ci.recovery!=null?(" ("+ci.recovery+" wk)"):""}</span></div>`;
+}
 
 /* ---------------- SC STIENS EMBLEEM ---------------- */
 const ROLE_LABEL={gk:"Keeper",def:"Verdediging",mid:"Middenveld",att:"Aanval"};
@@ -738,6 +753,7 @@ function renderCards(){
       </div>
       <div class="fname">${p.n}</div>
       <div class="fmeta">${p.age} jr · ${p.city}</div>
+      ${injuryBadgeHTML(p.n)}
       <div class="divider"></div>
       <div class="stats">
         ${STAT_KEYS.map(k=>`<div class="stat"><b>${k}</b>
@@ -1245,6 +1261,7 @@ function moodInput(n,k,val){ const s=wellSession(n,moodDate(),true); s.vals[k]=v
   if(row){ const sc=wellScore(n,moodDate()); const f=row.querySelector(".mface"); const b=row.querySelector(".mscoreb");
     if(f)f.textContent=moodFace(sc); if(b)b.textContent=(sc!=null?sc.toFixed(1):"–"); if(f)f.style.color=moodColor(sc); }
   renderMoodTeam();
+  if(k==="injury"||k==="recovery") renderCards();   // 🩹 op de kaart bijwerken
 }
 function renderMoodTable(){
   const t=document.getElementById("moodTable"); if(!t)return; const date=moodDate();
@@ -1453,7 +1470,7 @@ async function fetchCheckins(){
   (data||[]).forEach(row=>{ const n=tok2name[row.token]||row.player; if(!n||!PLAYERS.some(p=>p.n===n))return;
     const ws=getWell(n); let s=ws.find(x=>x.date===row.date); if(!s){ s={date:row.date,vals:{}}; ws.push(s); }
     s.vals=Object.assign({},s.vals,row.vals||{}); ws.sort((a,b)=>a.date<b.date?-1:1); cnt++; });
-  renderMoodAll(); flash(cnt+" check-in(s) geladen ✓");
+  renderMoodAll(); renderCards(); flash(cnt+" check-in(s) geladen ✓");
 }
 function renderMoodAll(){ renderMoodTable(); renderMoodTeam(); fillMoodPlayers(); renderMoodProgress(); renderMoodLinks(); }
 
