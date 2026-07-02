@@ -160,17 +160,17 @@
   .savestat.saved{color:var(--green)}
   .savestat.error{color:var(--red);font-weight:600}
   /* Alleen-lezen (niet ingelogd): geen bewerken/versturen; navigeren mag wel */
-  body.readonly .wrap input,
-  body.readonly .wrap select,
+  body.readonly .wrap input:not(.pub),
+  body.readonly .wrap select:not(.pub),
   body.readonly .wrap textarea,
-  body.readonly .wrap .btn,
+  body.readonly .wrap .btn:not(.pub),
   body.readonly .wrap .submit,
   body.readonly .wrap .del,
   body.readonly .wrap details summary{ pointer-events:none !important; }
-  body.readonly .wrap input,
-  body.readonly .wrap select,
+  body.readonly .wrap input:not(.pub),
+  body.readonly .wrap select:not(.pub),
   body.readonly .wrap textarea{ opacity:.6 }
-  body.readonly .wrap .btn,
+  body.readonly .wrap .btn:not(.pub),
   body.readonly .wrap .del,
   body.readonly .wrap .submit{ opacity:.4; filter:grayscale(1) }
   .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
@@ -518,14 +518,14 @@
       automatisch in je eigen agenda (Apple, Outlook of Google) en komen wijzigingen vanzelf mee (meestal binnen een paar uur).
     </div>
     <div class="controls">
-      <input id="agendaUrl" readonly value="" onclick="this.select()" style="min-width:320px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px">
-      <button class="btn" onclick="copyAgendaUrl()">Kopieer link</button>
-      <a id="agendaSub" class="btn primary" href="#" style="text-decoration:none">➕ Abonneren (Apple/iPhone)</a>
+      <input id="agendaUrl" class="pub" readonly value="" onclick="this.select()" style="min-width:320px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px">
+      <button class="btn pub" onclick="copyAgendaUrl()">Kopieer link</button>
+      <a id="agendaSub" class="btn primary pub" href="#" style="text-decoration:none">➕ Abonneren (Apple/iPhone)</a>
     </div>
     <p class="hint">iPhone/Apple: klik op <b>Abonneren</b>. Outlook/Google: "Agenda toevoegen → Via URL / abonneren" en plak de gekopieerde link.
       Wijzigingen komen automatisch mee, maar niet per direct (de app ververst periodiek; in Apple Agenda kun je naar beneden trekken om te verversen).</p>
     <div class="controls" style="margin-top:6px">
-      <label>Toon <select id="agFilter" onchange="renderAgenda()"><option value="up">Aankomend</option><option value="all">Hele seizoen</option></select></label>
+      <label>Toon <select id="agFilter" class="pub" onchange="renderAgenda()"><option value="up">Aankomend</option><option value="all">Hele seizoen</option></select></label>
     </div>
     <div id="agendaList" style="overflow:auto;margin-top:6px"></div>
   </section>
