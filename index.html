@@ -1427,6 +1427,8 @@ function recoverPhonesFromLocal(){ if(!isStaff) return;
 }
 function backupPhonesLocal(){ try{ const bak={}; PLAYERS.forEach(p=>{ if(store[p.n]&&store[p.n].phone) bak[p.n]=store[p.n].phone; });
   if(Object.keys(bak).length) localStorage.setItem("scstiens_phones_bak",JSON.stringify(bak)); }catch(e){} }
+// Als er lokaal wél nummers zijn maar in de cloud niet: schrijf ze terug naar de gedeelde data.
+function healPhones(){ if(!(CLOUD && isStaff)) return; if(PLAYERS.some(p=>store[p.n]&&store[p.n].phone)) scheduleSave(); }
 // Alleen-lezen voor iedereen die niet als staf is ingelogd (alleen in cloud-modus).
 const STAFF_TABS=["mood","belasting","kas"];  // alleen zichtbaar als staf ingelogd is
 function applyStaffGate(){
@@ -1445,7 +1447,7 @@ async function cloudLoad(){
   if(!CLOUD) return;
   try{ const {data,error}=await sb.from("dashboard_state").select("data").eq("id","main").maybeSingle();
     if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
-  recoverPhonesFromLocal();
+  recoverPhonesFromLocal(); healPhones();
 }
 let _lastSaveAt=0, _statusTimer=null;
 function setSaveStatus(state){
@@ -1504,7 +1506,7 @@ async function staffLogin(){
   const pass=prompt("Wachtwoord:"); if(!pass) return;
   const {error}=await sb.auth.signInWithPassword({email:email.trim(),password:pass});
   if(error){ alert("Inloggen mislukt: "+error.message); return; }
-  isStaff=true; await refreshAuthUI(); recoverPhonesFromLocal(); renderAll(); flash("Ingelogd als staf ✓");
+  isStaff=true; await refreshAuthUI(); recoverPhonesFromLocal(); healPhones(); renderAll(); flash("Ingelogd als staf ✓");
 }
 async function staffLogout(){ try{ await sb.auth.signOut(); }catch(e){} isStaff=false; clearPhones(); await refreshAuthUI(); renderAll(); flash("Uitgelogd"); }
 async function cloudInit(){
