@@ -761,10 +761,10 @@ let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coo
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
   {date:"2026-08-22", time:"14:00", opponent:"Harkemase Boys VR1 (oefen)", home:true},
-  {date:"2026-08-29", time:"", opponent:"", home:null},   // bekerronde 1 — thuis/uit nog onbekend
-  {date:"2026-09-02", time:"", opponent:"", home:null},   // bekerronde 2 (di/wo/do)
-  {date:"2026-09-05", time:"", opponent:"", home:null},   // bekerronde 3
-  {date:"2026-09-12", time:"", opponent:"", home:null},   // competitie 1
+  {date:"2026-08-29", time:"", opponent:"Bekerronde 1", home:null},               // thuis/uit nog onbekend
+  {date:"2026-09-02", time:"", opponent:"Bekerronde 2 (di/wo/do)", home:null},    // exacte dag nog onbekend
+  {date:"2026-09-05", time:"", opponent:"Bekerronde 3", home:null},
+  {date:"2026-09-12", time:"", opponent:"Competitie 1", home:null},
 ];
 function loadProgram(){
   if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
