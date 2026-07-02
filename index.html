@@ -704,7 +704,7 @@ function currentInjury(n){
   return {injury:inj, recovery:rec};
 }
 function injuryBadgeHTML(n){ const ci=currentInjury(n); if(!ci) return "";
-  return `<div style="text-align:center;margin:0 0 6px"><span class="cardinjury">🩹 Geblesseerd${ci.injury?(" — "+esc(ci.injury)):""}${ci.recovery!=null?(" ("+ci.recovery+" wk)"):""}</span></div>`;
+  return `<div style="text-align:center;margin:0 0 6px"><span class="cardinjury">🤕 Geblesseerd${ci.injury?(" — "+esc(ci.injury)):""}${ci.recovery!=null?(" ("+ci.recovery+" wk)"):""}</span></div>`;
 }
 
 /* ---------------- SC STIENS EMBLEEM ---------------- */
