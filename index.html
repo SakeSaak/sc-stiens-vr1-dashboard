@@ -418,15 +418,20 @@
         <button class="btn" onclick="loadProgram()">📋 Laad voorbereidingsprogramma</button>
       </label>
       <label>&nbsp;
-        <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel taken</button>
+        <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel openstaande taken</button>
+      </label>
+      <label>&nbsp;
+        <button class="btn" onclick="reassignAll()" title="Wist alles en verdeelt opnieuw">🔄 Alles opnieuw</button>
       </label>
       <label>&nbsp;
         <button class="btn" onclick="exportICS()">📅 Exporteer agenda (.ics)</button>
       </label>
     </div>
     <p class="hint" style="margin-top:-4px">Vul per wedstrijd de <b>datum</b>, <b>tijd</b>, <b>tegenstander</b> en <b>thuis/uit</b> in de tabel in.
-      Klik daarna op <b>Verdeel taken</b> voor een eerlijke taakverdeling en op <b>Exporteer agenda</b> voor een <b>.ics</b>-bestand
-      dat je in Apple Agenda, Google Calendar of Outlook importeert. Elke afspraak bevat de tegenstander én wie rijdt, wast, vlagt en het eten regelt.</p>
+      <b>Verdeel openstaande taken</b> vult alleen wedstrijden in die nog geen verdeling hebben en <b>behoudt de bestaande verdeling</b> —
+      voeg je later nieuwe wedstrijden toe, klik dan gewoon opnieuw en alleen die nieuwe worden ingevuld (eerlijk t.o.v. wat iedereen al deed).
+      Gebruik <b>Alles opnieuw</b> alléén om aan het begin van het seizoen helemaal opnieuw te beginnen. De verdeling wordt automatisch bewaard en gedeeld.
+      Met <b>Exporteer agenda</b> maak je een <b>.ics</b> voor Apple Agenda, Google Calendar of Outlook.</p>
 
     <div class="grid2">
       <div>
@@ -799,31 +804,45 @@ function assignTasks(){
     );
     const w=cand[0]; used.add(w); pts[w]++; sub[w][taskKey]++; lastAny[w]=idx; return w;
   }
+  // Bestaande toewijzing behouden én meetellen voor de balans; alleen lege taken (nieuwe/lege wedstrijden) invullen.
+  function keep(arr,key,idx,used){ if(!(arr&&arr.length))return false;
+    arr.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n][key]++; lastAny[n]=idx; used.add(n); } }); return true; }
   fixtures.forEach((f,idx)=>{
     const used=new Set();
     const zaterdag=new Date(f.date+"T00:00:00").getDay()===6;    // jeugd-verenigingstaken alleen op zaterdag
-    f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx); if(w)f.wash.push(w);}
-    const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[];  // vlaggen bij ELKE wedstrijd (eigen wedstrijd), coverage-first
-    if(zaterdag){                                                 // verenigingstaken jeugd, los van thuis/uit
-      const fu=pickOne(fluitPool,used,"fluit",idx,null,true); f.fluit=fu?[fu]:[];   // fluiten (bv. MO13)
-      const co=pickOne(coordPool,used,"coord",idx,null,true); f.coord=co?[co]:[];   // wedstrijdcoördinatie jeugd (tot ~12u)
-    } else { f.fluit=[]; f.coord=[]; }
+    // wassen (elke wedstrijd)
+    if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx); if(w)f.wash.push(w);} }
+    // vlaggen bij onze eigen wedstrijd (coverage-first)
+    if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,null,true); f.flag=fl?[fl]:[]; }
+    // fluiten + wedstrijdcoördinatie: verenigingstaken jeugd, alleen op zaterdag
+    if(zaterdag){
+      if(!keep(f.fluit,"fluit",idx,used)){ const fu=pickOne(fluitPool,used,"fluit",idx,null,true); f.fluit=fu?[fu]:[]; }
+      if(!keep(f.coord,"coord",idx,used)){ const co=pickOne(coordPool,used,"coord",idx,null,true); f.coord=co?[co]:[]; }
+    } else { if(!(f.fluit&&f.fluit.length))f.fluit=[]; if(!(f.coord&&f.coord.length))f.coord=[]; }
     if(f.home){
       f.drive=[];
-      const a=pickOne(allPool,used,"food",idx);                         // eten in tweetallen (roterende partners)
-      const b=pickOne(allPool,used,"food",idx,new Set(a?[partner[a]]:[]));
-      f.food=[a,b].filter(Boolean);
-      if(a&&b){partner[a]=b; partner[b]=a;}
+      if(!keep(f.food,"food",idx,used)){                                // eten in tweetallen (roterende partners)
+        const a=pickOne(allPool,used,"food",idx);
+        const b=pickOne(allPool,used,"food",idx,new Set(a?[partner[a]]:[]));
+        f.food=[a,b].filter(Boolean); if(a&&b){partner[a]=b; partner[b]=a;}
+      } else if(f.food.length===2){ partner[f.food[0]]=f.food[1]; partner[f.food[1]]=f.food[0]; }
     } else {
       f.food=[];                                                        // geen eten bij uitwedstrijden
-      f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx); if(d)f.drive.push(d);}
+      if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx); if(d)f.drive.push(d);} }
     }
   });
   sched={pts,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders();
   if(typeof persistLocal==="function") persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
-  flash("Taken eerlijk & gevarieerd verdeeld ✓");
+  flash("Openstaande taken verdeeld — bestaande verdeling behouden ✓");
+}
+// Bewuste volledige reset: wist alles en verdeelt opnieuw (alleen doen als er nog niets is uitgevoerd).
+function reassignAll(){
+  if(!confirm("Let op: dit wist de HELE huidige taakverdeling en maakt een nieuwe. Doe dit alleen aan het begin van het seizoen — niet als er al taken zijn uitgevoerd, want dan gaat het overzicht van wie wat deed verloren. Doorgaan?")) return;
+  fixtures.forEach(f=>{ f.drive=[]; f.wash=[]; f.flag=[]; f.fluit=[]; f.coord=[]; f.food=[]; });
+  assignTasks();
+  flash("Volledige verdeling opnieuw gemaakt");
 }
 
 function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
