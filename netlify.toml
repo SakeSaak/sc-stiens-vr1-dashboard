@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Mooie agenda-URL: /agenda.ics wordt live gegenereerd door de functie.
+[[redirects]]
+  from = "/agenda.ics"
+  to = "/.netlify/functions/agenda"
+  status = 200

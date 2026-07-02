@@ -495,6 +495,30 @@
       <label>&nbsp;<button class="btn" onclick="reassignClubDuties()">🔄 Alles opnieuw</button></label>
     </div>
     <div id="clubTable" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:26px">🏃 Vaste teamtrainingen</h2>
+    <div class="note">
+      Trainingen met een vaste datum/tijd (uit het voorbereidingsschema). Deze komen in de teamagenda. Het losse zomer-hardloopprogramma
+      staat hier bewust niet in: dat plant iedereen zelf in (2× per week, eigen dagen).
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="loadTrainings()">📋 Laad teamtrainingen (voorbereiding)</button>
+      <button class="btn" onclick="addTraining()">➕ Training toevoegen</button>
+    </div>
+    <div id="trainTable" style="overflow:auto"></div>
+
+    <h2 class="sec" style="margin-top:26px">📅 Teamagenda — abonneren (live)</h2>
+    <div class="note">
+      Eén gedeelde agenda met <b>wedstrijden, teamtrainingen én taken</b>. Speelsters <b>abonneren</b> zich op de link hieronder in hun
+      agenda-app (Apple Agenda, Outlook of Google). Wijzig je iets in het dashboard, dan komt dat vanzelf in hun agenda — agenda-apps
+      verversen een geabonneerde agenda periodiek (meestal elke paar uur), dus niet per direct maar wel automatisch.
+    </div>
+    <div class="controls">
+      <input id="agendaUrl" readonly value="" onclick="this.select()" style="min-width:320px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px">
+      <button class="btn" onclick="copyAgendaUrl()">Kopieer link</button>
+      <a id="agendaSub" class="btn" href="#" style="text-decoration:none">➕ Abonneren (Apple/Outlook)</a>
+    </div>
+    <p class="hint">Apple Agenda / iPhone: klik op <b>Abonneren</b> (opent via webcal). Outlook/Google: kies "Agenda toevoegen → Via URL/abonneren" en plak de gekopieerde link.</p>
   </section>
 
   <!-- ============ BOETEPOT & KAS ============ -->
@@ -757,6 +781,42 @@ function renderSquad(){
 /* ---------------- FAIR SCHEDULE ---------------- */
 let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],food:[]}
 let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coord:[]}] — eigen datumlijst
+let trainings=[];         // vaste teamtrainingen: [{date, time, end, title}]
+const PROGRAM_TRAININGS=[
+  {date:"2026-08-03",time:"19:30",end:"21:30",title:"Eerste training"},
+  {date:"2026-08-05",time:"19:00",end:"20:30",title:"Training"},
+  {date:"2026-08-08",time:"",end:"",title:"Training of padeltoernooi (tijd volgt)"},
+  {date:"2026-08-10",time:"19:30",end:"21:30",title:"Training"},
+  {date:"2026-08-12",time:"19:00",end:"22:00",title:"Training + spelersavond"},
+  {date:"2026-08-15",time:"",end:"",title:"Training of andere activiteit (tijd volgt)"},
+  {date:"2026-08-19",time:"19:00",end:"20:30",title:"Training"},
+  {date:"2026-08-24",time:"19:30",end:"21:00",title:"Training"},
+  {date:"2026-08-26",time:"19:00",end:"20:30",title:"Training"},
+];
+function loadTrainings(){
+  if(trainings.length && !confirm("Dit vervangt de huidige trainingslijst door de teamtrainingen uit het voorbereidingsschema. Doorgaan?")) return;
+  trainings=PROGRAM_TRAININGS.map(t=>Object.assign({},t)); renderTrainings(); scheduleSave(); flash("Teamtrainingen geladen ✓");
+}
+function addTraining(){ trainings.push({date:todayStr(),time:"",end:"",title:"Training"}); trainings.sort((a,b)=>a.date<b.date?-1:1); renderTrainings(); scheduleSave(); }
+function delTraining(i){ trainings.splice(i,1); renderTrainings(); scheduleSave(); }
+function setTr(i,k,v){ if(trainings[i]){ trainings[i][k]=v; if(k==="date"){ /* geen re-sort tijdens typen */ } } }
+function renderTrainings(){
+  const t=document.getElementById("trainTable"); if(!t)return;
+  if(!trainings.length){ t.innerHTML='<p class="hint">Nog geen trainingen. Klik op <b>Laad teamtrainingen</b> of voeg er zelf toe.</p>'; return; }
+  const inp="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px";
+  t.innerHTML=`<table><tr><th>Datum</th><th>Van</th><th>Tot</th><th>Omschrijving</th><th></th></tr>`+
+    trainings.map((tr,i)=>`<tr>
+      <td><input type="date" value="${tr.date||''}" style="${inp}" onchange="setTr(${i},'date',this.value)"></td>
+      <td><input type="time" value="${tr.time||''}" style="${inp};width:90px" onchange="setTr(${i},'time',this.value)"></td>
+      <td><input type="time" value="${tr.end||''}" style="${inp};width:90px" onchange="setTr(${i},'end',this.value)"></td>
+      <td><input type="text" value="${(tr.title||'').replace(/"/g,'&quot;')}" placeholder="omschrijving…" style="${inp};min-width:180px" onchange="setTr(${i},'title',this.value)"></td>
+      <td><button class="del" onclick="delTraining(${i})">×</button></td></tr>`).join("")+`</table>`;
+}
+function agendaHttpUrl(){ return location.origin.replace(/\/$/,"")+"/agenda.ics"; }
+function initAgendaUrl(){ const u=agendaHttpUrl();
+  const inp=document.getElementById("agendaUrl"); if(inp)inp.value=u;
+  const a=document.getElementById("agendaSub"); if(a)a.href=u.replace(/^https?:/,"webcal:"); }
+function copyAgendaUrl(){ navigator.clipboard.writeText(agendaHttpUrl()).then(()=>flash("Agenda-link gekopieerd ✓"),()=>flash("Kopiëren mislukt")); }
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
@@ -1556,9 +1616,9 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; }
-function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); }catch(e){} }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings}; }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; }
+function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
   try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
@@ -1579,7 +1639,7 @@ function applyStaffGate(){
 function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderKasAll();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderKasAll();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -1678,10 +1738,11 @@ const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=t
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderKasAll();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
+try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
 cloudInit();
 </script>
 </body>
