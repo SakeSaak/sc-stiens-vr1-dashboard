@@ -80,7 +80,7 @@ exports.handler = async () => {
   L.push("END:VCALENDAR");
   return {
     statusCode:200,
-    headers:{ "Content-Type":"text/calendar; charset=utf-8", "Cache-Control":"public, max-age=1800",
+    headers:{ "Content-Type":"text/calendar; charset=utf-8", "Cache-Control":"public, max-age=60, must-revalidate",
       "Content-Disposition":"inline; filename=scstiens.ics" },
     body: L.join("\r\n")
   };
