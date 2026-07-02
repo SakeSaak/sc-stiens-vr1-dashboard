@@ -570,6 +570,10 @@
       </div>
     </div>
 
+    <h2 class="sec" style="margin-top:8px">🔔 Boete uit verenigingstaken (fluiten &amp; coördinatie)</h2>
+    <div class="controls"><label>Datum <select id="kasClub" onchange="renderClubBoetes()"></select></label></div>
+    <div id="clubBoetes" style="overflow:auto"></div>
+
     <h2 class="sec" style="margin-top:22px">🍝 Eten-kosten delen</h2>
     <div class="controls">
       <label>Datum <input type="date" id="foodDate"></label>
@@ -1663,11 +1667,26 @@ function renderTaakBoetes(){ const w=document.getElementById("taakBoetes"); if(!
       <button class="btn" style="padding:3px 8px" onclick="addFine('${nEsc}','${lbl} te laat',${late},'${f.date}')">te laat</button></div>`; }); });
   w.innerHTML=html||'<p class="hint">Nog geen taken verdeeld voor deze wedstrijd (klik eerst op "Verdeel taken").</p>';
 }
+const CLUB_TASKLBL={fluit:"Fluiten",coord:"Wedstr.coörd."};
+function fillKasClub(){ const s=document.getElementById("kasClub"); if(!s)return; const cur=s.value;
+  s.innerHTML=(clubDuties||[]).map((c,i)=>`<option value="${i}">${new Date(c.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</option>`).join("");
+  if(cur)s.value=cur; }
+function renderClubBoetes(){ const w=document.getElementById("clubBoetes"); if(!w)return; const s=document.getElementById("kasClub");
+  const ci=s?+s.value:0; const c=(clubDuties||[])[ci]; if(!c){ w.innerHTML='<p class="hint">Geen verenigingstaken. Voeg datums toe bij Taakschema\'s → Verenigingstaken jeugd.</p>'; return; }
+  const late=(kas().rules.find(r=>/te laat/i.test(r.reason))||{}).amount ?? 5;
+  const nd=(kas().rules.find(r=>/niet uitgevoerd/i.test(r.reason))||{}).amount ?? 5;
+  let html="";
+  Object.keys(CLUB_TASKLBL).forEach(k=>{ (c[k]||[]).forEach(n=>{ const nEsc=n.replace(/'/g,"\\'"); const lbl=CLUB_TASKLBL[k];
+    html+=`<div style="display:flex;gap:6px;align-items:center;margin:3px 0;flex-wrap:wrap"><span style="min-width:150px" class="mini">${lbl}: <b>${n}</b></span>
+      <button class="btn" style="padding:3px 8px" onclick="addFine('${nEsc}','${lbl} niet uitgevoerd',${nd},'${c.date}')">niet gedaan</button>
+      <button class="btn" style="padding:3px 8px" onclick="addFine('${nEsc}','${lbl} te laat',${late},'${c.date}')">te laat</button></div>`; }); });
+  w.innerHTML=html||'<p class="hint">Nog geen fluiten/coördinatie verdeeld voor deze datum (klik eerst op "Verdeel verenigingstaken").</p>';
+}
 function renderKasAll(){
   const tk=document.getElementById("tikkieLink"); if(tk)tk.value=kas().tikkie;
   const fd=document.getElementById("fDate"); if(fd&&!fd.value)fd.value=todayStr();
   const fod=document.getElementById("foodDate"); if(fod&&!fod.value)fod.value=todayStr();
-  renderRules(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes();
+  renderRules(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes(); fillKasClub(); renderClubBoetes();
 }
 
 /* ---------------- CLOUD SYNC (Supabase) ---------------- */
