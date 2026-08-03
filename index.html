@@ -1106,7 +1106,7 @@ const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const TESTS=[
   {k:"sprint10", stat:"PAC", lbl:"Sprint 10 m",              unit:"s",      top:1.80, low:2.40, step:"0.01"},
   {k:"sprint30", stat:"PAC", lbl:"Sprint 30 m",              unit:"s",      top:4.50, low:6.00, step:"0.01"},
-  {k:"beeptest", stat:"PHY", lbl:"Shuttle run (beep test)",  unit:"niveau", top:11.0, low:5.0,  step:"0.1"},
+  {k:"isrt",     stat:"PHY", lbl:"Interval Shuttle Run (ISRT)",unit:"trap",  top:125,  low:80,   step:"1",   target:116, targetHi:125},
   {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
   {k:"illinois", stat:"DRI", lbl:"Illinois behendigheid",    unit:"s",      top:16.0, low:20.0, step:"0.1"},
   {k:"dribbel",  stat:"DRI", lbl:"Dribbelparcours",          unit:"s",      top:12.0, low:18.0, step:"0.1"},
@@ -1154,30 +1154,41 @@ function updateMeasComputed(n){ const row=document.querySelector(`#measTable tr[
   const o=row.querySelector('.comp[data-c="OVR"] b'); if(o)o.textContent=ovr(n);
 }
 function changeMeasDate(){ renderMeasTable(); }
+// Streefwaarde-indicator: ✓ als de gemeten waarde het gewenste niveau haalt, anders klein gat-getal.
+function targetMark(val,tt){
+  if(tt.target==null || val==null || val==="") return "";
+  const v=parseFloat(val); if(isNaN(v)) return "";
+  const higherBetter=tt.top>tt.low;               // ISRT: hoger = beter
+  const met = higherBetter ? v>=tt.target : v<=tt.target;
+  return met
+    ? `<div class="mini" style="color:var(--green);margin-top:2px">✓ niveau</div>`
+    : `<div class="mini" style="color:var(--muted);margin-top:2px">${higherBetter?'-':'+'}${Math.abs(Math.round((tt.target-v)*(tt.step==='1'?1:10))/(tt.step==='1'?1:10))}</div>`;
+}
 function renderMeasTable(){
   const t=document.getElementById("measTable"); if(!t)return; const date=selDate();
   let h1=`<tr><th rowspan="2">Speelster</th>`;
   STAT_KEYS.forEach(stat=>{ const ts=STAT_TESTS[stat]; if(ts.length) h1+=`<th class="center" colspan="${ts.length}" style="border-left:2px solid var(--line)">${stat}</th>`; });
   h1+=`<th class="center" colspan="7" style="border-left:2px solid var(--gold)">Berekende stats</th></tr>`;
   let h2=`<tr>`;
-  STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ h2+=`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''} title="${tt.lbl}">${tt.lbl}<br><span style="opacity:.6">${tt.unit}</span></th>`; }); });
+  STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ const strf=tt.target!=null?`<br><span style="color:var(--gold)">streef ${tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target}</span>`:''; h2+=`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''} title="${tt.lbl}${tt.target!=null?' — gewenst niveau: '+(tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target)+' '+tt.unit:''}">${tt.lbl}<br><span style="opacity:.6">${tt.unit}</span>${strf}</th>`; }); });
   h2+=`<th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">PHY</th><th class="center">OVR</th></tr>`;
   t.innerHTML=h1+h2+PLAYERS.map(p=>{
     const nEsc=p.n.replace(/'/g,"\\'"); const sess=sessionFor(p.n,date,false); const r=(sess&&sess.results)||{}; const s=(store[p.n]&&store[p.n].stats)||{};
     let row=`<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`;
     STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="number" step="${tt.step}" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
       style="width:58px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
-      oninput="measInput('${nEsc}','${tt.k}',this.value)"></td>`; }); });
+      oninput="measInput('${nEsc}','${tt.k}',this.value)">${targetMark(r[tt.k],tt)}</td>`; }); });
     row+=`<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td><td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td><td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
     return row;
   }).join("");
 }
 function renderTestCfg(){
   const t=document.getElementById("testCfgTable"); if(!t)return;
-  t.innerHTML=`<tr><th>Test</th><th class="center">Stat</th><th>Eenheid</th><th class="center">Top (→99)</th><th class="center">Zwak (→50)</th></tr>`+
+  t.innerHTML=`<tr><th>Test</th><th class="center">Stat</th><th>Eenheid</th><th class="center">Top (→99)</th><th class="center">Zwak (→50)</th><th class="center">Streefwaarde</th></tr>`+
     TESTS.map((tt,i)=>`<tr><td>${tt.lbl}</td><td class="center"><span class="badge">${tt.stat}</span></td><td class="mini">${tt.unit}</td>
       <td class="center"><input type="number" step="${tt.step}" value="${tt.top}" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].top=+this.value; computeAllAndRefresh()"></td>
-      <td class="center"><input type="number" step="${tt.step}" value="${tt.low}" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].low=+this.value; computeAllAndRefresh()"></td></tr>`).join("");
+      <td class="center"><input type="number" step="${tt.step}" value="${tt.low}" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].low=+this.value; computeAllAndRefresh()"></td>
+      <td class="center"><input type="number" step="${tt.step}" value="${tt.target!=null?tt.target:''}" placeholder="—" title="Gewenst niveau (KNVB/fitheidsplan)" style="width:72px;background:var(--bg2);color:var(--txt);border:1px solid var(--gold);border-radius:6px;padding:4px;text-align:center" oninput="TESTS[${i}].target=this.value===''?null:+this.value; computeAllAndRefresh()"></td></tr>`).join("");
 }
 function computeAllAndRefresh(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); }
 function fillProgPlayers(){ const sel=document.getElementById("progPlayer"); if(!sel)return; const cur=sel.value;
