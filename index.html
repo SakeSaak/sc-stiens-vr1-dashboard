@@ -1135,13 +1135,17 @@ function statsAsOf(n,date){ const out={};
   out.OVR=(all.length===6)?Math.round(all.reduce((a,b)=>a+b,0)/6):null; return out;
 }
 function computePlayerStats(n){ store[n]=store[n]||{stats:{},note:""}; const s=store[n].stats=store[n].stats||{}; const cur=statsAsOf(n,null);
-  STAT_KEYS.forEach(k=>{ if(cur[k]!=null) s[k]=cur[k]; }); }
+  STAT_KEYS.forEach(k=>{ if(cur[k]!=null) s[k]=cur[k]; else delete s[k]; }); }  // stat wist mee als alle metingen weg zijn
 function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); renderDev(); flash("Stats herberekend ✓"); }
 
 // LIVE invoer op de gekozen datum
 function measInput(n,k,val){
-  const s=sessionFor(n,selDate(),true); s.results[k]=val;
+  const s=sessionFor(n,selDate(),true);
+  if(val===""||val==null){ delete s.results[k]; }   // leeggehaald: waarde echt verwijderen
+  else { s.results[k]=val; }
   computePlayerStats(n); updateCardStats(n); updateMeasComputed(n); renderDev();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();  // altijd opslaan (ook bij weghalen)
 }
 function updateCardStats(n){ const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`); if(!c)return;
   const s=(store[n]&&store[n].stats)||{};
