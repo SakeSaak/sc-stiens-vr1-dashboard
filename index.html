@@ -698,12 +698,15 @@ function cardGoalHTML(n){
   return h;
 }
 // Blessure uit de laatste check-in: 🤕 op de kaart als de meest recente meting een blessure meldt.
+// "geen", "nee", "-", "n.v.t." e.d. betekenen géén blessure
+function isNoInjury(inj){ const s=((inj==null?"":String(inj))).trim().toLowerCase();
+  return s==="" || ["geen","nee","neen","none","-","–","n.v.t.","n.v.t","nvt","0","fit","niks","niets","na","x"].includes(s); }
 function currentInjury(n){
   const ws=(store[n]&&store[n].wellbeing)||[];
   if(!ws.length) return null;
   const last=ws.slice().sort((a,b)=>a.date<b.date?1:-1)[0];
   const inj=((last&&last.vals&&last.vals.injury)||"").trim();
-  if(!inj) return null;
+  if(isNoInjury(inj)) return null;
   const rec=(last.vals.recovery!=null && last.vals.recovery!=="")?last.vals.recovery:null;
   return {injury:inj, recovery:rec};
 }
@@ -1121,6 +1124,8 @@ function selDate(){ const el=document.getElementById("measDate"); return (el&&el
 
 // Metingen over tijd: store[n].sessions = [{date, results:{testKey:val}}]
 function getSessions(n){ store[n]=store[n]||{stats:{},note:""}; if(!Array.isArray(store[n].sessions))store[n].sessions=[]; return store[n].sessions; }
+function measSessionEmpty(s){ return !s||!s.results||!Object.keys(s.results).some(k=>s.results[k]!=null&&s.results[k]!==""); }
+function pruneSessions(n){ const ss=getSessions(n); for(let i=ss.length-1;i>=0;i--){ if(measSessionEmpty(ss[i])) ss.splice(i,1); } }
 function sessionFor(n,date,create){ const ss=getSessions(n); let s=ss.find(x=>x.date===date);
   if(!s&&create){ s={date,results:{}}; ss.push(s); ss.sort((a,b)=>a.date<b.date?-1:1); } return s; }
 // meest recente waarde van een test op of vóór 'date' (date leeg = alle)
@@ -1143,7 +1148,9 @@ function measInput(n,k,val){
   const s=sessionFor(n,selDate(),true);
   if(val===""||val==null){ delete s.results[k]; }   // leeggehaald: waarde echt verwijderen
   else { s.results[k]=val; }
-  computePlayerStats(n); updateCardStats(n); updateMeasComputed(n); renderDev();
+  const before=getSessions(n).length; pruneSessions(n); const pruned=getSessions(n).length!==before;
+  computePlayerStats(n); updateCardStats(n); updateMeasComputed(n); renderDev(); renderProgress();
+  if(pruned) renderMeasTable();                     // lege meet-rij is opgeruimd
   if(typeof persistLocal==="function") persistLocal();
   if(typeof scheduleSave==="function") scheduleSave();  // altijd opslaan (ook bij weghalen)
 }
@@ -1271,6 +1278,12 @@ function moodDate(){ const el=document.getElementById("moodDate"); return (el&&e
 function getWell(n){ store[n]=store[n]||{stats:{},note:""}; if(!Array.isArray(store[n].wellbeing))store[n].wellbeing=[]; return store[n].wellbeing; }
 function wellSession(n,date,create){ const ws=getWell(n); let s=ws.find(x=>x.date===date);
   if(!s&&create){ s={date,vals:{}}; ws.push(s); ws.sort((a,b)=>a.date<b.date?-1:1);} return s; }
+function wellSessionEmpty(s){ if(!s||!s.vals) return true;
+  const hasWell=WELL.some(w=>s.vals[w.k]!=null && s.vals[w.k]!=="");
+  const hasInj=!isNoInjury(s.vals.injury);
+  const hasRec=s.vals.recovery!=null && s.vals.recovery!=="" && +s.vals.recovery>0;
+  return !hasWell && !hasInj && !hasRec; }
+function pruneWell(n){ const ws=getWell(n); for(let i=ws.length-1;i>=0;i--){ if(wellSessionEmpty(ws[i])) ws.splice(i,1); } }
 function wellScore(n,date){ const s=wellSession(n,date,false); if(!s)return null;
   const v=WELL.map(w=>parseFloat(s.vals[w.k])).filter(x=>!isNaN(x)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 function moodFace(sc){ if(sc==null)return "·"; return sc>=4.5?"😄":sc>=3.5?"🙂":sc>=2.5?"😐":sc>=1.5?"😟":"😣"; }
@@ -1278,10 +1291,12 @@ function moodColor(sc){ if(sc==null)return "var(--line)"; return sc>=4?"var(--gr
 function moodInput(n,k,val){ const s=wellSession(n,moodDate(),true);
   if(val===""||val==null){ delete s.vals[k]; }   // leeggehaald: waarde echt verwijderen
   else { s.vals[k]=val; }
+  const before=getWell(n).length; pruneWell(n); const pruned=getWell(n).length!==before;
   const row=document.querySelector(`#moodTable tr[data-n="${CSS.escape(n)}"]`);
   if(row){ const sc=wellScore(n,moodDate()); const f=row.querySelector(".mface"); const b=row.querySelector(".mscoreb");
     if(f)f.textContent=moodFace(sc); if(b)b.textContent=(sc!=null?sc.toFixed(1):"–"); if(f)f.style.color=moodColor(sc); }
-  renderMoodTeam();
+  renderMoodTeam(); renderMoodProgress();          // verloop-tabel meteen bijwerken
+  if(pruned) renderMoodTable();                    // lege check-in-rij is opgeruimd
   if(k==="injury"||k==="recovery") renderCards();   // 🤕 op de kaart bijwerken
   if(typeof persistLocal==="function") persistLocal();
   if(typeof scheduleSave==="function") scheduleSave();  // altijd opslaan (ook bij weghalen)
@@ -1738,6 +1753,7 @@ function applyStaffGate(){
   if(locked){ const active=document.querySelector("section.active"); if(active && STAFF_TABS.includes(active.id)) showTab("cards"); }
 }
 function renderAll(){
+  PLAYERS.forEach(p=>{ if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // ruim lege check-ins/metingen op
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderAgenda(); renderKasAll();
