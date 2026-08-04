@@ -1275,12 +1275,16 @@ function wellScore(n,date){ const s=wellSession(n,date,false); if(!s)return null
   const v=WELL.map(w=>parseFloat(s.vals[w.k])).filter(x=>!isNaN(x)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 function moodFace(sc){ if(sc==null)return "·"; return sc>=4.5?"😄":sc>=3.5?"🙂":sc>=2.5?"😐":sc>=1.5?"😟":"😣"; }
 function moodColor(sc){ if(sc==null)return "var(--line)"; return sc>=4?"var(--green)":sc>=3?"var(--gold)":"var(--red)"; }
-function moodInput(n,k,val){ const s=wellSession(n,moodDate(),true); s.vals[k]=val;
+function moodInput(n,k,val){ const s=wellSession(n,moodDate(),true);
+  if(val===""||val==null){ delete s.vals[k]; }   // leeggehaald: waarde echt verwijderen
+  else { s.vals[k]=val; }
   const row=document.querySelector(`#moodTable tr[data-n="${CSS.escape(n)}"]`);
   if(row){ const sc=wellScore(n,moodDate()); const f=row.querySelector(".mface"); const b=row.querySelector(".mscoreb");
     if(f)f.textContent=moodFace(sc); if(b)b.textContent=(sc!=null?sc.toFixed(1):"–"); if(f)f.style.color=moodColor(sc); }
   renderMoodTeam();
   if(k==="injury"||k==="recovery") renderCards();   // 🤕 op de kaart bijwerken
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();  // altijd opslaan (ook bij weghalen)
 }
 function renderMoodTable(){
   const t=document.getElementById("moodTable"); if(!t)return; const date=moodDate();
