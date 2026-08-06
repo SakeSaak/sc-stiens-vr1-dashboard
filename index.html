@@ -398,7 +398,7 @@
       <b>Vlaggen</b> (grensrechter bij ónze wedstrijd) gebeurt bij elke wedstrijd. <b>Fluiten</b> en <b>Wedstrijdcoördinatie</b> zijn twee losse
       <b>verenigingstaken voor de jeugd</b> (bv. MO13 fluiten of aanspreekpunt tot ~12:00) — los van onze eigen wedstrijd, alleen op <b>zaterdagen</b>;
       <b>speelsters zonder auto/rijbewijs pakken die juist vaker op</b>, zodat het rijden voor de rest eerlijk verdeeld blijft.
-      <b>Eten</b> wordt bij thuiswedstrijden door een <b>tweetal</b> voorbereid. Amber fluit niet (eigen voorkeur) — ze vlagt en coördineert wel mee.
+      <b>Eten/lunch</b> bij thuiswedstrijden wordt verzorgd door het <b>vaste corvee-duo van die week</b> (zie tabblad Team &amp; afspraken) — datzelfde duo ondersteunt die week ook de trainers bij het klaarzetten van materiaal. Amber fluit niet (eigen voorkeur) — ze vlagt en coördineert wel mee.
       Bij het verdelen wordt rekening gehouden met <b>afwezigheid</b> (vul in bij Selectieoverzicht → Afwezig).
     </div>
 
@@ -962,6 +962,14 @@ const DUOS=[
 ];
 const CORVEE_START="2026-09-07";  // eerste maandag regulier seizoen
 function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+// Het duo dat in de week van 'dateStr' op corvee is: ondersteunt de trainers én verzorgt het eten op de thuiswedstrijd.
+function duoForDate(dateStr){
+  const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
+  const mon=mondayOf(new Date(dateStr+"T00:00:00"));
+  let idx=Math.round((mon-start)/(7*86400000));
+  idx=((idx%DUOS.length)+DUOS.length)%DUOS.length;
+  return DUOS[idx].slice();
+}
 function renderCorvee(){
   const w=document.getElementById("corveeWrap"); if(!w) return;
   const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
@@ -999,7 +1007,9 @@ function renderAgenda(){
     items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · ")});
   });
   AG_SUMMER.forEach(s=>items.push({date:s.date,time:"",icon:"🏃",cat:"Zomertraining",title:s.title,det:"2 trainingen deze week — eigen dagen"}));
-  regTrainOccurrences().forEach(t=>items.push({date:t.date,time:t.time,icon:"🏃",cat:"Vaste training",title:t.title,det:t.note||""}));
+  regTrainOccurrences().forEach(t=>{ const duo=duoForDate(t.date);
+    const det=[t.note,"🧰 materiaal: "+duo.join(" & ")].filter(Boolean).join(" · ");
+    items.push({date:t.date,time:t.time,icon:"🏃",cat:"Vaste training",title:t.title,det}); });
   let list=items.filter(x=> filt==="all" ? true : x.date>=today);
   list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
   if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
@@ -1108,11 +1118,8 @@ function assignTasks(){
     f.fluit=[]; f.coord=[];   // fluiten/coördinatie zijn losse verenigingstaken (eigen rooster, niet aan onze wedstrijd)
     if(f.home){
       f.drive=[];
-      if(!keep(f.food,"food",idx,used)){                                // eten in tweetallen (roterende partners), min. per persoon
-        const a=pickOne(allPool,used,"food",idx,{min:minFood,date:D});
-        const b=pickOne(allPool,used,"food",idx,{min:minFood,date:D,avoid:new Set(a?[partner[a]]:[])});
-        f.food=[a,b].filter(Boolean); if(a&&b){partner[a]=b; partner[b]=a;}
-      } else if(f.food.length===2){ partner[f.food[0]]=f.food[1]; partner[f.food[1]]=f.food[0]; }
+      f.food=duoForDate(f.date);                                        // eten = het vaste corvee-duo van die week
+      f.food.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n].food++; lastAny[n]=idx; used.add(n); } });
     } else {
       f.food=[];
       if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx,{date:D}); if(d)f.drive.push(d);} }  // rijden: eerlijke rotatie onder rijders
