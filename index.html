@@ -181,6 +181,12 @@
   @media(max-width:760px){.grid2{grid-template-columns:1fr}}
   .foot-note{color:var(--muted);font-size:12px;text-align:center;margin-top:30px;line-height:1.6}
   .mini{font-size:11px;color:var(--muted)}
+  .teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .teamcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .teamcard h3{margin:0 0 8px;font-size:14px;color:var(--gold)}
+  .teamcard .tlist{margin:0;padding-left:18px}
+  .teamcard .tlist li{margin:3px 0;font-size:13px;line-height:1.45}
+  .teamcard p.mini{font-size:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -211,6 +217,7 @@
 <nav>
   <button data-tab="cards" class="active">FIFA-kaartjes</button>
   <button data-tab="squad">Selectieoverzicht</button>
+  <button data-tab="team">Team &amp; afspraken</button>
   <button data-tab="agenda">Agenda</button>
   <button data-tab="metingen">Metingen</button>
   <button data-tab="ontwikkeling">Ontwikkeling</button>
@@ -510,6 +517,82 @@
     </div>
     <div id="trainTable" style="overflow:auto"></div>
 
+  </section>
+
+  <!-- ============ TEAM & AFSPRAKEN (publiek) ============ -->
+  <section id="team">
+    <h2 class="sec">🧡 Team &amp; afspraken 2026/2027</h2>
+    <p class="note">De belangrijkste teaminfo uit de seizoenspresentatie op één plek — zichtbaar voor iedereen. <i>Jullie maken het seizoen tot een succes!</i></p>
+
+    <div class="teamgrid">
+      <div class="teamcard">
+        <h3>👥 Teamstaf</h3>
+        <ul class="tlist">
+          <li><b>Menno Tjoelker</b> — Hoofdtrainer <span class="mini">(ALO jaar 4 · Voetbalcoach 3)</span></li>
+          <li><b>Martijn van der Noord</b> — Assistent-trainer <span class="mini">(CIOS Heerenveen)</span></li>
+          <li><b>Sake Saakstra</b> — Teammanager / Videoanalist</li>
+        </ul>
+      </div>
+
+      <div class="teamcard">
+        <h3>🏃 Trainingen</h3>
+        <ul class="tlist">
+          <li><b>Maandag</b> 19:30–21:00 uur</li>
+          <li><b>Woensdag</b> 19:00–20:30 uur</li>
+          <li>5 minuten van tevoren klaarstaan op het veld</li>
+          <li>Maandag 18:55–19:15: wedstrijdevaluatie</li>
+          <li>Corvee: 2 speelsters per week — alle materialen klaar, ballen opgepompt</li>
+        </ul>
+      </div>
+
+      <div class="teamcard">
+        <h3>⚽ Wedstrijddagen</h3>
+        <ul class="tlist">
+          <li><b>Thuis:</b> 15:00 spelen · 13:00 op de club</li>
+          <li>13:00 lunch (corveeschema) · 13:40 wedstrijdbespreking · 14:25 warming-up</li>
+          <li><b>Uit:</b> 1 uur en 15 min van tevoren aanwezig op het sportcomplex</li>
+          <li>Vertrek vanaf de club (uitzonderingen daargelaten)</li>
+        </ul>
+      </div>
+
+      <div class="teamcard">
+        <h3>⏱️ Speelminuten / wisselbeleid</h3>
+        <p class="mini">Aantal speelminuten wordt bepaald door: trainingsarbeid (kwantitatief), kwaliteit op de training, en blessures. <b>Laat elke training zien waarom jij in de basis hoort!</b></p>
+      </div>
+
+      <div class="teamcard">
+        <h3>🤝 Normen &amp; waarden</h3>
+        <ul class="tlist">
+          <li>Alle gemaakte afspraken nakomen en naleven</li>
+          <li>Elkaar kunnen en mogen aanspreken</li>
+          <li>Verantwoordelijkheid nemen met en voor elkaar</li>
+        </ul>
+      </div>
+
+      <div class="teamcard">
+        <h3>🎯 Speelwijze — visie</h3>
+        <ul class="tlist">
+          <li>Winnen · dominant in balbezit</li>
+          <li>Veel energie (balbezit én balverlies)</li>
+          <li>Met lef en durf spelen</li>
+          <li>Bal kwijt? Gelijk druk op de bal</li>
+        </ul>
+      </div>
+
+      <div class="teamcard">
+        <h3>➡️ Aanvallen</h3>
+        <p class="mini"><b>Opbouwen → kansen → scoren.</b> Georganiseerd uit elkaar, zo lang mogelijk balbezit, diep spelen als het kan, geduldig de tegenstander uitlokken, snelle balverplaatsing. Diepte gaat voor breedte; ruimtes creëren voor elkaar met restverdediging.</p>
+      </div>
+
+      <div class="teamcard">
+        <h3>⬅️ Verdedigen</h3>
+        <p class="mini"><b>Opbouw verstoren → doelpunten voorkomen.</b> Druk op de baldrager, waar het kan hoog druk zetten. Als de bal beweegt, beweegt het team. Compact spelen, ruimtes tussen de linies klein, kort dekken in de buurt van de bal.</p>
+      </div>
+    </div>
+
+    <h3 class="sec" style="font-size:16px;margin-top:22px">👯 Duo's &amp; corveeschema</h3>
+    <p class="note">Vaste duo's voor trainingen en wedstrijddagen (lunch- en wasschema). Elke week is één duo op corvee: materialen klaarzetten, ballen oppompen en de lunch op de thuiswedstrijd verzorgen.</p>
+    <div id="corveeWrap" style="overflow:auto"></div>
   </section>
 
   <!-- ============ AGENDA (publiek) ============ -->
@@ -857,6 +940,46 @@ const AG_SUMMER=[
   {date:"2026-07-20",title:"Zomertraining week 5 (20–26 juli)"},
   {date:"2026-07-27",title:"Zomertraining week 6 (27–31 juli)"},
 ];
+// Vaste wekelijkse teamtrainingen (regulier seizoen): ma 19:30–21:00 & wo 19:00–20:30.
+const REG_TRAIN={ start:"2026-09-01", end:"2027-06-01",
+  days:[ {dow:1,time:"19:30",end:"21:00",title:"Training (maandag)",note:"18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie"},
+         {dow:3,time:"19:00",end:"20:30",title:"Training (woensdag)",note:""} ] };
+function fmtDate(d){ const p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
+function regTrainOccurrences(){ const out=[]; const s=new Date(REG_TRAIN.start+"T00:00:00"), e=new Date(REG_TRAIN.end+"T00:00:00");
+  for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){ const dow=d.getDay();
+    REG_TRAIN.days.forEach(x=>{ if(x.dow===dow) out.push({date:fmtDate(d),time:x.time,end:x.end,title:x.title,note:x.note}); }); }
+  return out; }
+// Vaste duo's (seizoenspresentatie) voor trainingen, lunch-/was- en corveeschema.
+const DUOS=[
+  ["Maja","Alyssa Visser"],
+  ["Sacha","Esmee Terpstra"],
+  ["Renske","Nynke"],
+  ["Sigrid","Amber Merkx"],
+  ["Esmee Diekstra","Mare"],
+  ["Iris","Merle","Grietine Bergsma"],
+  ["Bente","Coby Keizer"],
+  ["Jetty De Ruiter","Arwen Kuipers"],
+];
+const CORVEE_START="2026-09-07";  // eerste maandag regulier seizoen
+function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function renderCorvee(){
+  const w=document.getElementById("corveeWrap"); if(!w) return;
+  const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
+  const todayMon=mondayOf(new Date());
+  let firstIdx=Math.round((todayMon-start)/(7*86400000)); if(firstIdx<0) firstIdx=0;
+  const fmt=d=>d.toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+  const rows=[];
+  for(let i=firstIdx;i<firstIdx+16;i++){
+    const mon=new Date(start); mon.setDate(mon.getDate()+i*7);
+    const sun=new Date(mon); sun.setDate(sun.getDate()+6);
+    const duo=DUOS[((i%DUOS.length)+DUOS.length)%DUOS.length];
+    rows.push({mon,sun,duo,cur:mon.getTime()===todayMon.getTime()});
+  }
+  w.innerHTML=`<table><tr><th>Week</th><th>Op corvee (duo)</th></tr>`+
+    rows.map(r=>`<tr${r.cur?' style="background:rgba(242,140,0,.12)"':''}>
+      <td class="mini">${fmt(r.mon)} – ${fmt(r.sun)}${r.cur?' <b style="color:var(--gold)">· deze week</b>':''}</td>
+      <td>${r.duo.join(" &amp; ")}</td></tr>`).join("")+`</table>`;
+}
 function renderAgenda(){
   const w=document.getElementById("agendaList"); if(!w)return;
   const filt=((document.getElementById("agFilter")||{}).value)||"up";
@@ -876,6 +999,7 @@ function renderAgenda(){
     items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · ")});
   });
   AG_SUMMER.forEach(s=>items.push({date:s.date,time:"",icon:"🏃",cat:"Zomertraining",title:s.title,det:"2 trainingen deze week — eigen dagen"}));
+  regTrainOccurrences().forEach(t=>items.push({date:t.date,time:t.time,icon:"🏃",cat:"Vaste training",title:t.title,det:t.note||""}));
   let list=items.filter(x=> filt==="all" ? true : x.date>=today);
   list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
   if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
@@ -1107,15 +1231,17 @@ function renderPerPlayer(){
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 // Testcatalogus. top = topwaarde (→99), low = zwakke waarde (→50). Werkt voor tijd (lager=beter) én score (hoger=beter).
 const TESTS=[
+  {k:"sprint5",  stat:"PAC", lbl:"5-meter sprint (start)",   unit:"s",      top:1.00, low:1.60, step:"0.01"},
   {k:"sprint10", stat:"PAC", lbl:"Sprint 10 m",              unit:"s",      top:1.80, low:2.40, step:"0.01"},
   {k:"sprint30", stat:"PAC", lbl:"Sprint 30 m",              unit:"s",      top:4.50, low:6.00, step:"0.01"},
-  {k:"isrt",     stat:"PHY", lbl:"Interval Shuttle Run (ISRT)",unit:"trap",  top:125,  low:80,   step:"1",   target:116, targetHi:125},
-  {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
-  {k:"illinois", stat:"DRI", lbl:"Illinois behendigheid",    unit:"s",      top:16.0, low:20.0, step:"0.1"},
-  {k:"dribbel",  stat:"DRI", lbl:"Dribbelparcours",          unit:"s",      top:12.0, low:18.0, step:"0.1"},
   {k:"finish",   stat:"SHO", lbl:"Afrondtest",               unit:"raak/10",top:9,    low:2,    step:"1"},
   {k:"passing",  stat:"PAS", lbl:"Passtest",                 unit:"raak/20",top:19,   low:8,    step:"1"},
+  {k:"proagility",stat:"DRI",lbl:"Pro Agility (5-10-5)",     unit:"s",      top:4.80, low:6.20, step:"0.01"},
+  {k:"illinois", stat:"DRI", lbl:"Illinois behendigheid",    unit:"s",      top:16.0, low:20.0, step:"0.1"},
   {k:"duel",     stat:"DEF", lbl:"1v1 duels gewonnen",       unit:"%",      top:80,   low:30,   step:"5"},
+  {k:"isrt",     stat:"PHY", lbl:"Interval Shuttle Run (ISRT)",unit:"trap",  top:125,  low:80,   step:"1",   target:116, targetHi:125},
+  {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
+  {k:"viad",     stat:"PHY", lbl:"VIAD-conditietest",        unit:"score",  top:100,  low:50,   step:"1"},
 ];
 const STAT_TESTS={}; STAT_KEYS.forEach(s=>STAT_TESTS[s]=TESTS.filter(t=>t.stat===s));
 function convert(val,t){ const v=parseFloat(val); if(isNaN(v)||!t)return null; const f=(v-t.low)/(t.top-t.low); return Math.round(clamp(50+f*49,1,99)); }
@@ -1756,7 +1882,7 @@ function renderAll(){
   PLAYERS.forEach(p=>{ if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // ruim lege check-ins/metingen op
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
-  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderAgenda(); renderKasAll();
+  renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -1855,7 +1981,7 @@ const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=t
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
-renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); initAgendaUrl(); renderAgenda(); renderKasAll();
+renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
