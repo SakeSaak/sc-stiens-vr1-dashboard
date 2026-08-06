@@ -805,6 +805,29 @@ function CREST(w,id){ const h=Math.round(w*1.317); return `<img src="${LOGO_SRC}
 /* ---------------- FIFA CARDS ---------------- */
 let store = loadStats();
 function loadStats(){ try{return JSON.parse(localStorage.getItem("scstiens_stats"))||{}}catch(e){return {}} }
+// Bekende afwezigheden uit de teamvragenlijst (+ door staf doorgegeven). Datums in YYYY-MM-DD, reeksen met "..".
+// Wordt één keer ingevuld en overschrijft NOOIT wat de staf zelf invult bij Selectieoverzicht → Afwezig.
+const AWAY_SEED_VERSION=1;
+const DEFAULT_AWAY={
+  "Mare":"2026-06-11..2026-06-18, 2026-06-27..2026-08-03",
+  "Esmee Terpstra":"2026-07-10..2026-08-10",
+  "Maja":"2026-07-13..2026-07-27",
+  "Nynke":"2026-08-07..2026-08-09",
+  "Sacha":"2026-07-07..2026-08-05",
+  "Esmee Diekstra":"2026-07-07..2026-07-25",
+  "Bente":"2026-07-19..2026-07-26",
+  "Amber Merkx":"2026-07-22..2026-07-29, 2026-08-06..2026-08-10",
+  "Merle":"2026-08-11..2026-11-30",
+  "Grietine Bergsma":"2026-10-26..2026-11-05",
+};
+function seedAway(){
+  if(!store || typeof store!=="object") return;
+  if(store.__awaySeed>=AWAY_SEED_VERSION) return;
+  Object.keys(DEFAULT_AWAY).forEach(n=>{ store[n]=store[n]||{stats:{},note:""};
+    if(!store[n].away) store[n].away=DEFAULT_AWAY[n]; });   // alleen invullen als nog leeg
+  store.__awaySeed=AWAY_SEED_VERSION;
+  if(typeof persistLocal==="function") persistLocal();
+}
 function saveStats(){
   // Stats komen uitsluitend uit de metingen (niet handmatig). Hier alleen de video-notitie opslaan.
   document.querySelectorAll(".fcard").forEach(c=>{
@@ -1878,7 +1901,7 @@ let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; seedAway(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
@@ -1996,6 +2019,7 @@ function initLock(){
 
 /* ---------------- INIT ---------------- */
 initLock();
+seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
