@@ -1282,8 +1282,12 @@ const TESTS=[
   {k:"illinois", stat:"DRI", lbl:"Illinois behendigheid",    unit:"s",      top:16.0, low:20.0, step:"0.1"},
   {k:"duel",     stat:"DEF", lbl:"1v1 duels gewonnen",       unit:"%",      top:80,   low:30,   step:"5"},
   {k:"isrt",     stat:"PHY", lbl:"Interval Shuttle Run (ISRT)",unit:"trap",  top:125,  low:80,   step:"1",   target:116, targetHi:125},
-  {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
   {k:"viad",     stat:"PHY", lbl:"VIAD-conditietest",        unit:"score",  top:100,  low:50,   step:"1"},
+  {k:"rsa",      stat:"PHY", lbl:"Herhaalde sprints (RSA, gem.)",unit:"s",  top:4.50, low:6.50, step:"0.01"},
+  {k:"cmj",      stat:"PHY", lbl:"Verticale sprong (CMJ)",   unit:"cm",     top:40,   low:20,   step:"0.5"},
+  {k:"broadjumpL",stat:"PHY",lbl:"Broad jump 1-been — links",unit:"cm",     top:220,  low:120,  step:"1"},
+  {k:"broadjumpR",stat:"PHY",lbl:"Broad jump 1-been — rechts",unit:"cm",    top:220,  low:120,  step:"1"},
+  {k:"skater",   stat:"PHY", lbl:"Lateral skater jump",      unit:"cm",     top:180,  low:90,   step:"1"},
 ];
 const STAT_TESTS={}; STAT_KEYS.forEach(s=>STAT_TESTS[s]=TESTS.filter(t=>t.stat===s));
 function convert(val,t){ const v=parseFloat(val); if(isNaN(v)||!t)return null; const f=(v-t.low)/(t.top-t.low); return Math.round(clamp(50+f*49,1,99)); }
