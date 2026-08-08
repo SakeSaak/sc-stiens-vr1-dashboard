@@ -80,13 +80,13 @@ exports.handler = async () => {
   // Vaste wekelijkse teamtrainingen (regulier seizoen): ma 19:30–21:00 & wo 19:00–20:30, t/m 1 juni 2027.
   L.push("BEGIN:VEVENT","UID:regtrain-mo@scstiens","DTSTAMP:"+now,
     "DTSTART:20260907T193000","DTEND:20260907T210000",
-    "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20270601T000000Z",
+    "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20270601T000000",
     fold("SUMMARY:"+esc("🏃 Training (maandag)")),
     fold("DESCRIPTION:"+esc("18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie")),
     "END:VEVENT");
   L.push("BEGIN:VEVENT","UID:regtrain-we@scstiens","DTSTAMP:"+now,
     "DTSTART:20260902T190000","DTEND:20260902T203000",
-    "RRULE:FREQ=WEEKLY;BYDAY=WE;UNTIL=20270601T000000Z",
+    "RRULE:FREQ=WEEKLY;BYDAY=WE;UNTIL=20270601T000000",
     fold("SUMMARY:"+esc("🏃 Training (woensdag)")),
     "END:VEVENT");
 

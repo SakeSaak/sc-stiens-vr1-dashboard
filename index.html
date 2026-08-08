@@ -1318,7 +1318,8 @@ function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards()
 // LIVE invoer op de gekozen datum
 function measInput(n,k,val){
   const s=sessionFor(n,selDate(),true);
-  if(val===""||val==null){ delete s.results[k]; }   // leeggehaald: waarde echt verwijderen
+  val=(val==null?"":String(val)).replace(",",".").replace(/[^0-9.\-]/g,"").trim();  // NL-komma → punt, alleen cijfers
+  if(val===""){ delete s.results[k]; }   // leeggehaald: waarde echt verwijderen
   else { s.results[k]=val; }
   const before=getSessions(n).length; pruneSessions(n); const pruned=getSessions(n).length!==before;
   computePlayerStats(n); updateCardStats(n); updateMeasComputed(n); renderDev(); renderProgress();
@@ -1358,7 +1359,7 @@ function renderMeasTable(){
   t.innerHTML=h1+h2+PLAYERS.map(p=>{
     const nEsc=p.n.replace(/'/g,"\\'"); const sess=sessionFor(p.n,date,false); const r=(sess&&sess.results)||{}; const s=(store[p.n]&&store[p.n].stats)||{};
     let row=`<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`;
-    STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="number" step="${tt.step}" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
+    STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="text" inputmode="decimal" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
       style="width:58px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
       oninput="measInput('${nEsc}','${tt.k}',this.value)">${targetMark(r[tt.k],tt)}</td>`; }); });
     row+=`<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td><td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td><td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
