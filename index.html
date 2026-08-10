@@ -1057,12 +1057,36 @@ function renderAgenda(){
 }
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
+  // Oefenwedstrijden
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
   {date:"2026-08-22", time:"14:00", opponent:"Harkemase Boys VR1 (oefen)", home:true},
-  {date:"2026-08-29", time:"14:30", opponent:"ST BMJ VR1 (beker)", home:false},           // uit
-  {date:"2026-09-01", time:"20:00", opponent:"Leeuwarder Zwaluwen VR1 (beker)", home:true},// thuis, di 1 sep
-  {date:"2026-09-05", time:"12:45", opponent:"St.-Annaparochie VR1 (beker)", home:false},  // uit
-  {date:"2026-09-12", time:"", opponent:"Competitie 1", home:null},
+  // Beker (poulefase)
+  {date:"2026-08-29", time:"14:30", opponent:"ST BMJ VR1 (beker)", home:false},
+  {date:"2026-09-01", time:"20:00", opponent:"Leeuwarder Zwaluwen VR1 (beker)", home:true},
+  {date:"2026-09-05", time:"12:45", opponent:"St.Annaparochie VR1 (beker)", home:false},
+  // Competitie 2e klasse D
+  {date:"2026-09-12", time:"14:30", opponent:"Helpman VR1", home:false},
+  {date:"2026-09-19", time:"15:00", opponent:"The Knickerbockers VR2", home:true},
+  {date:"2026-09-26", time:"17:00", opponent:"FC MVA NOORD VR1", home:false},
+  {date:"2026-10-03", time:"15:00", opponent:"GVAV-Rapiditas VR1", home:true},
+  {date:"2026-10-10", time:"15:00", opponent:"SC Bolsward VR1", home:false},
+  {date:"2026-10-24", time:"15:00", opponent:"ST BMJ VR1", home:true},
+  {date:"2026-10-31", time:"16:00", opponent:"Lycurgus VR1", home:false},
+  {date:"2026-11-07", time:"15:00", opponent:"VEV'67 VR1", home:true},
+  {date:"2026-11-14", time:"12:30", opponent:"Amicitia VMC VR1", home:false},
+  {date:"2026-11-21", time:"15:00", opponent:"vv Winsum VR1", home:true},
+  {date:"2026-11-28", time:"12:30", opponent:"Marum VR1", home:false},
+  {date:"2026-12-05", time:"15:00", opponent:"Helpman VR1", home:true},
+  {date:"2027-01-30", time:"12:15", opponent:"The Knickerbockers VR2", home:false},
+  {date:"2027-02-13", time:"15:00", opponent:"FC MVA NOORD VR1", home:true},
+  {date:"2027-03-06", time:"14:30", opponent:"GVAV-Rapiditas VR1", home:false},
+  {date:"2027-03-13", time:"15:00", opponent:"SC Bolsward VR1", home:true},
+  {date:"2027-03-20", time:"14:30", opponent:"ST BMJ VR1", home:false},
+  {date:"2027-04-03", time:"15:00", opponent:"Lycurgus VR1", home:true},
+  {date:"2027-04-10", time:"13:00", opponent:"VEV'67 VR1", home:false},
+  {date:"2027-04-17", time:"15:00", opponent:"Amicitia VMC VR1", home:true},
+  {date:"2027-05-08", time:"15:00", opponent:"Marum VR1", home:true},
+  {date:"2027-05-15", time:"15:00", opponent:"vv Winsum VR1", home:false},
 ];
 function loadProgram(){
   if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
