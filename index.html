@@ -983,23 +983,23 @@ const DUOS=[
   ["Bente","Coby Keizer"],
   ["Jetty De Ruiter","Arwen Kuipers"],
 ];
-const CORVEE_START="2026-09-07";  // eerste maandag regulier seizoen
+const CORVEE_START="2026-08-10";  // startweek corvee (Menno): deze week = duo hieronder
+const CORVEE_OFFSET=2;            // 0=Maja&Alyssa; 2 = startweek valt op Renske & Nynke (positie 3 in de lijst)
 function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function duoIdxFor(mon,start){ let i=Math.round((mon-start)/(7*86400000))+CORVEE_OFFSET; return ((i%DUOS.length)+DUOS.length)%DUOS.length; }
 // Het duo dat in de week van 'dateStr' op corvee is: ondersteunt de trainers én verzorgt het eten op de thuiswedstrijd.
 function duoForDate(dateStr){
   const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
   const mon=mondayOf(new Date(dateStr+"T00:00:00"));
-  let idx=Math.round((mon-start)/(7*86400000));
-  idx=((idx%DUOS.length)+DUOS.length)%DUOS.length;
-  return DUOS[idx].slice();
+  return DUOS[duoIdxFor(mon,start)].slice();
 }
 // Zelfde duo, maar afwezige leden vallen af; is het hele duo weg, schuif door naar het eerstvolgende beschikbare duo.
 function duoAvailableForDate(dateStr){
   const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
   const mon=mondayOf(new Date(dateStr+"T00:00:00"));
-  let idx=Math.round((mon-start)/(7*86400000));
+  let base=Math.round((mon-start)/(7*86400000))+CORVEE_OFFSET;
   for(let step=0; step<DUOS.length; step++){
-    const j=((( idx+step)%DUOS.length)+DUOS.length)%DUOS.length;
+    const j=(((base+step)%DUOS.length)+DUOS.length)%DUOS.length;
     const present=DUOS[j].filter(n=>!(typeof isAbsent==="function" && isAbsent(n,dateStr)));
     if(present.length) return present;
   }
@@ -1015,7 +1015,7 @@ function renderCorvee(){
   for(let i=firstIdx;i<firstIdx+16;i++){
     const mon=new Date(start); mon.setDate(mon.getDate()+i*7);
     const sun=new Date(mon); sun.setDate(sun.getDate()+6);
-    const duo=DUOS[((i%DUOS.length)+DUOS.length)%DUOS.length];
+    const duo=DUOS[((( i+CORVEE_OFFSET)%DUOS.length)+DUOS.length)%DUOS.length];
     rows.push({mon,sun,duo,cur:mon.getTime()===todayMon.getTime()});
   }
   w.innerHTML=`<table><tr><th>Week</th><th>Op corvee (duo)</th></tr>`+

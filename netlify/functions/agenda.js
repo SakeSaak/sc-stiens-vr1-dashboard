@@ -27,7 +27,8 @@ const DUOS=[
   ["Bente","Coby Keizer"],
   ["Jetty De Ruiter","Arwen Kuipers"],
 ];
-const CORVEE_START="2026-09-07";
+const CORVEE_START="2026-08-10";  // startweek corvee (Menno): deze week = Renske & Nynke
+const CORVEE_OFFSET=2;
 function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
 function normDate(s){ s=(s||"").trim(); let m;
   if(m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/)) return s;
@@ -44,7 +45,7 @@ function isAbsent(store,n,dateStr){
 function duoAvailable(store,dateStr){
   const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
   const mon=mondayOf(new Date(dateStr+"T00:00:00"));
-  let idx=Math.round((mon-start)/(7*86400000));
+  let idx=Math.round((mon-start)/(7*86400000))+CORVEE_OFFSET;
   for(let step=0; step<DUOS.length; step++){
     const j=(((idx+step)%DUOS.length)+DUOS.length)%DUOS.length;
     const present=DUOS[j].filter(x=>!isAbsent(store,x,dateStr));
