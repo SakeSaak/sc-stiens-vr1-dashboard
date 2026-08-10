@@ -97,7 +97,8 @@ exports.handler = async () => {
   trainings.forEach((t,i)=>{ if(!t || !t.date) return;
     let dur=90;
     if(t.time && t.end){ const a=t.time.split(":").map(Number), b=t.end.split(":").map(Number); const m=(b[0]*60+b[1])-(a[0]*60+a[1]); if(m>0)dur=m; }
-    ev("t"+i+"-"+t.date+"@scstiens", "🏃 "+((t.title||"Training")), t.date, t.time||"", dur, "");
+    const duo=duoAvailable(store,t.date);
+    ev("t"+i+"-"+t.date+"@scstiens", "🏃 "+((t.title||"Training")), t.date, t.time||"", dur, "Corvee/materiaal: "+duo.join(" & "));
   });
 
   club.forEach((c,i)=>{ if(!c || !c.date) return;
@@ -118,10 +119,11 @@ exports.handler = async () => {
 
   // Vaste wekelijkse teamtrainingen (regulier seizoen): ma 19:30–21:00 & wo 19:00–20:30, t/m 1 juni 2027.
   // Als losse afspraken per week, zodat het corvee-duo van díé week in de agenda staat (afwezigen vallen af).
+  const REG_START=new Date("2026-09-01T00:00:00");   // augustus komt uit de voorbereidingslijst (trainings); regulier vanaf sep
   const REG_END=new Date("2027-06-01T00:00:00");
   const REG_DAYS=[ {dow:1,time:"19:30",dur:90,title:"Training (maandag)",note:"18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie"},
                    {dow:3,time:"19:00",dur:90,title:"Training (woensdag)",note:""} ];
-  for(let d=new Date(CORVEE_START+"T00:00:00"); d<=REG_END; d.setDate(d.getDate()+1)){
+  for(let d=new Date(REG_START); d<=REG_END; d.setDate(d.getDate()+1)){
     REG_DAYS.forEach(x=>{ if(d.getDay()!==x.dow) return;
       const ds=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
       const duo=duoAvailable(store,ds);

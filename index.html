@@ -1027,7 +1027,8 @@ function renderAgenda(){
   const w=document.getElementById("agendaList"); if(!w)return;
   const filt=((document.getElementById("agFilter")||{}).value)||"up";
   const today=todayStr(); const items=[];
-  (trainings||[]).forEach(t=>{ if(t&&t.date) items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:""}); });
+  (trainings||[]).forEach(t=>{ if(t&&t.date){ const duo=duoAvailableForDate(t.date);
+    items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:"🧰 materiaal: "+duo.join(" & ")}); } });
   (fixtures||[]).forEach((f,i)=>{ if(!f||!f.date)return;
     const tu=f.home===true?"Thuis":f.home===false?"Uit":"n.t.b.";
     const opp=(f.opponent||"").trim()||("Wedstrijd "+(i+1)); const parts=[];
