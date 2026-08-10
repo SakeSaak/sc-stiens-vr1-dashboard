@@ -16,6 +16,43 @@ function dtLocal(dateStr,timeStr,addMin){
 function dtDate(dateStr){ return dateStr.replace(/-/g,""); }
 function names(a){ return (a&&a.length)?a.join(", "):""; }
 
+// Vaste duo's (seizoenspresentatie) + corvee-rotatie — moet gelijk zijn aan index.html.
+const DUOS=[
+  ["Maja","Alyssa Visser"],
+  ["Sacha","Esmee Terpstra"],
+  ["Renske","Nynke"],
+  ["Sigrid","Amber Merkx"],
+  ["Esmee Diekstra","Mare"],
+  ["Iris","Merle","Grietine Bergsma"],
+  ["Bente","Coby Keizer"],
+  ["Jetty De Ruiter","Arwen Kuipers"],
+];
+const CORVEE_START="2026-09-07";
+function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
+function normDate(s){ s=(s||"").trim(); let m;
+  if(m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/)) return s;
+  if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/)) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+  if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})$/)){ const dd=m[1].padStart(2,"0"), mm=m[2].padStart(2,"0"); const yr=(+mm>=7)?"2026":"2027"; return yr+"-"+mm+"-"+dd; }
+  return null;
+}
+function isAbsent(store,n,dateStr){
+  const raw=(store&&store[n]&&store[n].away)||""; if(!raw) return false;
+  return raw.split(",").some(tok=>{ tok=tok.trim(); if(!tok)return false;
+    const parts=tok.split(".."); const a=normDate(parts[0]); const b=parts[1]?normDate(parts[1]):a;
+    if(!a) return false; return dateStr>=a && dateStr<=(b||a); });
+}
+function duoAvailable(store,dateStr){
+  const start=mondayOf(new Date(CORVEE_START+"T00:00:00"));
+  const mon=mondayOf(new Date(dateStr+"T00:00:00"));
+  let idx=Math.round((mon-start)/(7*86400000));
+  for(let step=0; step<DUOS.length; step++){
+    const j=(((idx+step)%DUOS.length)+DUOS.length)%DUOS.length;
+    const present=DUOS[j].filter(x=>!isAbsent(store,x,dateStr));
+    if(present.length) return present;
+  }
+  const j=(((idx)%DUOS.length)+DUOS.length)%DUOS.length; return DUOS[j].slice();
+}
+
 exports.handler = async () => {
   let data={};
   try{
@@ -28,6 +65,7 @@ exports.handler = async () => {
   const fixtures=Array.isArray(data.fixtures)?data.fixtures:[];
   const trainings=Array.isArray(data.trainings)?data.trainings:[];
   const club=Array.isArray(data.clubDuties)?data.clubDuties:[];
+  const store=(data.store&&typeof data.store==="object")?data.store:{};
 
   const nd=new Date();
   const now=nd.getUTCFullYear()+pad(nd.getUTCMonth()+1)+pad(nd.getUTCDate())+"T"+pad(nd.getUTCHours())+pad(nd.getUTCMinutes())+pad(nd.getUTCSeconds())+"Z";
@@ -78,17 +116,18 @@ exports.handler = async () => {
   SUMMER.forEach((s,i)=>{ ev("z"+i+"-"+s.mon+"@scstiens", "🏃 "+s.t, s.mon, "", 0, s.d, "PT9H"); });  // herinnering ma 09:00
 
   // Vaste wekelijkse teamtrainingen (regulier seizoen): ma 19:30–21:00 & wo 19:00–20:30, t/m 1 juni 2027.
-  L.push("BEGIN:VEVENT","UID:regtrain-mo@scstiens","DTSTAMP:"+now,
-    "DTSTART:20260907T193000","DTEND:20260907T210000",
-    "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20270601T000000",
-    fold("SUMMARY:"+esc("🏃 Training (maandag)")),
-    fold("DESCRIPTION:"+esc("18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie")),
-    "END:VEVENT");
-  L.push("BEGIN:VEVENT","UID:regtrain-we@scstiens","DTSTAMP:"+now,
-    "DTSTART:20260902T190000","DTEND:20260902T203000",
-    "RRULE:FREQ=WEEKLY;BYDAY=WE;UNTIL=20270601T000000",
-    fold("SUMMARY:"+esc("🏃 Training (woensdag)")),
-    "END:VEVENT");
+  // Als losse afspraken per week, zodat het corvee-duo van díé week in de agenda staat (afwezigen vallen af).
+  const REG_END=new Date("2027-06-01T00:00:00");
+  const REG_DAYS=[ {dow:1,time:"19:30",dur:90,title:"Training (maandag)",note:"18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie"},
+                   {dow:3,time:"19:00",dur:90,title:"Training (woensdag)",note:""} ];
+  for(let d=new Date(CORVEE_START+"T00:00:00"); d<=REG_END; d.setDate(d.getDate()+1)){
+    REG_DAYS.forEach(x=>{ if(d.getDay()!==x.dow) return;
+      const ds=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+      const duo=duoAvailable(store,ds);
+      const desc=[x.note,"Corvee/materiaal: "+duo.join(" & ")].filter(Boolean).join("\n");
+      ev("rt-"+x.dow+"-"+ds+"@scstiens", "🏃 "+x.title, ds, x.time, x.dur, desc);
+    });
+  }
 
   L.push("END:VCALENDAR");
   return {
