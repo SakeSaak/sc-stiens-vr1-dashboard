@@ -187,6 +187,12 @@
   .teamcard .tlist{margin:0;padding-left:18px}
   .teamcard .tlist li{margin:3px 0;font-size:13px;line-height:1.45}
   .teamcard p.mini{font-size:12px;line-height:1.5}
+  .taskcell{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:120px}
+  .taskchip{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--line);
+    border-radius:12px;padding:2px 6px 2px 8px;font-size:12px;white-space:nowrap}
+  .taskchip .x{cursor:pointer;color:var(--muted);font-size:11px}
+  .taskchip .x:hover{color:var(--red)}
+  .taskadd{font-size:11px !important;padding:2px 4px !important;opacity:.7}
 </style>
 </head>
 <body>
@@ -1205,6 +1211,23 @@ function setFixtureHome(idx,val){ const f=fixtures[idx]; if(!f)return;
   if(f.home===null){ f.drive=[]; f.wash=[]; f.flag=[]; f.food=[]; }   // onbekend: nog geen taken
   renderSchedTable(); renderReminders(); if(typeof scheduleSave==="function") scheduleSave();
 }
+// ---- Handmatig bewerken van taaktoewijzingen (bv. ruilverzoeken) ----
+function eligiblePool(task){ return task==="drive" ? PLAYERS.filter(p=>p.car).map(p=>p.n) : PLAYERS.map(p=>p.n); }
+function taskCell(idx,task){
+  const f=fixtures[idx]; const list=f[task]||[];
+  const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="taskRemove(${idx},'${task}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
+  const pool=eligiblePool(task).filter(n=>!list.includes(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
+  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
+  const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
+  return `<div class="taskcell">${chips}${add}</div>`;
+}
+function taskAdd(idx,task,name){ if(!name)return; const f=fixtures[idx]; f[task]=f[task]||[]; if(!f[task].includes(name)) f[task].push(name); afterTaskEdit(); }
+function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f[task]=f[task].filter(x=>x!==name); afterTaskEdit(); }
+function recomputeSched(){ const pts={},sub={}; PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+  fixtures.forEach(f=>{ ["drive","wash","flag","food"].forEach(k=>{ (f[k]||[]).forEach(n=>{ if(sub[n]){pts[n]++; sub[n][k]++;} }); }); }); sched={pts,sub}; }
+function afterTaskEdit(){ tasksAssigned=true; recomputeSched();
+  renderSchedTable(); renderBalance(); renderPerPlayer(); renderReminders(); if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
@@ -1220,7 +1243,7 @@ function renderSchedTable(){
            <option value="H" ${f.home===true?'selected':''}>Thuis</option>
            <option value="U" ${f.home===false?'selected':''}>Uit</option></select></td>
       ${(f.home===true||f.home===false)
-        ? `<td>${f.home?'<span class="mini">n.v.t.</span>':names(f.drive)}</td><td>${names(f.wash)}</td><td>${names(f.flag)}</td><td>${f.home?(f.food.length?f.food.join(' &amp; '):'—'):'<span class="mini">n.v.t. (uit)</span>'}</td>`
+        ? `<td>${f.home?'<span class="mini">n.v.t.</span>':taskCell(idx,'drive')}</td><td>${taskCell(idx,'wash')}</td><td>${taskCell(idx,'flag')}</td><td>${f.home?taskCell(idx,'food'):'<span class="mini">n.v.t. (uit)</span>'}</td>`
         : `<td colspan="4"><span class="mini">⏳ nog te bepalen — kies eerst thuis/uit, daarna Verdeel openstaande taken</span></td>`
       }</tr>`).join("");
   // style the inline inputs
