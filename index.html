@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel</p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-a</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1505,6 +1505,10 @@ function wellSessionEmpty(s){ if(!s||!s.vals) return true;
   const hasRec=s.vals.recovery!=null && s.vals.recovery!=="" && +s.vals.recovery>0;
   return !hasWell && !hasInj && !hasRec; }
 function pruneWell(n){ const ws=getWell(n); for(let i=ws.length-1;i>=0;i--){ if(wellSessionEmpty(ws[i])) ws.splice(i,1); } }
+// Opgeslagen "Nee"/"Geen"/0 wk opschonen, zodat oude invullingen ook echt geen blessure meer zijn.
+function normalizeInjuries(n){ getWell(n).forEach(s=>{ if(!s||!s.vals)return;
+  if(isNoInjury(s.vals.injury)) delete s.vals.injury;
+  if(s.vals.recovery==="" || +s.vals.recovery===0) delete s.vals.recovery; }); }
 function wellScore(n,date){ const s=wellSession(n,date,false); if(!s)return null;
   const v=WELL.map(w=>parseFloat(s.vals[w.k])).filter(x=>!isNaN(x)); return v.length?(v.reduce((a,b)=>a+b,0)/v.length):null; }
 function moodFace(sc){ if(sc==null)return "·"; return sc>=4.5?"😄":sc>=3.5?"🙂":sc>=2.5?"😐":sc>=1.5?"😟":"😣"; }
@@ -1994,7 +1998,7 @@ function applyStaffGate(){
   if(locked){ const active=document.querySelector("section.active"); if(active && STAFF_TABS.includes(active.id)) showTab("cards"); }
 }
 function renderAll(){
-  PLAYERS.forEach(p=>{ if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // ruim lege check-ins/metingen op
+  PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // schoon blessures + ruim lege check-ins/metingen op
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
