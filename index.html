@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-a</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-b</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1184,7 +1184,8 @@ function assignTasks(){
     f.fluit=[]; f.coord=[];   // fluiten/coördinatie zijn losse verenigingstaken (eigen rooster, niet aan onze wedstrijd)
     if(f.home){
       f.drive=[];
-      f.food=duoAvailableForDate(f.date);                               // eten = corvee-duo van die week (afwezigen vallen af)
+      // eten/lunch = corvee-duo van die week (afwezigen vallen af); handmatige ruil blijft staan
+      if(!f.foodManual) f.food=duoAvailableForDate(f.date);
       f.food.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n].food++; lastAny[n]=idx; used.add(n); } });
     } else {
       f.food=[];
@@ -1221,8 +1222,14 @@ function taskCell(idx,task){
   const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
   return `<div class="taskcell">${chips}${add}</div>`;
 }
-function taskAdd(idx,task,name){ if(!name)return; const f=fixtures[idx]; f[task]=f[task]||[]; if(!f[task].includes(name)) f[task].push(name); afterTaskEdit(); }
-function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f[task]=f[task].filter(x=>x!==name); afterTaskEdit(); }
+function taskAdd(idx,task,name){ if(!name)return; const f=fixtures[idx]; f[task]=f[task]||[]; if(!f[task].includes(name)) f[task].push(name);
+  if(task==="food") f.foodManual=true;   // handmatige ruil: niet overschrijven door het corvee-duo
+  afterTaskEdit(); }
+function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f[task]=f[task].filter(x=>x!==name);
+  if(task==="food") f.foodManual=true;
+  afterTaskEdit(); }
+// Terug naar het corvee-duo van die week (handmatige ruil ongedaan maken)
+function foodResetToDuo(idx){ const f=fixtures[idx]; if(!f)return; delete f.foodManual; f.food=duoAvailableForDate(f.date); afterTaskEdit(); }
 function recomputeSched(){ const pts={},sub={}; PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
   fixtures.forEach(f=>{ ["drive","wash","flag","food"].forEach(k=>{ (f[k]||[]).forEach(n=>{ if(sub[n]){pts[n]++; sub[n][k]++;} }); }); }); sched={pts,sub}; }
 function afterTaskEdit(){ tasksAssigned=true; recomputeSched();
@@ -1231,7 +1238,7 @@ function afterTaskEdit(){ tasksAssigned=true; recomputeSched();
 function renderSchedTable(){
   const t=document.getElementById("schedTable");
   t.innerHTML=`<tr><th class="center">#</th><th>Datum</th><th>Tijd</th><th>Tegenstander</th><th class="center">T/U</th>
-    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🟢 Eten</th></tr>`+
+    <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🟢 Lunch/eten <span class="mini">(corvee-duo)</span></th></tr>`+
     fixtures.map((f,idx)=>`<tr>
       <td class="center">${idx+1}</td>
       <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
@@ -1243,7 +1250,7 @@ function renderSchedTable(){
            <option value="H" ${f.home===true?'selected':''}>Thuis</option>
            <option value="U" ${f.home===false?'selected':''}>Uit</option></select></td>
       ${(f.home===true||f.home===false)
-        ? `<td>${f.home?'<span class="mini">n.v.t.</span>':taskCell(idx,'drive')}</td><td>${taskCell(idx,'wash')}</td><td>${taskCell(idx,'flag')}</td><td>${f.home?taskCell(idx,'food'):'<span class="mini">n.v.t. (uit)</span>'}</td>`
+        ? `<td>${f.home?'<span class="mini">n.v.t.</span>':taskCell(idx,'drive')}</td><td>${taskCell(idx,'wash')}</td><td>${taskCell(idx,'flag')}</td><td>${f.home?(taskCell(idx,'food')+(f.foodManual?`<div class="mini" style="margin-top:3px">handmatig · <a href="#" onclick="foodResetToDuo(${idx});return false" style="color:var(--gold)">herstel duo</a></div>`:'')):'<span class="mini">n.v.t. (uit)</span>'}</td>`
         : `<td colspan="4"><span class="mini">⏳ nog te bepalen — kies eerst thuis/uit, daarna Verdeel openstaande taken</span></td>`
       }</tr>`).join("");
   // style the inline inputs
