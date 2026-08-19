@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-d</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-e</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -519,6 +519,7 @@
     </div>
     <div class="controls">
       <button class="btn" onclick="loadTrainings()">📋 Laad teamtrainingen (voorbereiding)</button>
+      <button class="btn" onclick="generateSeasonTrainings()">📅 Vul hele seizoen aan (ma + wo)</button>
       <button class="btn" onclick="addTraining()">➕ Training toevoegen</button>
     </div>
     <div id="trainTable" style="overflow:auto"></div>
@@ -984,6 +985,28 @@ function regTrainOccurrences(){ const out=[]; const s=new Date(REG_TRAIN.start+"
   for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){ const dow=d.getDay();
     REG_TRAIN.days.forEach(x=>{ if(x.dow===dow) out.push({date:fmtDate(d),time:x.time,end:x.end,title:x.title,note:x.note}); }); }
   return out; }
+// Zet de wekelijkse trainingen als échte regels in de lijst, zodat ze overal bewerkbaar zijn.
+// Bestaande regels (voorbereiding of handmatig aangepast) blijven staan; dubbele datums worden overgeslagen.
+function generateSeasonTrainings(silent){
+  const have=new Set((trainings||[]).map(t=>t&&t.date));
+  let added=0;
+  regTrainOccurrences().forEach(t=>{ if(have.has(t.date)) return;
+    trainings.push({date:t.date,time:t.time,end:t.end,title:t.title}); have.add(t.date); added++; });
+  trainings.sort((a,b)=>a.date<b.date?-1:1);
+  if(added){ if(typeof renderTrainings==="function") renderTrainings(); if(typeof renderAgenda==="function") renderAgenda();
+    if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
+  if(!silent) flash(added?(added+" trainingen toegevoegd ✓"):"Alle trainingen stonden er al");
+  return added;
+}
+// Eén keer automatisch vullen, zodat het hele seizoen meteen zichtbaar is.
+const TRAIN_SEED_VERSION=1;
+function seedSeasonTrainings(){
+  if(!store || typeof store!=="object") return;
+  if(store.__trainSeed>=TRAIN_SEED_VERSION) return;
+  generateSeasonTrainings(true);
+  store.__trainSeed=TRAIN_SEED_VERSION;
+  if(typeof persistLocal==="function") persistLocal();
+}
 // Vaste duo's (seizoenspresentatie) voor trainingen, lunch-/was- en corveeschema.
 const DUOS=[
   ["Maja","Alyssa Visser"],
@@ -1076,9 +1099,7 @@ function renderAgenda(){
   (events||[]).forEach((e,i)=>{ if(!e||!e.date)return;
     items.push({date:e.date,time:e.time||"",icon:"📌",cat:"Activiteit",title:e.title||"Activiteit",det:e.note||"",src:"event",i}); });
   AG_SUMMER.forEach(s=>items.push({date:s.date,time:"",icon:"🏃",cat:"Zomertraining",title:s.title,det:"2 trainingen deze week — eigen dagen"}));
-  regTrainOccurrences().forEach(t=>{ const duo=duoAvailableForDate(t.date);
-    const det=[t.note,"🧰 materiaal: "+duo.join(" & ")].filter(Boolean).join(" · ");
-    items.push({date:t.date,time:t.time,icon:"🏃",cat:"Vaste training",title:t.title,det}); });
+  // (de wekelijkse trainingen staan als echte regels in 'trainings' — zie generateSeasonTrainings)
   let list=items.filter(x=> filt==="all" ? true : x.date>=today);
   list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
   if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
@@ -2039,7 +2060,7 @@ let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
@@ -2169,6 +2190,7 @@ try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.is
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
 try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
 try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)){ events=le; renderAgenda(); } }catch(e){}
+seedSeasonTrainings(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
 </body>

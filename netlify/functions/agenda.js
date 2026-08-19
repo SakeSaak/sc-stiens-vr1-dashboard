@@ -124,18 +124,7 @@ exports.handler = async () => {
 
   // Vaste wekelijkse teamtrainingen (regulier seizoen): ma 19:30–21:00 & wo 19:00–20:30, t/m 1 juni 2027.
   // Als losse afspraken per week, zodat het corvee-duo van díé week in de agenda staat (afwezigen vallen af).
-  const REG_START=new Date("2026-09-01T00:00:00");   // augustus komt uit de voorbereidingslijst (trainings); regulier vanaf sep
-  const REG_END=new Date("2027-06-01T00:00:00");
-  const REG_DAYS=[ {dow:1,time:"19:30",dur:90,title:"Training (maandag)",note:"18:55 klaarstaan · 18:55–19:15 wedstrijdevaluatie"},
-                   {dow:3,time:"19:00",dur:90,title:"Training (woensdag)",note:""} ];
-  for(let d=new Date(REG_START); d<=REG_END; d.setDate(d.getDate()+1)){
-    REG_DAYS.forEach(x=>{ if(d.getDay()!==x.dow) return;
-      const ds=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-      const duo=duoAvailable(store,ds);
-      const desc=[x.note,"Corvee/materiaal: "+duo.join(" & ")].filter(Boolean).join("\n");
-      ev("rt-"+x.dow+"-"+ds+"@scstiens", "🏃 "+x.title, ds, x.time, x.dur, desc);
-    });
-  }
+  // (de wekelijkse trainingen staan als échte regels in 'trainings' en zijn hierboven al toegevoegd)
 
   L.push("END:VCALENDAR");
   return {
