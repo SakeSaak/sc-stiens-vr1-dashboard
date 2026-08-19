@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-c</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-d</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -945,7 +945,11 @@ function loadTrainings(){
 }
 function addTraining(){ trainings.push({date:todayStr(),time:"",end:"",title:"Training"}); trainings.sort((a,b)=>a.date<b.date?-1:1); renderTrainings(); scheduleSave(); }
 function delTraining(i){ trainings.splice(i,1); renderTrainings(); scheduleSave(); }
-function setTr(i,k,v){ if(trainings[i]){ trainings[i][k]=v; if(k==="date"){ /* geen re-sort tijdens typen */ } } }
+function setTr(i,k,v){ if(!trainings[i])return; trainings[i][k]=v;
+  if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
 function renderTrainings(){
   const t=document.getElementById("trainTable"); if(!t)return;
   if(!trainings.length){ t.innerHTML='<p class="hint">Nog geen trainingen. Klik op <b>Laad teamtrainingen</b> of voeg er zelf toe.</p>'; return; }
@@ -1078,7 +1082,8 @@ function renderAgenda(){
   let list=items.filter(x=> filt==="all" ? true : x.date>=today);
   list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
   if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
-  const canEdit = (typeof isStaff!=="undefined" && isStaff);
+  // Zelfde regel als de rest van de app: bewerken mag als de app niet in alleen-lezen staat.
+  const canEdit = !((typeof CLOUD!=="undefined" && CLOUD) && !(typeof isStaff!=="undefined" && isStaff));
   const INP='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px';
   w.innerHTML=`<table><tr><th>Datum</th><th>Tijd</th><th>Activiteit</th><th>Details</th>${canEdit?'<th class="center">✎</th>':''}</tr>`+
     list.map(x=>{
@@ -1247,6 +1252,15 @@ function reassignAll(){
 }
 
 function names(arr){return (arr&&arr.length)?arr.join(", "):"—";}
+// Wedstrijdveld wijzigen vanuit het Taakschema — werkt meteen door in agenda en gedeelde data.
+function setFix(idx,key,val){ const f=fixtures[idx]; if(!f)return; f[key]=val;
+  if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof renderReminders==="function") renderReminders();
+  if(typeof renderPeriode==="function") renderPeriode();
+  if(typeof fillKasMatch==="function") fillKasMatch();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
 function setFixtureHome(idx,val){ const f=fixtures[idx]; if(!f)return;
   f.home = val==='H'?true : val==='U'?false : null;
   if(f.home===null){ f.drive=[]; f.wash=[]; f.flag=[]; f.food=[]; }   // onbekend: nog geen taken
@@ -1281,10 +1295,10 @@ function renderSchedTable(){
     <th>🔵 Rijden</th><th>🟣 Wassen</th><th>🟡 Vlaggen</th><th>🟢 Lunch/eten <span class="mini">(corvee-duo)</span></th></tr>`+
     fixtures.map((f,idx)=>`<tr>
       <td class="center">${idx+1}</td>
-      <td><input type="date" value="${f.date}" onchange="fixtures[${idx}].date=this.value"></td>
-      <td><input type="time" value="${f.time}" style="width:90px" onchange="fixtures[${idx}].time=this.value"></td>
+      <td><input type="date" value="${f.date}" onchange="setFix(${idx},'date',this.value)"></td>
+      <td><input type="time" value="${f.time}" style="width:90px" onchange="setFix(${idx},'time',this.value)"></td>
       <td><input type="text" value="${f.opponent.replace(/"/g,'&quot;')}" placeholder="tegenstander…" style="min-width:120px"
-           onchange="fixtures[${idx}].opponent=this.value"></td>
+           onchange="setFix(${idx},'opponent',this.value)"></td>
       <td class="center"><select onchange="setFixtureHome(${idx},this.value)">
            <option value="?" ${(f.home!==true&&f.home!==false)?'selected':''}>? n.t.b.</option>
            <option value="H" ${f.home===true?'selected':''}>Thuis</option>
@@ -2043,6 +2057,7 @@ function applyStaffGate(){
   document.body.classList.toggle("readonly", locked);
   STAFF_TABS.forEach(id=>{ const btn=document.querySelector(`nav button[data-tab="${id}"]`); if(btn) btn.style.display = locked ? "none" : ""; });
   if(locked){ const active=document.querySelector("section.active"); if(active && STAFF_TABS.includes(active.id)) showTab("cards"); }
+  if(typeof renderAgenda==="function") renderAgenda();   // bewerkvelden tonen/verbergen na in- of uitloggen
 }
 function renderAll(){
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // schoon blessures + ruim lege check-ins/metingen op
