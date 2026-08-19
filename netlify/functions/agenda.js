@@ -67,6 +67,7 @@ exports.handler = async () => {
   const trainings=Array.isArray(data.trainings)?data.trainings:[];
   const club=Array.isArray(data.clubDuties)?data.clubDuties:[];
   const store=(data.store&&typeof data.store==="object")?data.store:{};
+  const events=Array.isArray(data.events)?data.events:[];
 
   const nd=new Date();
   const now=nd.getUTCFullYear()+pad(nd.getUTCMonth()+1)+pad(nd.getUTCDate())+"T"+pad(nd.getUTCHours())+pad(nd.getUTCMinutes())+pad(nd.getUTCSeconds())+"Z";
@@ -99,6 +100,10 @@ exports.handler = async () => {
     if(t.time && t.end){ const a=t.time.split(":").map(Number), b=t.end.split(":").map(Number); const m=(b[0]*60+b[1])-(a[0]*60+a[1]); if(m>0)dur=m; }
     const duo=duoAvailable(store,t.date);
     ev("t"+i+"-"+t.date+"@scstiens", "🏃 "+((t.title||"Training")), t.date, t.time||"", dur, "Corvee/materiaal: "+duo.join(" & "));
+  });
+
+  events.forEach((e,i)=>{ if(!e || !e.date) return;
+    ev("ev"+i+"-"+e.date+"@scstiens", "📌 "+((e.title||"Activiteit")), e.date, e.time||"", 90, e.note||"");
   });
 
   club.forEach((c,i)=>{ if(!c || !c.date) return;

@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-b</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-c</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -617,6 +617,7 @@
       Wijzigingen komen automatisch mee, maar niet per direct (de app ververst periodiek; in Apple Agenda kun je naar beneden trekken om te verversen).</p>
     <div class="controls" style="margin-top:6px">
       <label>Toon <select id="agFilter" class="pub" onchange="renderAgenda()"><option value="up">Aankomend</option><option value="all">Hele seizoen</option></select></label>
+      <button class="btn" onclick="agAddEvent()">➕ Activiteit toevoegen</button>
     </div>
     <div id="agendaList" style="overflow:auto;margin-top:6px"></div>
   </section>
@@ -926,6 +927,7 @@ function renderSquad(){
 let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home:bool, drive:[],wash:[],flag:[],food:[]}
 let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coord:[]}] — eigen datumlijst
 let trainings=[];         // vaste teamtrainingen: [{date, time, end, title}]
+let events=[];            // eigen agenda-activiteiten: [{date, time, title, note}]
 const PROGRAM_TRAININGS=[
   {date:"2026-08-03",time:"19:30",end:"21:30",title:"Eerste training"},
   {date:"2026-08-05",time:"19:00",end:"20:30",title:"Training"},
@@ -1029,12 +1031,31 @@ function renderCorvee(){
       <td class="mini">${fmt(r.mon)} – ${fmt(r.sun)}${r.cur?' <b style="color:var(--gold)">· deze week</b>':''}</td>
       <td>${r.duo.join(" &amp; ")}</td></tr>`).join("")+`</table>`;
 }
+// Agenda-item aanpassen (staf): werkt door in wedstrijden, trainingen, verenigingstaken of eigen activiteiten.
+function agSet(src,i,key,val){
+  const arr = src==="fix"?fixtures : src==="train"?trainings : src==="club"?clubDuties : events;
+  const o=arr&&arr[i]; if(!o) return;
+  o[key]=val;
+  if(src==="fix"){ renderSchedTable(); renderBalance(); renderPerPlayer(); renderReminders(); if(typeof renderPeriode==="function") renderPeriode(); }
+  if(src==="train"&&typeof renderTrainings==="function") renderTrainings();
+  if(src==="club"&&typeof renderClubDuties==="function") renderClubDuties();
+  renderAgenda();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
+function agAddEvent(){
+  events.push({date:todayStr(),time:"",title:"Nieuwe activiteit",note:""});
+  renderAgenda(); if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave();
+  flash("Activiteit toegevoegd — vul datum en naam in");
+}
+function agDelEvent(i){ if(!events[i])return; if(!confirm("Activiteit \""+(events[i].title||"")+"\" verwijderen?"))return;
+  events.splice(i,1); renderAgenda(); if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
 function renderAgenda(){
   const w=document.getElementById("agendaList"); if(!w)return;
   const filt=((document.getElementById("agFilter")||{}).value)||"up";
   const today=todayStr(); const items=[];
-  (trainings||[]).forEach(t=>{ if(t&&t.date){ const duo=duoAvailableForDate(t.date);
-    items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:"🧰 materiaal: "+duo.join(" & ")}); } });
+  (trainings||[]).forEach((t,i)=>{ if(t&&t.date){ const duo=duoAvailableForDate(t.date);
+    items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:"🧰 materiaal: "+duo.join(" & "),src:"train",i}); } });
   (fixtures||[]).forEach((f,i)=>{ if(!f||!f.date)return;
     const tu=f.home===true?"Thuis":f.home===false?"Uit":"n.t.b.";
     const opp=(f.opponent||"").trim()||("Wedstrijd "+(i+1)); const parts=[];
@@ -1042,12 +1063,14 @@ function renderAgenda(){
     if(f.wash&&f.wash.length) parts.push("🧺 "+f.wash.join(", "));
     if(f.flag&&f.flag.length) parts.push("🚩 "+f.flag.join(", "));
     if(f.home===true && f.food&&f.food.length) parts.push("🍝 "+f.food.join(" & "));
-    items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · ")});
+    items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · "),src:"fix",i});
   });
-  (clubDuties||[]).forEach(c=>{ if(!c||!c.date)return; const parts=[];
+  (clubDuties||[]).forEach((c,i)=>{ if(!c||!c.date)return; const parts=[];
     if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")); if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
-    items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · ")});
+    items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · "),src:"club",i});
   });
+  (events||[]).forEach((e,i)=>{ if(!e||!e.date)return;
+    items.push({date:e.date,time:e.time||"",icon:"📌",cat:"Activiteit",title:e.title||"Activiteit",det:e.note||"",src:"event",i}); });
   AG_SUMMER.forEach(s=>items.push({date:s.date,time:"",icon:"🏃",cat:"Zomertraining",title:s.title,det:"2 trainingen deze week — eigen dagen"}));
   regTrainOccurrences().forEach(t=>{ const duo=duoAvailableForDate(t.date);
     const det=[t.note,"🧰 materiaal: "+duo.join(" & ")].filter(Boolean).join(" · ");
@@ -1055,12 +1078,29 @@ function renderAgenda(){
   let list=items.filter(x=> filt==="all" ? true : x.date>=today);
   list.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : ((a.time||"")<(b.time||"")?-1:1));
   if(!list.length){ w.innerHTML='<p class="hint">Geen activiteiten in deze weergave.</p>'; return; }
-  w.innerHTML=`<table><tr><th>Datum</th><th>Tijd</th><th>Activiteit</th><th>Details</th></tr>`+
-    list.map(x=>`<tr>
-      <td class="mini">${new Date(x.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})}</td>
-      <td class="mini">${x.time||"—"}</td>
-      <td>${x.icon} <b>${x.title}</b> <span class="mini">· ${x.cat}</span></td>
-      <td class="mini">${x.det||""}</td></tr>`).join("")+`</table>`;
+  const canEdit = (typeof isStaff!=="undefined" && isStaff);
+  const INP='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px';
+  w.innerHTML=`<table><tr><th>Datum</th><th>Tijd</th><th>Activiteit</th><th>Details</th>${canEdit?'<th class="center">✎</th>':''}</tr>`+
+    list.map(x=>{
+      const editable = canEdit && (x.src==="fix"||x.src==="train"||x.src==="event"||x.src==="club");
+      const dateCell = editable
+        ? `<input type="date" value="${x.date}" style="${INP}" onchange="agSet('${x.src}',${x.i},'date',this.value)">`
+        : new Date(x.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"});
+      const timeCell = (editable && x.src!=="club")
+        ? `<input type="time" value="${x.time||''}" style="${INP};width:88px" onchange="agSet('${x.src}',${x.i},'time',this.value)">`
+        : (x.time||"—");
+      const titleCell = (canEdit && x.src==="event")
+        ? `${x.icon} <input type="text" value="${(x.title||'').replace(/"/g,'&quot;')}" style="${INP};min-width:150px" onchange="agSet('event',${x.i},'title',this.value)">`
+        : `${x.icon} <b>${x.title}</b> <span class="mini">· ${x.cat}</span>`;
+      const detCell = (canEdit && x.src==="event")
+        ? `<input type="text" value="${(x.det||'').replace(/"/g,'&quot;')}" placeholder="notitie…" style="${INP};min-width:150px" onchange="agSet('event',${x.i},'note',this.value)">`
+        : (x.det||"");
+      const act = canEdit
+        ? `<td class="center">${x.src==="event"?`<button class="btn" title="Verwijderen" onclick="agDelEvent(${x.i})" style="padding:2px 7px;font-size:12px">✕</button>`:'<span class="mini" title="Wedstrijden/trainingen verwijder je bij Taakschema&#39;s">·</span>'}</td>`
+        : '';
+      return `<tr><td class="mini">${dateCell}</td><td class="mini">${timeCell}</td><td>${titleCell}</td><td class="mini">${detCell}</td>${act}</tr>`;
+    }).join("")+`</table>`
+    +(canEdit?'<p class="hint" style="margin-top:8px">Als staf kun je datum en tijd hier direct aanpassen — wijzigingen gaan meteen mee naar de gedeelde agenda. Wedstrijden en trainingen verwijder je bij <b>Taakschema\'s</b>.</p>':'');
 }
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
@@ -1068,7 +1108,7 @@ const PROGRAM_FIXTURES=[
   {date:"2026-08-17", time:"20:00", opponent:"FC Burgum VR1 (oefen)", home:false},
   {date:"2026-08-22", time:"14:00", opponent:"Harkemase Boys VR1 (oefen)", home:true},
   // Beker (poulefase)
-  {date:"2026-08-29", time:"14:30", opponent:"ST BMJ VR1 (beker)", home:false},
+  {date:"2026-08-26", time:"19:30", opponent:"ST BMJ VR1 (beker)", home:false},   // verplaatst van za 29 aug 14:30
   {date:"2026-09-01", time:"20:00", opponent:"Leeuwarder Zwaluwen VR1 (beker)", home:true},
   {date:"2026-09-05", time:"12:45", opponent:"St.Annaparochie VR1 (beker)", home:false},
   // Competitie 2e klasse D
@@ -1984,9 +2024,9 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; seedAway(); }
-function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); }catch(e){} }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events}; }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); }
+function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
   try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
@@ -2113,6 +2153,7 @@ document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
 try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
+try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)){ events=le; renderAgenda(); } }catch(e){}
 cloudInit();
 </script>
 </body>
