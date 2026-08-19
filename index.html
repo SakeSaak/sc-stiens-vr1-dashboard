@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-e</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-f</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1075,8 +1075,29 @@ function agAddEvent(){
   renderAgenda(); if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave();
   flash("Activiteit toegevoegd — vul datum en naam in");
 }
-function agDelEvent(i){ if(!events[i])return; if(!confirm("Activiteit \""+(events[i].title||"")+"\" verwijderen?"))return;
-  events.splice(i,1); renderAgenda(); if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
+function agDelEvent(i){ agDel("event",i); }
+// Elk agenda-item verwijderen (staf): activiteit, training, wedstrijd of verenigingstaak.
+function agDel(src,i){
+  const arr = src==="fix"?fixtures : src==="train"?trainings : src==="club"?clubDuties : events;
+  const o=arr&&arr[i]; if(!o) return;
+  const d=o.date?new Date(o.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"}):"";
+  const wat = src==="fix" ? ("de wedstrijd tegen "+((o.opponent||"").trim()||"?"))
+            : src==="train" ? ("de training \""+(o.title||"Training")+"\"")
+            : src==="club" ? "de verenigingstaak (fluiten/coördinatie)"
+            : ("de activiteit \""+(o.title||"")+"\"");
+  let vraag="Weet je zeker dat je "+wat+" op "+d+" wilt verwijderen?";
+  if(src==="fix") vraag+="\n\nLet op: de taakverdeling van deze wedstrijd (rijden, wassen, vlaggen, lunch) gaat ook weg.";
+  if(!confirm(vraag)) return;
+  arr.splice(i,1);
+  if(src==="fix"){ recomputeSched(); renderSchedTable(); renderBalance(); renderPerPlayer(); if(typeof fillKasMatch==="function") fillKasMatch(); if(typeof renderTaakBoetes==="function") renderTaakBoetes(); if(typeof renderPeriode==="function") renderPeriode(); }
+  if(src==="train"&&typeof renderTrainings==="function") renderTrainings();
+  if(src==="club"&&typeof renderClubDuties==="function") renderClubDuties();
+  if(typeof renderReminders==="function") renderReminders();
+  renderAgenda();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+  flash("Verwijderd ✓");
+}
 function renderAgenda(){
   const w=document.getElementById("agendaList"); if(!w)return;
   const filt=((document.getElementById("agFilter")||{}).value)||"up";
@@ -1122,11 +1143,11 @@ function renderAgenda(){
         ? `<input type="text" value="${(x.det||'').replace(/"/g,'&quot;')}" placeholder="notitie…" style="${INP};min-width:150px" onchange="agSet('event',${x.i},'note',this.value)">`
         : (x.det||"");
       const act = canEdit
-        ? `<td class="center">${x.src==="event"?`<button class="btn" title="Verwijderen" onclick="agDelEvent(${x.i})" style="padding:2px 7px;font-size:12px">✕</button>`:'<span class="mini" title="Wedstrijden/trainingen verwijder je bij Taakschema&#39;s">·</span>'}</td>`
+        ? `<td class="center">${editable?`<button class="btn" title="Verwijderen" onclick="agDel('${x.src}',${x.i})" style="padding:2px 7px;font-size:12px">✕</button>`:'<span class="mini">·</span>'}</td>`
         : '';
       return `<tr><td class="mini">${dateCell}</td><td class="mini">${timeCell}</td><td>${titleCell}</td><td class="mini">${detCell}</td>${act}</tr>`;
     }).join("")+`</table>`
-    +(canEdit?'<p class="hint" style="margin-top:8px">Als staf kun je datum en tijd hier direct aanpassen — wijzigingen gaan meteen mee naar de gedeelde agenda. Wedstrijden en trainingen verwijder je bij <b>Taakschema\'s</b>.</p>':'');
+    +(canEdit?'<p class="hint" style="margin-top:8px">Als staf kun je datum en tijd hier direct aanpassen en met <b>✕</b> een item verwijderen — wijzigingen gaan meteen mee naar de gedeelde agenda.</p>':'');
 }
 // Bekend voorbereidingsprogramma VR1 (seizoen 2026/2027) — wedstrijden; details van beker/competitie nog invullen.
 const PROGRAM_FIXTURES=[
