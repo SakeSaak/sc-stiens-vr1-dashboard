@@ -167,13 +167,13 @@
   body.readonly .wrap textarea,
   body.readonly .wrap .btn:not(.pub),
   body.readonly .wrap .submit,
-  body.readonly .wrap .del,
+  body.readonly .wrap .del:not(.pub),
   body.readonly .wrap details summary{ pointer-events:none !important; }
   body.readonly .wrap input:not(.pub),
   body.readonly .wrap select:not(.pub),
   body.readonly .wrap textarea{ opacity:.6 }
   body.readonly .wrap .btn:not(.pub),
-  body.readonly .wrap .del,
+  body.readonly .wrap .del:not(.pub),
   body.readonly .wrap .submit{ opacity:.4; filter:grayscale(1) }
   .note{background:rgba(255,210,90,.08);border:1px solid var(--gold2);border-radius:10px;
     padding:12px 14px;font-size:13px;color:#ffe6a8;line-height:1.55;margin-bottom:16px}
@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-f</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-g</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -297,7 +297,9 @@
     <div class="note">
       De persoonlijke <b>ontwikkelpunten</b> en <b>procesdoelen</b> uit de teamvragenlijst — de basis voor de individuele
       trainingsmomenten (KNVB-maatwerk). Elk doel is gekoppeld aan de bijbehorende FIFA-stat, zodat je voortgang kunt volgen:
-      <b>doel → meting → ontwikkeling</b>. Zet de status en het voortgangspercentage naar eigen inzicht en klik op <b>Opslaan</b>.
+      <b>doel → meting → ontwikkeling</b>. Zet de status en het voortgangspercentage naar eigen inzicht.
+      <br><b>Speelsters mogen hier zelf doelen toevoegen en bijwerken</b> — klik op <b>+ nieuw doel</b> bij je eigen naam.
+      Wijzigingen worden automatisch bewaard en zijn voor de hele staf zichtbaar.
     </div>
     <div class="toolbar"><button class="btn primary" onclick="saveStats()">💾 Opslaan</button></div>
     <div style="overflow:auto">
@@ -768,10 +770,29 @@ function getGoals(n){
   return store[n].goals;
 }
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-function addGoal(n){ getGoals(n).push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); scheduleSave(); }
-function removeGoal(n,i){ const g=getGoals(n); g.splice(i,1); if(!g.length)g.push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); scheduleSave(); }
-function setGoalField(n,i,field,val){ getGoals(n)[i][field]=val; if(field!=="text"){renderDev(); renderCards();} else {updateCardGoal(n);} }
-function setGoalStatus(n,i,v){ const g=getGoals(n)[i]; g.status=v; if(v==="behaald"&&g.pct<100)g.pct=100; renderDev(); renderCards(); }
+function addGoal(n){ getGoals(n).push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); pushGoals(n); }
+function removeGoal(n,i){ const g=getGoals(n); g.splice(i,1); if(!g.length)g.push({text:"",proc:"",link:"",status:"open",pct:0}); renderDev(); renderCards(); pushGoals(n); }
+function setGoalField(n,i,field,val){ getGoals(n)[i][field]=val; if(field!=="text"){renderDev(); renderCards(); pushGoals(n);} else {updateCardGoal(n);} }
+function setGoalStatus(n,i,v){ const g=getGoals(n)[i]; g.status=v; if(v==="behaald"&&g.pct<100)g.pct=100; renderDev(); renderCards(); pushGoals(n); }
+// Doelen opslaan. Staf slaat alles op zoals gewoonlijk; speelsters gebruiken een beveiligde
+// functie in de database die ALLEEN de doelen van die speelster mag wijzigen.
+let _goalTimer=null;
+function pushGoals(n){
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof CLOUD==="undefined" || !CLOUD) return;
+  if(typeof isStaff!=="undefined" && isStaff){ if(typeof scheduleSave==="function") scheduleSave(); return; }
+  clearTimeout(_goalTimer);
+  _goalTimer=setTimeout(async()=>{
+    try{
+      const {error}=await sb.rpc("save_goals",{p_player:n,p_goals:getGoals(n)});
+      if(error) throw error;
+      flash("Doel opgeslagen ✓");
+    }catch(e){
+      console.warn("save_goals",e);
+      flash("Opslaan mislukt — vraag de staf om hulp");
+    }
+  },900);
+}
 function setGoalPct(n,i,v,el){ getGoals(n)[i].pct=+v;
   if(el){const box=el.closest(".gprog"); if(box){box.querySelector(".pctlbl").textContent=v+"%"; box.querySelector(".bar span").style.width=v+"%";}} }
 // Doelregel op het FIFA-kaartje: toont het actieve doel + hoeveel er al behaald zijn.
@@ -1560,27 +1581,27 @@ function renderDev(){
     block.innerHTML=
       `<div class="devhead"><b>${p.n}</b> <span class="mini">${p.pos}</span>
         ${done?`<span class="donebadge">✓ ${done} behaald</span>`:''}
-        <button class="btn" style="margin-left:auto;padding:5px 11px" onclick="addGoal('${nEsc}')">+ nieuw doel</button></div>`+
+        <button class="btn pub" style="margin-left:auto;padding:5px 11px" onclick="addGoal('${nEsc}')">+ nieuw doel</button></div>`+
       goals.map((g,i)=>{
         const beh=g.status==="behaald";
         const cur=g.link?(s[g.link]??"–"):"–";
         return `<div class="devgoal${beh?' done':''}">
           <div class="gline">
             <span class="check">${beh?'✓':''}</span>
-            <input class="gtext" value="${esc(g.text)}" placeholder="ontwikkelpunt / leerdoel…"
-              oninput="setGoalField('${nEsc}',${i},'text',this.value)">
-            <select class="glink" title="gekoppelde stat" onchange="setGoalField('${nEsc}',${i},'link',this.value)">
+            <input class="gtext pub" value="${esc(g.text)}" placeholder="ontwikkelpunt / leerdoel…"
+              oninput="setGoalField('${nEsc}',${i},'text',this.value)" onchange="pushGoals('${nEsc}')">
+            <select class="glink pub" title="gekoppelde stat" onchange="setGoalField('${nEsc}',${i},'link',this.value)">
               <option value="">— stat —</option>
               ${STAT_KEYS.map(k=>`<option value="${k}" ${g.link===k?'selected':''}>${k}</option>`).join("")}
             </select>
             <span class="curstat">${g.link?g.link+': '+cur:''}</span>
-            <select class="gstatus" style="color:${STATUS_COLOR[g.status]}" onchange="setGoalStatus('${nEsc}',${i},this.value)">
+            <select class="gstatus pub" style="color:${STATUS_COLOR[g.status]}" onchange="setGoalStatus('${nEsc}',${i},this.value)">
               ${STATUS_OPTS.map(o=>`<option value="${o[0]}" ${g.status===o[0]?'selected':''}>${o[1]}</option>`).join("")}
             </select>
-            <button class="del" title="verwijderen" onclick="removeGoal('${nEsc}',${i})">×</button>
+            <button class="del pub" title="verwijderen" onclick="removeGoal('${nEsc}',${i})">×</button>
           </div>
           <div class="gprog">
-            <input type="range" min="0" max="100" step="5" value="${g.pct}" oninput="setGoalPct('${nEsc}',${i},this.value,this)">
+            <input type="range" class="pub" min="0" max="100" step="5" value="${g.pct}" oninput="setGoalPct('${nEsc}',${i},this.value,this)" onchange="pushGoals('${nEsc}')">
             <span class="pctlbl">${g.pct}%</span>
             <div class="bar"><span style="width:${g.pct}%"></span></div>
           </div>
