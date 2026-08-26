@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-g</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-h</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -447,6 +447,12 @@
       <label>&nbsp;
         <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel openstaande taken</button>
       </label>
+      <label>Herverdeel vanaf
+        <input type="date" id="cfgRebalDate" style="width:150px">
+      </label>
+      <label>&nbsp;
+        <button class="btn primary" onclick="rebalanceFrom()" title="Verdeelt alleen de wedstrijden vanaf deze datum opnieuw; alles ervoor blijft staan">♻️ Herverdeel eerlijk</button>
+      </label>
       <label>&nbsp;
         <button class="btn" onclick="reassignAll()" title="Wist alles en verdeelt opnieuw">🔄 Alles opnieuw</button>
       </label>
@@ -457,6 +463,9 @@
     <p class="hint" style="margin-top:-4px">Vul per wedstrijd de <b>datum</b>, <b>tijd</b>, <b>tegenstander</b> en <b>thuis/uit</b> in de tabel in.
       <b>Verdeel openstaande taken</b> vult alleen wedstrijden in die nog geen verdeling hebben en <b>behoudt de bestaande verdeling</b> —
       voeg je later nieuwe wedstrijden toe, klik dan gewoon opnieuw en alleen die nieuwe worden ingevuld (eerlijk t.o.v. wat iedereen al deed).
+      Is de balans scheefgegroeid (bijv. doordat je iemand ergens tussenuit hebt gehaald)? Gebruik dan <b>♻️ Herverdeel eerlijk</b>:
+      alles vóór de gekozen datum blijft staan en telt mee, alles erna wordt opnieuw verdeeld zodat wie achterloopt vaker aan de beurt komt.
+      Standaard staat die datum een maand vooruit, zodat afspraken die al gemaakt zijn niet omgegooid worden.
       Gebruik <b>Alles opnieuw</b> alléén om aan het begin van het seizoen helemaal opnieuw te beginnen. De verdeling wordt automatisch bewaard en gedeeld.
       Met <b>Exporteer agenda</b> maak je een <b>.ics</b> voor Apple Agenda, Google Calendar of Outlook.</p>
 
@@ -1276,8 +1285,9 @@ function assignTasks(){
     const av=x=>(o.avoid&&o.avoid.has(x))?1:0;
     const bm=x=>(o.min && sub[x][key]<o.min)?0:1;
     cand.sort((a,b)=>
-      (bm(a)-bm(b)) || (sub[a][key]-sub[b][key]) ||
-      (pts[a]-pts[b]) || (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5)
+      (bm(a)-bm(b)) || (pts[a]-pts[b]) ||            // 1) minimum inhalen  2) laagste totaal (eerlijke balans)
+      (sub[a][key]-sub[b][key]) ||                    // 3) wie dit klusje het minst deed (variatie)
+      (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5)
     );
     const w=cand[0]; used.add(w); pts[w]++; sub[w][key]++; lastAny[w]=idx; return w;
   }
@@ -1305,6 +1315,24 @@ function assignTasks(){
   if(typeof persistLocal==="function") persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
   flash("Openstaande taken verdeeld — bestaande verdeling behouden ✓");
+}
+// Eerlijk herverdelen vanaf een datum: alles vóór die datum blijft staan (en telt mee voor de
+// balans), alles erna wordt opnieuw en eerlijk verdeeld — zo halen achterblijvers hun schade in.
+function cutoffDefault(){ const d=new Date(); d.setMonth(d.getMonth()+1); return fmtDate(d); }
+function rebalanceFrom(){
+  const el=document.getElementById("cfgRebalDate");
+  const cutoff=(el&&el.value)||cutoffDefault();
+  const todo=fixtures.filter(f=>f&&f.date>=cutoff&&(f.home===true||f.home===false));
+  if(!todo.length){ alert("Geen wedstrijden gevonden vanaf "+cutoff+"."); return; }
+  const d=new Date(cutoff+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
+  if(!confirm("De taken van "+todo.length+" wedstrijd(en) vanaf "+d+" worden opnieuw verdeeld.\n\n"+
+              "Alles vóór die datum blijft ongewijzigd en telt mee, zodat wie tot nu toe minder deed nu vaker aan de beurt komt.\n\nDoorgaan?")) return;
+  fixtures.forEach(f=>{ if(!f||f.date<cutoff) return;
+    f.drive=[]; f.wash=[]; f.flag=[];
+    if(!f.foodManual) f.food=[];      // handmatige lunch-ruil blijft staan
+  });
+  assignTasks();
+  flash("Opnieuw verdeeld vanaf "+d+" ✓");
 }
 // Bewuste volledige reset: wist alles en verdeelt opnieuw (alleen doen als er nog niets is uitgevoerd).
 function reassignAll(){
@@ -2223,6 +2251,7 @@ function initLock(){
 initLock();
 seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
+const _rb=document.getElementById("cfgRebalDate"); if(_rb && !_rb.value) _rb.value=cutoffDefault();
 PLAYERS.forEach(p=>computePlayerStats(p.n));
 renderCards(); renderSquad(); buildFixtures(); assignTasks();
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
