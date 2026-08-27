@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-h</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-i</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -646,10 +646,14 @@
     <details style="margin-bottom:14px">
       <summary style="cursor:pointer;color:var(--gold);font-weight:600">⚙️ Instellingen &amp; boetereglement</summary>
       <div class="controls" style="margin-top:10px">
-        <label>Tikkie-link (herbruikbaar) <input type="text" id="tikkieLink" placeholder="https://tikkie.me/pay/…" oninput="setTikkie(this.value)" style="min-width:260px"></label>
+        <label>Betaallink (Tikkie of bank) <input type="text" id="tikkieLink" placeholder="https://tikkie.me/pay/… of …?amount={bedrag}" oninput="setTikkie(this.value)" style="min-width:280px"></label>
         <label>&nbsp;<button class="btn" onclick="saveStats()">💾 Opslaan</button></label>
       </div>
-      <p class="hint">Maak in de Tikkie-app een persoonlijke betaalverzoek-link aan en plak 'm hierboven. Wij zetten het bedrag in het WhatsApp-bericht.</p>
+      <p class="hint">Maak in de Tikkie-app een herbruikbare betaalverzoek-link aan en plak 'm hierboven.
+        Let op: bij zo'n <b>herbruikbare</b> Tikkie kan het bedrag niet vooraf vastgezet worden — de betaler vult dat zelf in.
+        Daarom zetten wij het exacte bedrag duidelijk in het WhatsApp-bericht, met de instructie erbij.
+        Gebruik je een betaallink die wél een bedrag ondersteunt (bv. een bank-betaalverzoek)? Zet dan <b>{bedrag}</b> in de link,
+        bijvoorbeeld <span class="mini">https://…?amount={bedrag}</span> — daar vullen wij het bedrag automatisch in.</p>
       <div style="overflow:auto;max-width:520px"><table id="rulesTable"></table></div>
       <button class="btn" style="margin-top:8px" onclick="addRule()">+ boeteregel</button>
     </details>
@@ -2067,10 +2071,21 @@ function payMsg(n){
   kas().food.filter(f=>f.shareWith.includes(n)&&!f.paid[n]).forEach(f=>{
     const d=new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
     items.push("• Eten "+d+" (gekookt door "+f.cook+") — "+eur(f.total/f.shareWith.length)); });
-  const t=kas().tikkie;
+  const amt=playerOwed(n);
+  const t=payLink(amt);
   return "Hoi "+n+"! Betaalverzoekje voor SC Stiens VR1:\n"+items.join("\n")+
-    "\nTotaal: "+eur(playerOwed(n))+".\n"+
-    (t?("Betaal makkelijk via Tikkie: "+t):"Vraag de penningmeester om de betaallink.")+" Bedankt!"; }
+    "\nTotaal: "+eur(amt)+".\n"+
+    (t?("Betalen kan hier: "+t+"\nVul bij het betalen "+eur(amt)+" in.")
+      :"Vraag de penningmeester om de betaallink.")+"\nBedankt!"; }
+// Betaallink opbouwen. Een herbruikbare Tikkie-link kan geen vast bedrag bevatten (de betaler
+// vult dat zelf in). Gebruikt je bank wél een bedrag in de link? Zet dan {bedrag} in de link,
+// bv. https://...?amount={bedrag} — wij vullen daar het juiste bedrag in.
+function payLink(amount){
+  const t=(kas().tikkie||"").trim(); if(!t) return "";
+  const cents=(Math.round((+amount||0)*100)/100).toFixed(2);          // 7.50
+  return t.replace(/\{bedrag\}|\{amount\}/gi, cents)
+          .replace(/\{bedrag_centen\}/gi, String(Math.round((+amount||0)*100)));  // 750
+}
 function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n)); }
 function renderKasOverview(){ const w=document.getElementById("kasOverview"); if(!w)return;
   const rows=PLAYERS.map(p=>({n:p.n,fine:fineOwed(p.n),food:foodOwed(p.n),tot:playerOwed(p.n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
