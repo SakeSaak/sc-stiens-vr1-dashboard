@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-n</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-o</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -677,7 +677,6 @@
         <div class="controls">
           <label>Speelster <select id="fPlayer"></select></label>
           <label>Reden <select id="fReason" onchange="fReasonChange()"></select></label>
-          <label>Bedrag € <input type="number" id="fAmount" step="0.5" style="width:80px"></label>
           <label>Gebeurtenis <select id="fEvent" onchange="fEventPicked()" title="Kies een training, wedstrijd of activiteit — de datum wordt automatisch ingevuld"></select></label>
           <label>Datum <input type="date" id="fDate"></label>
           <label>&nbsp;<button class="btn primary" onclick="addFineFromForm()">+ Boete</button></label>
@@ -2134,16 +2133,18 @@ function delRule(i){ kas().rules.splice(i,1); renderRules(); scheduleSave(); }
 function fillReasonSelect(){ const s=document.getElementById("fReason"); if(!s)return; const cur=s.value;
   s.innerHTML=kas().rules.map(r=>`<option value="${(r.reason||'').replace(/"/g,'&quot;')}">${r.reason} (${eur(r.amount)})</option>`).join("");
   if(cur)s.value=cur; }
-function fReasonChange(){ const s=document.getElementById("fReason"); if(!s)return; const r=kas().rules.find(x=>x.reason===s.value);
-  if(r){const a=document.getElementById("fAmount"); if(a)a.value=r.amount;} }
+function fReasonChange(){ /* bedrag komt uit het boetereglement (zie addFineFromForm) */ }
 function fillKasPlayers(){ ["fPlayer","foodCook"].forEach(id=>{const s=document.getElementById(id); if(!s)return; const cur=s.value;
   s.innerHTML=kasPeople().map(n=>`<option value="${n}">${n}${isStaffMember(n)?" (staf)":""}</option>`).join(""); if(cur)s.value=cur;}); }
 
 function addFine(player,reason,amount,date){ kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false});
   renderFines(); renderKasOverview(); scheduleSave(); flash("Boete: "+player); }
 function addFineFromForm(){ const p=document.getElementById("fPlayer").value; const reason=document.getElementById("fReason").value;
-  const amount=+document.getElementById("fAmount").value; const date=document.getElementById("fDate").value||todayStr();
-  if(!p||!amount){ alert("Kies een speelster en een bedrag."); return; }
+  const date=document.getElementById("fDate").value||todayStr();
+  const rule=kas().rules.find(x=>x.reason===reason);            // bedrag komt uit het boetereglement
+  const amount=rule?+rule.amount:0;
+  if(!p||!reason){ alert("Kies een speelster en een reden."); return; }
+  if(!amount){ alert("Voor deze reden staat geen bedrag in het boetereglement.\nPas het bedrag aan bij ⚙️ Instellingen & boetereglement."); return; }
   addFine(p,reason,amount,date); }
 function toggleFinePaid(id){ const f=kas().fines.find(x=>x.id===id); if(f)f.paid=!f.paid; renderFines(); renderKasOverview(); scheduleSave(); }
 function delFine(id){ kas().fines=kas().fines.filter(x=>x.id!==id); renderFines(); renderKasOverview(); scheduleSave(); }
