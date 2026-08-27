@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-j</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-l</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -253,7 +253,17 @@
   <!-- ============ SQUAD ============ -->
   <section id="squad">
     <h2 class="sec">Selectieoverzicht 2026/2027</h2>
-    <p class="hint">Basisgegevens uit de teamvragenlijst. Gebruikt als input voor de schema's (rijbewijs/auto bepaalt het rijschema).</p>
+    <div class="note">
+      Dit is de <b>centrale ledenlijst</b> van het team. Wie je hier toevoegt of verwijdert, verschijnt automatisch overal:
+      in de taakschema's, de boetepot &amp; kas, het eetschema en de herinneringen.
+      <b>Speelsters</b> doen mee met taken, metingen en FIFA-kaartjes; <b>staf</b> doet alleen mee met eten en kas.
+      Rijbewijs/auto bepaalt wie kan rijden. Een naam wijzigen mag: alle gekoppelde taken, boetes en check-ins gaan automatisch mee.
+    </div>
+    <div class="toolbar">
+      <button class="btn primary" onclick="addPerson('speelster')">➕ Speelster toevoegen</button>
+      <button class="btn" onclick="addPerson('staf')">➕ Staflid toevoegen</button>
+      <button class="btn" onclick="saveStats()">💾 Opslaan</button>
+    </div>
     <div style="overflow:auto">
       <table id="squadTable"></table>
     </div>
@@ -656,6 +666,9 @@
         bijvoorbeeld <span class="mini">https://…?amount={bedrag}</span> — daar vullen wij het bedrag automatisch in.</p>
       <div style="overflow:auto;max-width:520px"><table id="rulesTable"></table></div>
       <button class="btn" style="margin-top:8px" onclick="addRule()">+ boeteregel</button>
+      <h4 style="margin:18px 0 6px;font-size:13px;color:var(--gold)">📱 Telefoonnummers staf</h4>
+      <p class="hint" style="margin-bottom:8px">De staf eet mee en betaalt mee. Vul hier de nummers in, dan kun je ook hen een betaalverzoek via WhatsApp sturen.</p>
+      <div style="overflow:auto;max-width:520px"><table id="staffPhoneTable"></table></div>
     </details>
 
     <div class="grid2">
@@ -708,7 +721,7 @@
 
 <script>
 /* ---------------- SPELERSDATA ---------------- */
-const PLAYERS = [
+let PLAYERS = [
   {n:"Mare", age:25, city:"Stiens", job:"Docent wiskunde", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, centraal achterin, linksback", licence:"Ja", car:true, shirt:"S", goal:"Kampioen worden & het super leuk hebben", holiday:"11–18 juni & 27 juni–3 aug"},
   {n:"Esmee Terpstra", age:20, city:"Stiens", job:"Verpleegkunde (hbo)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor of back", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"10 juli–10 aug"},
   {n:"Renske", age:23, city:"Heerenveen", job:"Recruiter (Worketeers)", pos:"CM", role:"mid", form:"4-4-2 / 4-3-3", top:"CM, CAM of aanval", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"Nog niet bekend"},
@@ -728,6 +741,82 @@ const PLAYERS = [
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
 ];
 const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
+
+/* Staf — eet mee en betaalt mee, maar telt niet mee in FIFA-kaartjes, metingen of taakschema's. */
+let STAFF = [
+  {n:"Menno Tjoelker",      role:"Hoofdtrainer"},
+  {n:"Martijn van der Noord", role:"Assistent-trainer"},
+  {n:"Sake Saakstra",       role:"Teammanager"},
+];
+/* Iedereen die kan meebetalen aan eten/boetes: speelsters + staf. */
+function kasPeople(){ return PLAYERS.map(p=>p.n).concat(STAFF.map(s=>s.n)); }
+function isStaffMember(n){ return STAFF.some(s=>s.n===n); }
+
+/* ---------- Personen beheren vanuit het Selectieoverzicht ---------- */
+function personArr(rol){ return rol==="staf"?STAFF:PLAYERS; }
+function afterPeopleChange(){
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+  if(typeof renderAll==="function") renderAll(); else renderSquad();
+}
+function addPerson(rol){
+  const naam=(prompt(rol==="staf"?"Naam van het nieuwe staflid:":"Naam van de nieuwe speelster:")||"").trim();
+  if(!naam) return;
+  if(kasPeople().some(n=>n.toLowerCase()===naam.toLowerCase())){ alert("Die naam bestaat al."); return; }
+  if(rol==="staf") STAFF.push({n:naam, role:"Staf"});
+  else {
+    PLAYERS.push({n:naam, age:"", city:"", job:"", pos:"—", role:"mid", form:"—", top:"",
+                  licence:"Nee", car:false, shirt:"—", goal:"", holiday:""});
+    if(typeof MOOD_TOKENS==="object" && !MOOD_TOKENS[naam]){        // eigen check-in-link aanmaken
+      MOOD_TOKENS[naam]=[...crypto.getRandomValues(new Uint8Array(5))].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+  }
+  afterPeopleChange();
+  flash(naam+" toegevoegd ✓");
+}
+function delPerson(rol,i){
+  const arr=personArr(rol); const p=arr[i]; if(!p) return;
+  if(!confirm("Weet je zeker dat je "+p.n+" wilt verwijderen?\n\nTaken, boetes en check-ins van deze persoon blijven bewaard, maar zij verdwijnt uit alle keuzelijsten.")) return;
+  arr.splice(i,1); afterPeopleChange(); flash(p.n+" verwijderd");
+}
+function setPerson(rol,i,key,val){
+  const p=personArr(rol)[i]; if(!p) return;
+  if(key==="car"){ p.car=(val==="ja"); p.licence = val==="ja"?"Ja" : val==="rijbewijs"?"Rijbewijs, geen auto" : "Nee"; }
+  else p[key]=val;
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+  if(key==="car"){ renderSquad(); }          // rijders-pool verandert
+  if(key==="pos"||key==="posrole") renderCards();
+}
+// Naam wijzigen: verplaatst álle gekoppelde gegevens mee (taken, boetes, eten, duo's, check-ins).
+function renamePerson(rol,i,neu){
+  const arr=personArr(rol); const p=arr[i]; if(!p) return;
+  const oud=p.n; neu=(neu||"").trim();
+  if(!neu || neu===oud){ renderSquad(); return; }
+  if(kasPeople().some(n=>n!==oud && n.toLowerCase()===neu.toLowerCase())){ alert("Die naam bestaat al."); renderSquad(); return; }
+  p.n=neu;
+  if(store[oud]){ store[neu]=store[oud]; delete store[oud]; }
+  const swap=a=>Array.isArray(a)?a.map(x=>x===oud?neu:x):a;
+  (fixtures||[]).forEach(f=>{ if(!f)return; ["drive","wash","flag","fluit","coord","food"].forEach(k=>{ f[k]=swap(f[k]); }); });
+  (clubDuties||[]).forEach(c=>{ if(!c)return; c.fluit=swap(c.fluit); c.coord=swap(c.coord); });
+  DUOS=DUOS.map(d=>swap(d));
+  const K=kas();
+  (K.fines||[]).forEach(f=>{ if(f.player===oud) f.player=neu; });
+  (K.food||[]).forEach(f=>{ if(f.cook===oud) f.cook=neu; f.shareWith=swap(f.shareWith);
+    if(f.paid && Object.prototype.hasOwnProperty.call(f.paid,oud)){ f.paid[neu]=f.paid[oud]; delete f.paid[oud]; } });
+  if(typeof MOOD_TOKENS==="object" && MOOD_TOKENS[oud]){ MOOD_TOKENS[neu]=MOOD_TOKENS[oud]; delete MOOD_TOKENS[oud]; }
+  afterPeopleChange();
+  flash(oud+" heet nu "+neu+" ✓");
+}
+function movePersonRole(vanRol,i,naarRol){
+  if(vanRol===naarRol) return;
+  const van=personArr(vanRol), p=van[i]; if(!p) return;
+  van.splice(i,1);
+  if(naarRol==="staf") STAFF.push({n:p.n, role:p.role||"Staf"});
+  else PLAYERS.push({n:p.n, age:p.age||"", city:p.city||"", job:p.job||"", pos:p.pos||"—", role:"mid",
+                     form:"—", top:"", licence:p.licence||"Nee", car:!!p.car, shirt:p.shirt||"—", goal:"", holiday:""});
+  afterPeopleChange();
+}
 
 /* Top-3 posities per speelster (afgeleid uit de teamvragenlijst) */
 const POS3 = {
@@ -943,19 +1032,37 @@ function importData(ev){
 
 /* ---------------- SQUAD TABLE ---------------- */
 function renderSquad(){
-  const t=document.getElementById("squadTable");
-  t.innerHTML=`<tr><th>Naam</th><th>📱 Telefoon</th><th>🗓️ Afwezig (data)</th><th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
-    <th class="center">Pos</th><th class="center">Rijden</th><th class="center">Shirt</th></tr>`+
-    PLAYERS.map(p=>{ const nEsc=p.n.replace(/'/g,"\\'"); return `<tr>
-      <td><b>${p.n}</b></td>
-      <td><input type="text" value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${nEsc}',this.value)"
-        style="width:120px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px"></td>
-      <td><input type="text" value="${((store[p.n]&&store[p.n].away)||'').replace(/"/g,'&quot;')}" placeholder="bv. 22-08, 05-09..12-09" oninput="setAway('${nEsc}',this.value)"
-        style="width:170px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px"></td>
-      <td class="center">${p.age}</td><td>${p.city}</td><td class="mini">${p.job}</td>
-      <td class="center">${p.pos}</td>
-      <td class="center">${p.car?'✅':(p.licence.includes('geen auto')?'🚙 geen auto':'❌')}</td>
-      <td class="center">${p.shirt}</td></tr>`; }).join("");
+  const t=document.getElementById("squadTable"); if(!t)return;
+  const IN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px';
+  const rij=(p,rol,i)=>{
+    const staf=(rol==="staf");
+    return `<tr${staf?' style="background:rgba(242,140,0,.06)"':''}>
+      <td><input type="text" value="${(p.n||'').replace(/"/g,'&quot;')}" onchange="renamePerson('${rol}',${i},this.value)"
+          style="width:150px;font-weight:700;${IN}"></td>
+      <td class="center"><select onchange="movePersonRole('${rol}',${i},this.value)" style="${IN}">
+          <option value="speelster" ${!staf?'selected':''}>Speelster</option>
+          <option value="staf" ${staf?'selected':''}>Staf</option></select></td>
+      <td><input type="text" value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${p.n.replace(/'/g,"\\'")}',this.value)" onchange="scheduleSave()"
+          style="width:120px;${IN}"></td>
+      <td><input type="text" value="${((store[p.n]&&store[p.n].away)||'').replace(/"/g,'&quot;')}" placeholder="bv. 22-08, 05-09..12-09" oninput="setAway('${p.n.replace(/'/g,"\\'")}',this.value)" onchange="scheduleSave()"
+          style="width:160px;${IN}"></td>
+      ${staf
+        ? `<td colspan="5" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:180px;${IN}">
+             <span style="margin-left:8px">Staf doet mee met eten &amp; kas, niet met taken en FIFA-kaartjes.</span></td>`
+        : `<td class="center"><input type="text" value="${p.age||''}" onchange="setPerson('speelster',${i},'age',this.value)" style="width:46px;text-align:center;${IN}"></td>
+           <td><input type="text" value="${(p.city||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'city',this.value)" style="width:110px;${IN}"></td>
+           <td><input type="text" value="${(p.job||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'job',this.value)" style="width:150px;${IN}"></td>
+           <td class="center"><input type="text" value="${(p.pos||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'pos',this.value)" style="width:60px;text-align:center;${IN}"></td>
+           <td class="center"><select onchange="setPerson('speelster',${i},'car',this.value)" style="${IN}">
+               <option value="ja" ${p.car?'selected':''}>✅ auto</option>
+               <option value="rijbewijs" ${(!p.car&&(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>🚙 geen auto</option>
+               <option value="nee" ${(!p.car&&!(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>❌ geen rijbewijs</option></select></td>`}
+      <td class="center"><button class="del" title="verwijderen" onclick="delPerson('${rol}',${i})">×</button></td></tr>`;
+  };
+  t.innerHTML=`<tr><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig (data)</th>
+      <th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th><th class="center">Pos</th><th class="center">Rijden</th><th class="center"></th></tr>`
+    + PLAYERS.map((p,i)=>rij(p,"speelster",i)).join("")
+    + STAFF.map((p,i)=>rij(p,"staf",i)).join("");
 }
 
 /* ---------------- FAIR SCHEDULE ---------------- */
@@ -1060,7 +1167,7 @@ function seedSeasonTrainings(){
   if(typeof persistLocal==="function") persistLocal();
 }
 // Vaste duo's (seizoenspresentatie) voor trainingen, lunch-/was- en corveeschema.
-const DUOS=[
+let DUOS=[
   ["Maja","Alyssa Visser"],
   ["Sacha","Esmee Terpstra"],
   ["Renske","Nynke"],
@@ -1933,7 +2040,7 @@ function renderMoodAll(){ renderMoodTable(); renderMoodTeam(); fillMoodPlayers()
 
 /* ---------------- BELASTBAARHEID ---------------- */
 function classify(p){
-  const j=p.job.toLowerCase(), h=(p.holiday||"").toLowerCase(); const tags=[];
+  const j=(p.job||"").toLowerCase(), h=(p.holiday||"").toLowerCase(); const tags=[];
   if(/gymdoc|fysio|kok|verpleeg|sportkunde/.test(j))
     tags.push({i:"🟢",t:"Fysiek/staand werk",a:"Cumulatieve dagbelasting — stem omvang & intensiteit van de training af, let op stapeling van vermoeidheid (slide 78)."});
   if(/hrm|recruit|communicatie|advis|intercedent|veiligheidskunde|hotelschool|productieleider/.test(j))
@@ -2029,7 +2136,7 @@ function fillReasonSelect(){ const s=document.getElementById("fReason"); if(!s)r
 function fReasonChange(){ const s=document.getElementById("fReason"); if(!s)return; const r=kas().rules.find(x=>x.reason===s.value);
   if(r){const a=document.getElementById("fAmount"); if(a)a.value=r.amount;} }
 function fillKasPlayers(){ ["fPlayer","foodCook"].forEach(id=>{const s=document.getElementById(id); if(!s)return; const cur=s.value;
-  s.innerHTML=PLAYERS.map(p=>`<option value="${p.n}">${p.n}</option>`).join(""); if(cur)s.value=cur;}); }
+  s.innerHTML=kasPeople().map(n=>`<option value="${n}">${n}${isStaffMember(n)?" (staf)":""}</option>`).join(""); if(cur)s.value=cur;}); }
 
 function addFine(player,reason,amount,date){ kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false});
   renderFines(); renderKasOverview(); scheduleSave(); flash("Boete: "+player); }
@@ -2052,8 +2159,14 @@ function renderFines(){ const w=document.getElementById("finesList"); if(!w)retu
      :`<p class="hint">Nog geen boetes.</p>`);
 }
 
+function renderStaffPhones(){ const t=document.getElementById("staffPhoneTable"); if(!t)return;
+  t.innerHTML=`<tr><th>Staflid</th><th>Rol</th><th>06-nummer</th></tr>`+
+    STAFF.map(s=>{ const nEsc=s.n.replace(/'/g,"\\'");
+      return `<tr><td><b>${s.n}</b></td><td class="mini">${s.role}</td>
+        <td><input type="tel" value="${(getPhone(s.n)||'').replace(/"/g,'&quot;')}" placeholder="06…"
+          oninput="setPhone('${nEsc}',this.value)" onchange="scheduleSave()" style="min-width:150px;${KIN}"></td></tr>`; }).join(""); }
 function renderFoodShareList(){ const w=document.getElementById("foodShareList"); if(!w)return;
-  w.innerHTML=PLAYERS.map(p=>`<label class="badge" style="cursor:pointer"><input type="checkbox" class="foodshare" value="${p.n}" checked> ${p.n}</label>`).join(""); }
+  w.innerHTML=kasPeople().map(n=>`<label class="badge" style="cursor:pointer${isStaffMember(n)?';border-color:var(--gold)':''}"><input type="checkbox" class="foodshare" value="${n}" checked> ${n}${isStaffMember(n)?' <span class="mini">(staf)</span>':''}</label>`).join(""); }
 function foodShareAll(on){ document.querySelectorAll(".foodshare").forEach(c=>c.checked=on); }
 function addFoodFromForm(){ const date=document.getElementById("foodDate").value||todayStr(); const cook=document.getElementById("foodCook").value;
   const total=+document.getElementById("foodTotal").value;
@@ -2107,7 +2220,7 @@ function payLink(amount){
 }
 function payRequest(n){ const amt=playerOwed(n); if(amt<=0.001){ alert(n+" heeft niets openstaan."); return; } openWAmsg(n,payMsg(n)); }
 function renderKasOverview(){ const w=document.getElementById("kasOverview"); if(!w)return;
-  const rows=PLAYERS.map(p=>({n:p.n,fine:fineOwed(p.n),food:foodOwed(p.n),tot:playerOwed(p.n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
+  const rows=kasPeople().map(n=>({n,fine:fineOwed(n),food:foodOwed(n),tot:playerOwed(n)})).filter(r=>r.tot>0.001).sort((a,b)=>b.tot-a.tot);
   if(!rows.length){ w.innerHTML='<p class="hint">Niemand heeft iets openstaan 🎉</p>'; return; }
   const totalOpen=rows.reduce((a,r)=>a+r.tot,0);
   w.innerHTML=`<p class="hint">Totaal openstaand: <b style="color:var(--gold)">${eur(totalOpen)}</b></p>`+
@@ -2151,7 +2264,7 @@ function renderKasAll(){
   const tk=document.getElementById("tikkieLink"); if(tk)tk.value=kas().tikkie;
   const fd=document.getElementById("fDate"); if(fd&&!fd.value)fd.value=todayStr();
   const fod=document.getElementById("foodDate"); if(fod&&!fod.value)fod.value=todayStr();
-  renderRules(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes(); fillKasClub(); renderClubBoetes();
+  renderRules(); renderStaffPhones(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes(); fillKasClub(); renderClubBoetes();
 }
 
 /* ---------------- CLOUD SYNC (Supabase) ---------------- */
@@ -2162,16 +2275,22 @@ const CLOUD = !!(SUPA_URL && SUPA_KEY && window.supabase);
 let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
-function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
-function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events)); }catch(e){} }
+function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].phone; }); }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS}; }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
+  if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
+  if(st && Array.isArray(st.staff)) STAFF=st.staff;
+  if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
+  if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
+  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
+function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
+  localStorage.setItem("scstiens_people",JSON.stringify({players:PLAYERS,staff:STAFF,duos:DUOS,tokens:MOOD_TOKENS})); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
   try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
-    PLAYERS.forEach(p=>{ if((!store[p.n]||!store[p.n].phone) && bak[p.n]){ store[p.n]=store[p.n]||{stats:{},note:""}; store[p.n].phone=bak[p.n]; } }); }catch(e){}
+    kasPeople().forEach(n=>{ if((!store[n]||!store[n].phone) && bak[n]){ store[n]=store[n]||{stats:{},note:""}; store[n].phone=bak[n]; } }); }catch(e){}
 }
-function backupPhonesLocal(){ try{ const bak={}; PLAYERS.forEach(p=>{ if(store[p.n]&&store[p.n].phone) bak[p.n]=store[p.n].phone; });
+function backupPhonesLocal(){ try{ const bak={}; kasPeople().forEach(n=>{ if(store[n]&&store[n].phone) bak[n]=store[n].phone; });
   if(Object.keys(bak).length) localStorage.setItem("scstiens_phones_bak",JSON.stringify(bak)); }catch(e){} }
 // Als er lokaal wél nummers zijn maar in de cloud niet: schrijf ze terug naar de gedeelde data.
 function healPhones(){ if(!(CLOUD && isStaff)) return; if(PLAYERS.some(p=>store[p.n]&&store[p.n].phone)) scheduleSave(); }
@@ -2283,6 +2402,12 @@ function initLock(){
 
 /* ---------------- INIT ---------------- */
 initLock();
+// Ledenlijst zo vroeg mogelijk laden: alles hieronder rekent ermee.
+try{ const lp=JSON.parse(localStorage.getItem("scstiens_people"));
+  if(lp){ if(Array.isArray(lp.players)&&lp.players.length) PLAYERS=lp.players;
+          if(Array.isArray(lp.staff)) STAFF=lp.staff;
+          if(Array.isArray(lp.duos)&&lp.duos.length) DUOS=lp.duos;
+          if(lp.tokens&&typeof lp.tokens==="object") Object.assign(MOOD_TOKENS,lp.tokens); } }catch(e){}
 seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 const _rb=document.getElementById("cfgRebalDate"); if(_rb && !_rb.value) _rb.value=cutoffDefault();
