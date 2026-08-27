@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-l</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-m</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -678,6 +678,7 @@
           <label>Speelster <select id="fPlayer"></select></label>
           <label>Reden <select id="fReason" onchange="fReasonChange()"></select></label>
           <label>Bedrag € <input type="number" id="fAmount" step="0.5" style="width:80px"></label>
+          <label>Gebeurtenis <select id="fEvent" onchange="fEventChange()" title="Kies een training, wedstrijd of activiteit — de datum wordt automatisch ingevuld"></select></label>
           <label>Datum <input type="date" id="fDate"></label>
           <label>&nbsp;<button class="btn primary" onclick="addFineFromForm()">+ Boete</button></label>
         </div>
@@ -2231,9 +2232,47 @@ function renderKasOverview(){ const w=document.getElementById("kasOverview"); if
 }
 
 const KAS_TASKLBL={drive:"Rijden",wash:"Wassen",flag:"Vlaggen",food:"Eten"};
+// Keuzelijst met álle gebeurtenissen (wedstrijden, trainingen, verenigingstaken, activiteiten),
+// nieuwste bovenaan en standaard op de laatst geweeste — handig voor "te laat op de training".
+function fillFineEvents(){
+  const s=document.getElementById("fEvent"); if(!s)return; const cur=s.value;
+  const items=[];
+  (fixtures||[]).forEach(f=>{ if(f&&f.date) items.push({date:f.date,lbl:"⚽ "+((f.opponent||"wedstrijd"))}); });
+  (trainings||[]).forEach(t=>{ if(t&&t.date) items.push({date:t.date,lbl:"🏃 "+((t.title||"Training"))}); });
+  (clubDuties||[]).forEach(c=>{ if(c&&c.date) items.push({date:c.date,lbl:"🔔 Verenigingstaak"}); });
+  (events||[]).forEach(e=>{ if(e&&e.date) items.push({date:e.date,lbl:"📌 "+((e.title||"Activiteit"))}); });
+  items.sort((a,b)=> a.date<b.date?1:-1);
+  const t=todayStr();
+  let def=items.findIndex(x=>x.date<=t); if(def<0) def=items.length-1;
+  s.innerHTML=items.map((x,i)=>`<option value="${i}" data-d="${x.date}">${new Date(x.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})} — ${x.lbl}</option>`).join("");
+  s.value=(cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]'))?cur:String(def>=0?def:0);
+  fEventChange();
+}
+function fEventChange(){
+  const s=document.getElementById("fEvent"), d=document.getElementById("fDate");
+  if(!s||!d) return; const o=s.selectedOptions&&s.selectedOptions[0];
+  if(o&&o.dataset.d) d.value=o.dataset.d;
+}
+// Meest recente gebeurtenis op of vóór vandaag; is alles nog in de toekomst, dan de eerstvolgende.
+function latestIdxByDate(list){
+  if(!list||!list.length) return 0;
+  const t=todayStr(); let best=-1, bestDate="";
+  list.forEach((x,i)=>{ if(!x||!x.date)return; if(x.date<=t && x.date>=bestDate){ best=i; bestDate=x.date; } });
+  if(best>=0) return best;
+  let first=-1, firstDate="9999";
+  list.forEach((x,i)=>{ if(x&&x.date&&x.date<firstDate){ first=i; firstDate=x.date; } });
+  return first>=0?first:0;
+}
 function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)return; const cur=s.value;
-  s.innerHTML=(fixtures||[]).map((f,i)=>`<option value="${i}">${i+1}. ${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${f.home?"thuis":"uit"})</option>`).join("");
-  if(cur)s.value=cur; }
+  const rows=(fixtures||[]).map((f,i)=>({i,f})).filter(r=>r.f&&r.f.date)
+    .sort((a,b)=> a.f.date<b.f.date?1:-1);        // nieuwste bovenaan
+  s.innerHTML=rows.map(r=>{ const f=r.f;
+    const tu=f.home===true?"thuis":f.home===false?"uit":"n.t.b.";
+    return `<option value="${r.i}">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${tu})</option>`;
+  }).join("");
+  // standaard: de laatst gespeelde wedstrijd (daar gaan boetes meestal over)
+  s.value = (cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]')) ? cur : String(latestIdxByDate(fixtures||[]));
+}
 function renderTaakBoetes(){ const w=document.getElementById("taakBoetes"); if(!w)return; const s=document.getElementById("kasMatch");
   const fi=s?+s.value:0; const f=(fixtures||[])[fi]; if(!f){ w.innerHTML='<p class="hint">Geen wedstrijd.</p>'; return; }
   const late=(kas().rules.find(r=>/te laat/i.test(r.reason))||{}).amount ?? 5;
@@ -2247,8 +2286,10 @@ function renderTaakBoetes(){ const w=document.getElementById("taakBoetes"); if(!
 }
 const CLUB_TASKLBL={fluit:"Fluiten",coord:"Wedstr.coörd."};
 function fillKasClub(){ const s=document.getElementById("kasClub"); if(!s)return; const cur=s.value;
-  s.innerHTML=(clubDuties||[]).map((c,i)=>`<option value="${i}">${new Date(c.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</option>`).join("");
-  if(cur)s.value=cur; }
+  const rows=(clubDuties||[]).map((c,i)=>({i,c})).filter(r=>r.c&&r.c.date).sort((a,b)=> a.c.date<b.c.date?1:-1);
+  s.innerHTML=rows.map(r=>`<option value="${r.i}">${new Date(r.c.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</option>`).join("");
+  s.value = (cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]')) ? cur : String(latestIdxByDate(clubDuties||[]));
+}
 function renderClubBoetes(){ const w=document.getElementById("clubBoetes"); if(!w)return; const s=document.getElementById("kasClub");
   const ci=s?+s.value:0; const c=(clubDuties||[])[ci]; if(!c){ w.innerHTML='<p class="hint">Geen verenigingstaken. Voeg datums toe bij Taakschema\'s → Verenigingstaken jeugd.</p>'; return; }
   const late=(kas().rules.find(r=>/te laat/i.test(r.reason))||{}).amount ?? 5;
@@ -2264,7 +2305,7 @@ function renderKasAll(){
   const tk=document.getElementById("tikkieLink"); if(tk)tk.value=kas().tikkie;
   const fd=document.getElementById("fDate"); if(fd&&!fd.value)fd.value=todayStr();
   const fod=document.getElementById("foodDate"); if(fod&&!fod.value)fod.value=todayStr();
-  renderRules(); renderStaffPhones(); fillKasPlayers(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes(); fillKasClub(); renderClubBoetes();
+  renderRules(); renderStaffPhones(); fillKasPlayers(); fillFineEvents(); fReasonChange(); renderFoodShareList(); renderFines(); renderFood(); renderKasOverview(); fillKasMatch(); renderTaakBoetes(); fillKasClub(); renderClubBoetes();
 }
 
 /* ---------------- CLOUD SYNC (Supabase) ---------------- */
