@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-m</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-n</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -678,20 +678,20 @@
           <label>Speelster <select id="fPlayer"></select></label>
           <label>Reden <select id="fReason" onchange="fReasonChange()"></select></label>
           <label>Bedrag € <input type="number" id="fAmount" step="0.5" style="width:80px"></label>
-          <label>Gebeurtenis <select id="fEvent" onchange="fEventChange()" title="Kies een training, wedstrijd of activiteit — de datum wordt automatisch ingevuld"></select></label>
+          <label>Gebeurtenis <select id="fEvent" onchange="fEventPicked()" title="Kies een training, wedstrijd of activiteit — de datum wordt automatisch ingevuld"></select></label>
           <label>Datum <input type="date" id="fDate"></label>
           <label>&nbsp;<button class="btn primary" onclick="addFineFromForm()">+ Boete</button></label>
         </div>
       </div>
       <div>
         <h2 class="sec">🔗 Boete uit taakschema</h2>
-        <div class="controls"><label>Wedstrijd <select id="kasMatch" onchange="renderTaakBoetes()"></select></label></div>
+        <div class="controls"><label>Wedstrijd <select id="kasMatch" onchange="kasMatchPicked()"></select></label></div>
         <div id="taakBoetes" style="overflow:auto"></div>
       </div>
     </div>
 
     <h2 class="sec" style="margin-top:8px">🔔 Boete uit verenigingstaken (fluiten &amp; coördinatie)</h2>
-    <div class="controls"><label>Datum <select id="kasClub" onchange="renderClubBoetes()"></select></label></div>
+    <div class="controls"><label>Datum <select id="kasClub" onchange="kasClubPicked()"></select></label></div>
     <div id="clubBoetes" style="overflow:auto"></div>
 
     <h2 class="sec" style="margin-top:22px">🍝 Eten-kosten delen</h2>
@@ -2245,7 +2245,8 @@ function fillFineEvents(){
   const t=todayStr();
   let def=items.findIndex(x=>x.date<=t); if(def<0) def=items.length-1;
   s.innerHTML=items.map((x,i)=>`<option value="${i}" data-d="${x.date}">${new Date(x.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})} — ${x.lbl}</option>`).join("");
-  s.value=(cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]'))?cur:String(def>=0?def:0);
+  const keep=_fEventPicked && cur!=="" && cur!=null && s.querySelector('option[value="'+cur+'"]');
+  s.value=keep?cur:String(def>=0?def:0);
   fEventChange();
 }
 function fEventChange(){
@@ -2263,6 +2264,11 @@ function latestIdxByDate(list){
   list.forEach((x,i)=>{ if(x&&x.date&&x.date<firstDate){ first=i; firstDate=x.date; } });
   return first>=0?first:0;
 }
+// Alleen een bewuste keuze van de gebruiker onthouden; anders altijd de laatst gespeelde wedstrijd.
+let _kasMatchPicked=false, _kasClubPicked=false, _fEventPicked=false;
+function kasMatchPicked(){ _kasMatchPicked=true; renderTaakBoetes(); }
+function kasClubPicked(){ _kasClubPicked=true; renderClubBoetes(); }
+function fEventPicked(){ _fEventPicked=true; fEventChange(); }
 function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)return; const cur=s.value;
   const rows=(fixtures||[]).map((f,i)=>({i,f})).filter(r=>r.f&&r.f.date)
     .sort((a,b)=> a.f.date<b.f.date?1:-1);        // nieuwste bovenaan
@@ -2270,8 +2276,9 @@ function fillKasMatch(){ const s=document.getElementById("kasMatch"); if(!s)retu
     const tu=f.home===true?"thuis":f.home===false?"uit":"n.t.b.";
     return `<option value="${r.i}">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short"})} — ${(f.opponent||"wedstrijd")} (${tu})</option>`;
   }).join("");
-  // standaard: de laatst gespeelde wedstrijd (daar gaan boetes meestal over)
-  s.value = (cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]')) ? cur : String(latestIdxByDate(fixtures||[]));
+  const keep = _kasMatchPicked && cur!=="" && cur!=null && s.querySelector('option[value="'+cur+'"]');
+  s.value = keep ? cur : String(latestIdxByDate(fixtures||[]));
+  if(typeof renderTaakBoetes==="function") renderTaakBoetes();
 }
 function renderTaakBoetes(){ const w=document.getElementById("taakBoetes"); if(!w)return; const s=document.getElementById("kasMatch");
   const fi=s?+s.value:0; const f=(fixtures||[])[fi]; if(!f){ w.innerHTML='<p class="hint">Geen wedstrijd.</p>'; return; }
@@ -2288,7 +2295,9 @@ const CLUB_TASKLBL={fluit:"Fluiten",coord:"Wedstr.coörd."};
 function fillKasClub(){ const s=document.getElementById("kasClub"); if(!s)return; const cur=s.value;
   const rows=(clubDuties||[]).map((c,i)=>({i,c})).filter(r=>r.c&&r.c.date).sort((a,b)=> a.c.date<b.c.date?1:-1);
   s.innerHTML=rows.map(r=>`<option value="${r.i}">${new Date(r.c.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</option>`).join("");
-  s.value = (cur!==""&&cur!=null&&s.querySelector('option[value="'+cur+'"]')) ? cur : String(latestIdxByDate(clubDuties||[]));
+  const keep = _kasClubPicked && cur!=="" && cur!=null && s.querySelector('option[value="'+cur+'"]');
+  s.value = keep ? cur : String(latestIdxByDate(clubDuties||[]));
+  if(typeof renderClubBoetes==="function") renderClubBoetes();
 }
 function renderClubBoetes(){ const w=document.getElementById("clubBoetes"); if(!w)return; const s=document.getElementById("kasClub");
   const ci=s?+s.value:0; const c=(clubDuties||[])[ci]; if(!c){ w.innerHTML='<p class="hint">Geen verenigingstaken. Voeg datums toe bij Taakschema\'s → Verenigingstaken jeugd.</p>'; return; }
