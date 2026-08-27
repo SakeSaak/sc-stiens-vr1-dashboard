@@ -213,7 +213,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-i</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-j</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -972,7 +972,7 @@ const PROGRAM_TRAININGS=[
   {date:"2026-08-15",time:"",end:"",title:"Training of andere activiteit (tijd volgt)"},
   {date:"2026-08-19",time:"19:00",end:"20:30",title:"Training"},
   {date:"2026-08-24",time:"19:30",end:"21:00",title:"Training"},
-  {date:"2026-08-26",time:"19:00",end:"20:30",title:"Training"},
+  // 26 aug: geen training — die avond is de bekerwedstrijd tegen ST BMJ (19:30)
 ];
 function loadTrainings(){
   if(trainings.length && !confirm("Dit vervangt de huidige trainingslijst door de teamtrainingen uit het voorbereidingsschema. Doorgaan?")) return;
@@ -1031,6 +1031,24 @@ function generateSeasonTrainings(silent){
     if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
   if(!silent) flash(added?(added+" trainingen toegevoegd ✓"):"Alle trainingen stonden er al");
   return added;
+}
+// Trainingen die op een wedstrijddag vallen zijn dubbelingen (bv. 26 aug: beker i.p.v. training).
+// Eén keer automatisch opruimen; daarna kun je zelf altijd trainingen toevoegen of verwijderen.
+const CLASH_CLEAN_VERSION=1;
+function cleanTrainingClashes(){
+  if(!store || typeof store!=="object") return;
+  if(store.__clashClean>=CLASH_CLEAN_VERSION) return;
+  if(!Array.isArray(fixtures) || !fixtures.length) return;      // wacht tot de wedstrijden geladen zijn
+  const matchDays=new Set(fixtures.filter(f=>f&&f.date&&(f.home===true||f.home===false)).map(f=>f.date));
+  const before=trainings.length;
+  trainings=trainings.filter(t=>!(t&&t.date&&matchDays.has(t.date)));
+  store.__clashClean=CLASH_CLEAN_VERSION;
+  if(trainings.length!==before){
+    if(typeof renderTrainings==="function") renderTrainings();
+    if(typeof renderAgenda==="function") renderAgenda();
+    if(typeof persistLocal==="function") persistLocal();
+    if(typeof scheduleSave==="function") scheduleSave();
+  }
 }
 // Eén keer automatisch vullen, zodat het hele seizoen meteen zichtbaar is.
 const TRAIN_SEED_VERSION=1;
@@ -2075,7 +2093,8 @@ function payMsg(n){
   const t=payLink(amt);
   return "Hoi "+n+"! Betaalverzoekje voor SC Stiens VR1:\n"+items.join("\n")+
     "\nTotaal: "+eur(amt)+".\n"+
-    (t?("Betalen kan hier: "+t+"\nVul bij het betalen "+eur(amt)+" in.")
+    (t?("Betalen kan hier: "+t+
+        "\nLet op: deze Tikkie heeft geen vast bedrag — vul zelf "+eur(amt)+" in.")
       :"Vraag de penningmeester om de betaallink.")+"\nBedankt!"; }
 // Betaallink opbouwen. Een herbruikbare Tikkie-link kan geen vast bedrag bevatten (de betaler
 // vult dat zelf in). Gebruikt je bank wél een bedrag in de link? Zet dan {bedrag} in de link,
@@ -2145,7 +2164,7 @@ let isStaff=false;
 
 function clearPhones(){ PLAYERS.forEach(p=>{ if(store[p.n]) delete store[p.n].phone; }); }
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events}; }
-function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); }
+function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); } if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
@@ -2276,7 +2295,7 @@ try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.is
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
 try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
 try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)){ events=le; renderAgenda(); } }catch(e){}
-seedSeasonTrainings(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
+seedSeasonTrainings(); cleanTrainingClashes(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
 </body>
