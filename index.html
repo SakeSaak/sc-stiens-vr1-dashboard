@@ -6,6 +6,7 @@
 <title>SC Stiens Vrouwen 1 — Teamdashboard 2026/2027</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     /* SC Stiens clubkleuren: zwart, oranje, geel */
@@ -213,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-o</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-p</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -225,6 +226,7 @@
   <button data-tab="squad">Selectieoverzicht</button>
   <button data-tab="team">Team &amp; afspraken</button>
   <button data-tab="agenda">Agenda</button>
+  <button data-tab="analyse">Wedstrijdanalyse</button>
   <button data-tab="metingen">Metingen</button>
   <button data-tab="ontwikkeling">Ontwikkeling</button>
   <button data-tab="mood">Gesteldheid</button>
@@ -621,6 +623,26 @@
     <h3 class="sec" style="font-size:16px;margin-top:22px">👯 Duo's &amp; corveeschema</h3>
     <p class="note">Vaste duo's voor trainingen en wedstrijddagen (lunch- en wasschema). Elke week is één duo op corvee: materialen klaarzetten, ballen oppompen en de lunch op de thuiswedstrijd verzorgen.</p>
     <div id="corveeWrap" style="overflow:auto"></div>
+  </section>
+
+  <!-- ============ WEDSTRIJDANALYSE (publiek) ============ -->
+  <section id="analyse">
+    <h2 class="sec">📊 Wedstrijdanalyse</h2>
+    <div class="note">
+      De teamcijfers uit de video-analyse (VEO) per wedstrijd: balbezit, passnauwkeurigheid, duels, schoten en spelhervattingen —
+      met de vergelijking tussen de <b>eerste en tweede helft</b>. Handig voor de wedstrijdbespreking op maandag.
+      Dit zijn <b>teamcijfers</b>; de individuele ontwikkeling volg je bij <b>Metingen</b> en op de FIFA-kaartjes.
+      Bij elke statistiek staat een <b>betrouwbaarheid</b>: hoe zeker de meting is.
+    </div>
+    <div class="toolbar">
+      <label class="btn primary" style="cursor:pointer">⬆︎ Analyse importeren (.xlsx)
+        <input type="file" accept=".xlsx,.xls" onchange="importAnalyse(event)" hidden multiple></label>
+      <label>Wedstrijd <select id="anSel" class="pub" onchange="renderAnalyse()"></select></label>
+      <button class="btn" onclick="delAnalyse()">✕ Verwijder deze analyse</button>
+    </div>
+    <div id="anBody"></div>
+    <h3 class="sec" style="font-size:16px;margin-top:24px">📈 Ontwikkeling over het seizoen</h3>
+    <div id="anTrend" style="overflow:auto"></div>
   </section>
 
   <!-- ============ AGENDA (publiek) ============ -->
@@ -1070,6 +1092,7 @@ let fixtures=[];          // {date:"YYYY-MM-DD", time:"HH:MM", opponent:"", home
 let clubDuties=[];        // losse verenigingstaken jeugd: [{date, fluit:[], coord:[]}] — eigen datumlijst
 let trainings=[];         // vaste teamtrainingen: [{date, time, end, title}]
 let events=[];            // eigen agenda-activiteiten: [{date, time, title, note}]
+let analyses=[];          // wedstrijdanalyses (VEO): [{id,date,opp,tot:[...],half:[...]}]
 const PROGRAM_TRAININGS=[
   {date:"2026-08-03",time:"19:30",end:"21:30",title:"Eerste training"},
   {date:"2026-08-05",time:"19:00",end:"20:30",title:"Training"},
@@ -1532,6 +1555,125 @@ function renderSchedTable(){
     el.style.background="var(--bg2)";el.style.color="var(--txt)";
     el.style.border="1px solid var(--line)";el.style.borderRadius="6px";el.style.padding="5px 6px";el.style.fontSize="12.5px";
   });
+}
+
+/* ---------------- WEDSTRIJDANALYSE (VEO-import) ---------------- */
+const AN_KERN=["Doelpunten","Balbezit","Passnauwkeurigheid","Duelwinst","Schoten","Schoten op doel"];
+function anPct(v){ const n=parseFloat(v); return isNaN(n)?null:(n<=1?n*100:n); }
+function anFmt(v,unit){ if(v==null||v==="")return "–";
+  if(unit==="percentage"){ const p=anPct(v); return p==null?"–":(Math.round(p*10)/10).toFixed(1).replace(".",",")+"%"; }
+  const n=parseFloat(v); return isNaN(n)?String(v):String(Math.round(n*100)/100).replace(".",","); }
+// Zoekt in een werkblad de rij die begint met "Statistiek" en leest alles daaronder.
+function anRows(sheet){
+  const aoa=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});
+  let h=-1; for(let i=0;i<aoa.length;i++){ if(String((aoa[i]||[])[0]||"").trim().toLowerCase()==="statistiek"){ h=i; break; } }
+  if(h<0) return {head:[],rows:[]};
+  return {head:(aoa[h]||[]).map(x=>x==null?"":String(x).trim()),
+          rows:aoa.slice(h+1).filter(r=>r&&r[0]!=null&&String(r[0]).trim()!=="")};
+}
+function importAnalyse(ev){
+  const files=[...(ev.target.files||[])]; if(!files.length) return;
+  if(typeof XLSX==="undefined"){ alert("De Excel-lezer is nog niet geladen. Ververs de pagina en probeer opnieuw."); return; }
+  let done=0, added=0;
+  files.forEach(file=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+        const nameTot=wb.SheetNames.find(s=>/wedstrijdtotaal/i.test(s));
+        if(!nameTot) throw new Error("Geen tabblad 'Wedstrijdtotaal' gevonden.");
+        const T=anRows(wb.Sheets[nameTot]);
+        const opp=(T.head[2]||"Tegenstander").replace(/^ST\s+/,"").trim();
+        const tot=T.rows.map(r=>({stat:String(r[0]).trim(), us:r[1], them:r[2], unit:String(r[4]||"aantal"), conf:String(r[5]||"")}));
+        let half=[];
+        const nameH=wb.SheetNames.find(s=>/per helft/i.test(s));
+        if(nameH){ const H=anRows(wb.Sheets[nameH]);
+          half=H.rows.map(r=>({stat:String(r[0]).trim(), us1:r[1], them1:r[2], us2:r[3], them2:r[4], unit:String(r[5]||"aantal")})); }
+        // Bij welke wedstrijd hoort dit? Zoek op tegenstandernaam in het programma.
+        const key=opp.toLowerCase().split(/\s+/)[0];
+        let fx=(fixtures||[]).map((f,i)=>({f,i})).filter(x=>x.f&&x.f.opponent&&x.f.opponent.toLowerCase().includes(key));
+        const match=fx.length?fx[0].f:null;
+        const g=tot.find(x=>/doelpunten/i.test(x.stat))||{};
+        const an={ id:uid(), date:(match&&match.date)||todayStr(), opp:opp,
+                   home:match?match.home:null, us:+g.us||0, them:+g.them||0,
+                   file:file.name, tot:tot, half:half };
+        const bestaand=analyses.findIndex(a=>a.date===an.date && a.opp===an.opp);
+        if(bestaand>=0) analyses[bestaand]=an; else analyses.push(an);
+        analyses.sort((a,b)=>a.date<b.date?1:-1);
+        added++;
+      }catch(err){ console.warn(err); alert("Kon "+file.name+" niet lezen: "+err.message); }
+      if(++done===files.length){
+        fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+        if(typeof persistLocal==="function") persistLocal();
+        if(typeof scheduleSave==="function") scheduleSave();
+        if(added) flash(added+" analyse(s) geïmporteerd ✓");
+      }
+    };
+    r.readAsArrayBuffer(file);
+  });
+  ev.target.value="";
+}
+function fillAnalyseSel(reset){
+  const s=document.getElementById("anSel"); if(!s)return; const cur=s.value;
+  s.innerHTML=analyses.map((a,i)=>`<option value="${i}">${new Date(a.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})} — ${a.opp} (${a.us}–${a.them})</option>`).join("");
+  if(!reset && cur!=="" && s.querySelector('option[value="'+cur+'"]')) s.value=cur; else s.value="0";
+}
+function curAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:0; return analyses[i]||null; }
+function delAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:-1; const a=analyses[i]; if(!a){ alert("Geen analyse geselecteerd."); return; }
+  if(!confirm("Analyse van "+a.opp+" verwijderen?")) return;
+  analyses.splice(i,1); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+  if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
+function renderAnalyse(){
+  const w=document.getElementById("anBody"); if(!w)return;
+  const a=curAnalyse();
+  if(!a){ w.innerHTML='<p class="hint">Nog geen analyses. Klik op <b>Analyse importeren</b> en kies je Excel-bestand van de wedstrijd.</p>'; return; }
+  const tu=a.home===true?"thuis":a.home===false?"uit":"";
+  const win=a.us>a.them?"var(--green)":a.us<a.them?"var(--red)":"var(--gold)";
+  const kern=AN_KERN.map(k=>a.tot.find(x=>x.stat.toLowerCase()===k.toLowerCase())).filter(Boolean);
+  let h=`<div class="teamcard" style="margin-bottom:14px">
+      <h3 style="margin:0 0 4px">S.C. Stiens VR1 — ${a.opp} ${tu?`<span class="mini">(${tu})</span>`:""}</h3>
+      <div style="font-size:26px;font-weight:800;color:${win}">${a.us} – ${a.them}</div>
+      <div class="mini">${new Date(a.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+    </div>
+    <div class="teamgrid" style="margin-bottom:16px">`;
+  kern.forEach(k=>{ const us=k.unit==="percentage"?anPct(k.us):parseFloat(k.us), them=k.unit==="percentage"?anPct(k.them):parseFloat(k.them);
+    const beter=(us>them);
+    h+=`<div class="teamcard"><h3 style="font-size:12px;margin:0 0 6px">${k.stat}</h3>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:22px;font-weight:800;color:${beter?'var(--green)':'var(--txt)'}">${anFmt(k.us,k.unit)}</span>
+        <span class="mini">tegen ${anFmt(k.them,k.unit)}</span></div></div>`; });
+  h+=`</div><h3 class="sec" style="font-size:15px">Alle teamcijfers</h3><div style="overflow:auto"><table>
+      <tr><th>Statistiek</th><th class="center">Stiens</th><th class="center">${a.opp}</th><th class="center">Eenheid</th><th class="center">Betrouwbaarheid</th></tr>`+
+    a.tot.map(x=>{ const us=x.unit==="percentage"?anPct(x.us):parseFloat(x.us), them=x.unit==="percentage"?anPct(x.them):parseFloat(x.them);
+      const c=us>them?"var(--green)":us<them?"var(--red)":"var(--txt)";
+      return `<tr><td>${x.stat}</td><td class="center"><b style="color:${c}">${anFmt(x.us,x.unit)}</b></td>
+        <td class="center">${anFmt(x.them,x.unit)}</td><td class="center mini">${x.unit}</td>
+        <td class="center mini">${x.conf||"–"}</td></tr>`; }).join("")+`</table></div>`;
+  if(a.half&&a.half.length){
+    h+=`<h3 class="sec" style="font-size:15px;margin-top:20px">Eerste helft vs. tweede helft</h3><div style="overflow:auto"><table>
+      <tr><th>Statistiek</th><th class="center">Stiens 1e</th><th class="center">Stiens 2e</th><th class="center">Δ</th>
+          <th class="center">${a.opp} 1e</th><th class="center">${a.opp} 2e</th></tr>`+
+      a.half.map(x=>{ const p=x.unit==="percentage";
+        const u1=p?anPct(x.us1):parseFloat(x.us1), u2=p?anPct(x.us2):parseFloat(x.us2);
+        let d="—"; if(!isNaN(u1)&&!isNaN(u2)){ const df=Math.round((u2-u1)*10)/10;
+          d=df>0?`<span style="color:var(--green)">▲ +${String(df).replace(".",",")}</span>`:df<0?`<span style="color:var(--red)">▼ ${String(df).replace(".",",")}</span>`:"0"; }
+        return `<tr><td>${x.stat}</td><td class="center">${anFmt(x.us1,x.unit)}</td><td class="center">${anFmt(x.us2,x.unit)}</td>
+          <td class="center">${d}</td><td class="center mini">${anFmt(x.them1,x.unit)}</td><td class="center mini">${anFmt(x.them2,x.unit)}</td></tr>`; }).join("")+`</table></div>`;
+  }
+  w.innerHTML=h;
+}
+function renderAnTrend(){
+  const w=document.getElementById("anTrend"); if(!w)return;
+  if(analyses.length<1){ w.innerHTML='<p class="hint">Zodra je meerdere wedstrijden hebt geïmporteerd, zie je hier de ontwikkeling.</p>'; return; }
+  const KEYS=[["Balbezit","%"],["Passnauwkeurigheid","%"],["Duelwinst","%"],["Schoten",""],["Schoten op doel",""]];
+  const list=analyses.slice().sort((a,b)=>a.date<b.date?-1:1);
+  w.innerHTML=`<table><tr><th>Wedstrijd</th><th class="center">Uitslag</th>`+
+    KEYS.map(k=>`<th class="center">${k[0]}</th>`).join("")+`</tr>`+
+    list.map(a=>{ const cells=KEYS.map(k=>{ const s=a.tot.find(x=>x.stat.toLowerCase()===k[0].toLowerCase());
+        return `<td class="center">${s?anFmt(s.us,s.unit):"–"}</td>`; }).join("");
+      const win=a.us>a.them?"var(--green)":a.us<a.them?"var(--red)":"var(--gold)";
+      return `<tr><td class="mini">${new Date(a.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — <b>${a.opp}</b></td>
+        <td class="center"><b style="color:${win}">${a.us}–${a.them}</b></td>${cells}</tr>`; }).join("")+`</table>`;
 }
 
 /* ---------------- ICS CALENDAR EXPORT ---------------- */
@@ -2327,15 +2469,16 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS}; }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
   if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
   if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
   if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
-  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
+  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
-  localStorage.setItem("scstiens_people",JSON.stringify({players:PLAYERS,staff:STAFF,duos:DUOS,tokens:MOOD_TOKENS})); }catch(e){} }
+  localStorage.setItem("scstiens_people",JSON.stringify({players:PLAYERS,staff:STAFF,duos:DUOS,tokens:MOOD_TOKENS}));
+  localStorage.setItem("scstiens_analyses",JSON.stringify(analyses)); }catch(e){} }
 // Herstel telefoonnummers uit de lokale back-up als de cloud ze (nog) mist (alleen voor staf).
 function recoverPhonesFromLocal(){ if(!isStaff) return;
   try{ const bak=JSON.parse(localStorage.getItem("scstiens_phones_bak"))||{};
@@ -2359,6 +2502,7 @@ function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
+  fillAnalyseSel(); renderAnalyse(); renderAnTrend();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -2471,6 +2615,8 @@ try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.is
 try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
 try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
 try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)){ events=le; renderAgenda(); } }catch(e){}
+try{ const la=JSON.parse(localStorage.getItem("scstiens_analyses")); if(Array.isArray(la)) analyses=la; }catch(e){}
+fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
 seedSeasonTrainings(); cleanTrainingClashes(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
