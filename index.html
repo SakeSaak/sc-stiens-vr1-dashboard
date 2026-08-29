@@ -214,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-p</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-q</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1623,6 +1623,60 @@ function delAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.va
   if(!confirm("Analyse van "+a.opp+" verwijderen?")) return;
   analyses.splice(i,1); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
   if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
+// Samenhangende cijfers samenvoegen tot één regel: "238 / 448 (53,1%)" i.p.v. vier losse regels.
+function anVal(a,naam){ const s=(a.tot||[]).find(x=>x.stat.toLowerCase()===naam.toLowerCase()); return s||null; }
+function anNum(a,naam,wie){ const s=anVal(a,naam); if(!s)return null; const v=parseFloat(wie==="them"?s.them:s.us); return isNaN(v)?null:v; }
+function anPctOf(a,naam,wie){ const s=anVal(a,naam); if(!s)return null; return anPct(wie==="them"?s.them:s.us); }
+function anNum0(v){ return v==null?"–":String(Math.round(v)); }
+function anPctTxt(p){ return p==null?"–":(Math.round(p*10)/10).toFixed(1).replace(".",",")+"%"; }
+// Bouwt per groep de regels: [label, waarde-voor-ons, waarde-tegenstander, ons-getal-voor-kleur, hun-getal]
+function anGroepen(a){
+  const g=(n,w)=>anNum(a,n,w), p=(n,w)=>anPctOf(a,n,w);
+  const duel=w=>{ const gew=g("Gewonnen duels",w), verl=g("Verloren duels",w);
+    return (gew==null||verl==null)?null:{gew,tot:gew+verl,pct:p("Duelwinst",w)}; };
+  const pas=w=>{ const ok=g("Geslaagde passes",w), tot=g("Passes",w);
+    return (ok==null||tot==null)?null:{ok,tot,pct:p("Passnauwkeurigheid",w)}; };
+  const sch=w=>({tot:g("Schoten",w), op:g("Schoten op doel",w)});
+  const rij=(lbl,fu,ft,nu,nt)=>({lbl,us:fu,them:ft,nu,nt});
+  const groepen=[];
+  // Aanvallend
+  const sU=sch("us"), sT=sch("them");
+  groepen.push({titel:"⚽ Aanvallend", rijen:[
+    rij("Doelpunten", anNum0(g("Doelpunten","us")), anNum0(g("Doelpunten","them")), g("Doelpunten","us"), g("Doelpunten","them")),
+    rij("Schoten (op doel)", anNum0(sU.tot)+(sU.op!=null?" ("+anNum0(sU.op)+")":""), anNum0(sT.tot)+(sT.op!=null?" ("+anNum0(sT.op)+")":""), sU.tot, sT.tot),
+    rij("Dribbels", anNum0(g("Dribbels","us")), anNum0(g("Dribbels","them")), g("Dribbels","us"), g("Dribbels","them")),
+  ].filter(r=>r.us!=="–"||r.them!=="–")});
+  // Opbouw
+  const pU=pas("us"), pT=pas("them");
+  groepen.push({titel:"🔄 Opbouw &amp; balbezit", rijen:[
+    rij("Balbezit", anPctTxt(p("Balbezit","us")), anPctTxt(p("Balbezit","them")), p("Balbezit","us"), p("Balbezit","them")),
+    pU&&pT? rij("Passes geslaagd", pU.ok+" / "+pU.tot+" ("+anPctTxt(pU.pct)+")", pT.ok+" / "+pT.tot+" ("+anPctTxt(pT.pct)+")", pU.pct, pT.pct) : null,
+  ].filter(Boolean)});
+  // Duels & verdedigen
+  const dU=duel("us"), dT=duel("them");
+  groepen.push({titel:"🛡️ Duels &amp; verdedigen", rijen:[
+    dU&&dT? rij("Duels gewonnen", dU.gew+" / "+dU.tot+" ("+anPctTxt(dU.pct)+")", dT.gew+" / "+dT.tot+" ("+anPctTxt(dT.pct)+")", dU.pct, dT.pct) : null,
+    rij("Tackles", anNum0(g("Tackles","us")), anNum0(g("Tackles","them")), g("Tackles","us"), g("Tackles","them")),
+    rij("Onderscheppingen", anNum0(g("Onderscheppingen","us")), anNum0(g("Onderscheppingen","them")), g("Onderscheppingen","us"), g("Onderscheppingen","them")),
+    rij("Reddingen keeper", anNum0(g("Reddingen","us")), anNum0(g("Reddingen","them")), g("Reddingen","us"), g("Reddingen","them")),
+    rij("Overtredingen", anNum0(g("Overtredingen","us")), anNum0(g("Overtredingen","them")), null, null),
+  ].filter(Boolean)});
+  // Spelhervattingen
+  groepen.push({titel:"🚩 Spelhervattingen", rijen:[
+    rij("Corners", anNum0(g("Corners","us")), anNum0(g("Corners","them")), g("Corners","us"), g("Corners","them")),
+    rij("Ingooien", anNum0(g("Ingooien","us")), anNum0(g("Ingooien","them")), null, null),
+    rij("Vrije trappen", anNum0(g("Vrije trappen","us")), anNum0(g("Vrije trappen","them")), null, null),
+    rij("Doeltrappen", anNum0(g("Doeltrappen","us")), anNum0(g("Doeltrappen","them")), null, null),
+  ]});
+  return groepen.filter(x=>x.rijen.length);
+}
+function anGroepTabel(a){
+  return anGroepen(a).map(gr=>`<h3 class="sec" style="font-size:14px;margin:16px 0 6px">${gr.titel}</h3>
+    <div style="overflow:auto"><table><tr><th>&nbsp;</th><th class="center">Stiens</th><th class="center">${a.opp}</th></tr>`+
+    gr.rijen.map(r=>{ const c=(r.nu!=null&&r.nt!=null)?(r.nu>r.nt?"var(--green)":r.nu<r.nt?"var(--red)":"var(--txt)"):"var(--txt)";
+      return `<tr><td>${r.lbl}</td><td class="center"><b style="color:${c}">${r.us}</b></td><td class="center">${r.them}</td></tr>`;
+    }).join("")+`</table></div>`).join("");
+}
 function renderAnalyse(){
   const w=document.getElementById("anBody"); if(!w)return;
   const a=curAnalyse();
@@ -1642,23 +1696,30 @@ function renderAnalyse(){
       <div style="display:flex;justify-content:space-between;align-items:baseline">
         <span style="font-size:22px;font-weight:800;color:${beter?'var(--green)':'var(--txt)'}">${anFmt(k.us,k.unit)}</span>
         <span class="mini">tegen ${anFmt(k.them,k.unit)}</span></div></div>`; });
-  h+=`</div><h3 class="sec" style="font-size:15px">Alle teamcijfers</h3><div style="overflow:auto"><table>
-      <tr><th>Statistiek</th><th class="center">Stiens</th><th class="center">${a.opp}</th><th class="center">Eenheid</th><th class="center">Betrouwbaarheid</th></tr>`+
+  h+=`</div>`+anGroepTabel(a)+
+     `<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--gold);font-size:13px">Alle losse cijfers tonen</summary>
+      <div style="overflow:auto;margin-top:8px"><table>
+      <tr><th>Statistiek</th><th class="center">Stiens</th><th class="center">${a.opp}</th><th class="center">Betrouwbaarheid</th></tr>`+
     a.tot.map(x=>{ const us=x.unit==="percentage"?anPct(x.us):parseFloat(x.us), them=x.unit==="percentage"?anPct(x.them):parseFloat(x.them);
       const c=us>them?"var(--green)":us<them?"var(--red)":"var(--txt)";
       return `<tr><td>${x.stat}</td><td class="center"><b style="color:${c}">${anFmt(x.us,x.unit)}</b></td>
-        <td class="center">${anFmt(x.them,x.unit)}</td><td class="center mini">${x.unit}</td>
-        <td class="center mini">${x.conf||"–"}</td></tr>`; }).join("")+`</table></div>`;
+        <td class="center">${anFmt(x.them,x.unit)}</td><td class="center mini">${x.conf||"–"}</td></tr>`; }).join("")+`</table></div></details>`;
   if(a.half&&a.half.length){
-    h+=`<h3 class="sec" style="font-size:15px;margin-top:20px">Eerste helft vs. tweede helft</h3><div style="overflow:auto"><table>
+    const KERN_H=["doelpunten","balbezit","passnauwkeurigheid","duelwinst","schoten","schoten op doel"];
+    const kernRijen=a.half.filter(x=>KERN_H.includes(x.stat.toLowerCase()));
+    const maakTabel=rows=>`<div style="overflow:auto"><table>
       <tr><th>Statistiek</th><th class="center">Stiens 1e</th><th class="center">Stiens 2e</th><th class="center">Δ</th>
           <th class="center">${a.opp} 1e</th><th class="center">${a.opp} 2e</th></tr>`+
-      a.half.map(x=>{ const p=x.unit==="percentage";
+      rows.map(x=>{ const p=x.unit==="percentage";
         const u1=p?anPct(x.us1):parseFloat(x.us1), u2=p?anPct(x.us2):parseFloat(x.us2);
         let d="—"; if(!isNaN(u1)&&!isNaN(u2)){ const df=Math.round((u2-u1)*10)/10;
           d=df>0?`<span style="color:var(--green)">▲ +${String(df).replace(".",",")}</span>`:df<0?`<span style="color:var(--red)">▼ ${String(df).replace(".",",")}</span>`:"0"; }
         return `<tr><td>${x.stat}</td><td class="center">${anFmt(x.us1,x.unit)}</td><td class="center">${anFmt(x.us2,x.unit)}</td>
           <td class="center">${d}</td><td class="center mini">${anFmt(x.them1,x.unit)}</td><td class="center mini">${anFmt(x.them2,x.unit)}</td></tr>`; }).join("")+`</table></div>`;
+    h+=`<h3 class="sec" style="font-size:15px;margin-top:20px">Eerste helft vs. tweede helft</h3>`
+      + maakTabel(kernRijen.length?kernRijen:a.half)
+      + `<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--gold);font-size:13px">Alle cijfers per helft tonen</summary>
+         <div style="margin-top:8px">`+maakTabel(a.half)+`</div></details>`;
   }
   w.innerHTML=h;
 }
