@@ -214,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-q</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-r</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -526,10 +526,18 @@
       Deze taken staan <b>los van de wedstrijden van VR1</b> — de vereniging levert hiervoor een eigen schema aan. Voeg de datums toe
       zodra ze bekend zijn en klik op <b>Verdeel verenigingstaken</b>. Ze worden eerlijk geroteerd, <b>speelsters zonder auto/rijbewijs
       krijgen voorrang</b> (zodat het rijden voor de rest eerlijk blijft), Amber doet geen fluiten (wel coördinatie), en afwezigheid telt mee.
+      <br>Het <b>wedstrijdcoördinaat-schema van de vereniging</b> is bekend: VR1 is aan de beurt op <b>3 okt, 13 feb en 29 mei</b> (08:00–12:00).
+      Klik op <b>Laad coördinaatschema VR1</b> om die datums toe te voegen. Het <b>fluitschema</b> volgt nog — met <b>Soort</b> geef je per datum aan
+      of het om fluiten, coördinaat of beide gaat.
     </div>
     <div class="controls">
       <label>Datum toevoegen <input type="date" id="clubDate"></label>
+      <label>Soort <select id="clubType">
+        <option value="both">beide</option>
+        <option value="fluit">alleen fluiten</option>
+        <option value="coord">alleen coördinaat</option></select></label>
       <label>&nbsp;<button class="btn" onclick="addClubDate()">➕ Toevoegen</button></label>
+      <label>&nbsp;<button class="btn" onclick="loadCoordSchedule()" title="3 okt, 13 feb en 29 mei — de beurten van VR1">📋 Laad coördinaatschema VR1</button></label>
       <label>&nbsp;<button class="btn primary" onclick="assignClubDuties()">⚖️ Verdeel verenigingstaken</button></label>
       <label>&nbsp;<button class="btn" onclick="reassignClubDuties()">🔄 Alles opnieuw</button></label>
     </div>
@@ -1295,9 +1303,11 @@ function renderAgenda(){
     if(f.home===true && f.food&&f.food.length) parts.push("🍝 "+f.food.join(" & "));
     items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · "),src:"fix",i});
   });
-  (clubDuties||[]).forEach((c,i)=>{ if(!c||!c.date)return; const parts=[];
+  (clubDuties||[]).forEach((c,i)=>{ if(!c||!c.date)return; const parts=[]; const ty=(typeof clubType==="function")?clubType(c):"both";
     if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")); if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
-    items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak jeugd",title:"Fluiten / coördinatie",det:parts.join(" · "),src:"club",i});
+    if(c.time)parts.push(c.time);
+    const titel = ty==="coord"?"Wedstrijdcoördinaat" : ty==="fluit"?"Fluiten jeugd" : "Fluiten / coördinatie";
+    items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak",title:titel,det:parts.join(" · "),src:"club",i});
   });
   (events||[]).forEach((e,i)=>{ if(!e||!e.date)return;
     items.push({date:e.date,time:e.time||"",icon:"📌",cat:"Activiteit",title:e.title||"Activiteit",det:e.note||"",src:"event",i}); });
@@ -2142,8 +2152,27 @@ function remindTask(n,code,fi){
 function addClubDate(){
   const el=document.getElementById("clubDate"); const d=el&&el.value; if(!d){ alert("Kies een datum."); return; }
   if(clubDuties.some(x=>x.date===d)){ alert("Die datum staat er al in."); return; }
-  clubDuties.push({date:d,fluit:[],coord:[]}); clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+  const ty=(document.getElementById("clubType")||{}).value||"both";
+  clubDuties.push({date:d,type:ty,fluit:[],coord:[]}); clubDuties.sort((a,b)=>a.date<b.date?-1:1);
   if(el)el.value=""; renderClubDuties(); scheduleSave();
+}
+function clubType(d){ return d.type||"both"; }        // oude regels zonder type = beide taken
+function setClubType(i,v){ if(clubDuties[i]){ clubDuties[i].type=v;
+  if(v==="coord") clubDuties[i].fluit=[]; if(v==="fluit") clubDuties[i].coord=[];
+  renderClubDuties(); if(typeof renderAgenda==="function") renderAgenda(); scheduleSave(); } }
+// Wedstrijdcoördinaat-schema van de vereniging (seizoen 2026/2027) — de beurten van VR1.
+const COORD_VR1=["2026-10-03","2027-02-13","2027-05-29"];
+function loadCoordSchedule(){
+  let added=0;
+  COORD_VR1.forEach(d=>{
+    const best=clubDuties.find(x=>x.date===d);
+    if(best){ best.type="coord"; best.time="08:00 - 12:00"; }
+    else { clubDuties.push({date:d,type:"coord",time:"08:00 - 12:00",fluit:[],coord:[]}); added++; }
+  });
+  clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+  renderClubDuties(); if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof persistLocal==="function") persistLocal(); scheduleSave();
+  flash(added?(added+" coördinaatbeurten toegevoegd ✓"):"Beurten stonden er al");
 }
 function delClubDate(i){ clubDuties.splice(i,1); renderClubDuties(); scheduleSave(); }
 function assignClubDuties(){
@@ -2158,9 +2187,11 @@ function assignClubDuties(){
   }
   function keep(arr,key,idx,used){ if(!(arr&&arr.length))return false; arr.forEach(n=>{ if(cnt[n]){cnt[n][key]++;cnt[n].tot++;last[n]=idx;used.add(n);} }); return true; }
   clubDuties.sort((a,b)=>a.date<b.date?-1:1);
-  clubDuties.forEach((d,idx)=>{ const used=new Set();
-    if(!keep(d.fluit,"fluit",idx,used)){ const f=pick(fluitPool,used,"fluit",idx,d.date); d.fluit=f?[f]:[]; }
-    if(!keep(d.coord,"coord",idx,used)){ const c=pick(coordPool,used,"coord",idx,d.date); d.coord=c?[c]:[]; }
+  clubDuties.forEach((d,idx)=>{ const used=new Set(); const ty=clubType(d);
+    if(ty==="fluit"||ty==="both"){ if(!keep(d.fluit,"fluit",idx,used)){ const f=pick(fluitPool,used,"fluit",idx,d.date); d.fluit=f?[f]:[]; } }
+    else d.fluit=[];
+    if(ty==="coord"||ty==="both"){ if(!keep(d.coord,"coord",idx,used)){ const c=pick(coordPool,used,"coord",idx,d.date); d.coord=c?[c]:[]; } }
+    else d.coord=[];
   });
   renderClubDuties(); scheduleSave(); flash("Verenigingstaken verdeeld — bestaande behouden ✓");
 }
@@ -2174,13 +2205,20 @@ function remindClub(n,code,ci){ const d=clubDuties[ci]; if(!d)return;
 function renderClubDuties(){
   const w=document.getElementById("clubTable"); if(!w)return;
   if(!clubDuties.length){ w.innerHTML='<p class="hint">Nog geen data. Voeg hierboven de datums toe zodra het verenigingsschema bekend is, en klik op <b>Verdeel verenigingstaken</b>.</p>'; return; }
-  w.innerHTML=`<table><tr><th>Datum</th><th>🔔 Fluiten</th><th></th><th>📋 Wedstr.coörd.</th><th></th><th></th></tr>`+
-    clubDuties.map((d,i)=>{ const fl=(d.fluit&&d.fluit[0])||"", co=(d.coord&&d.coord[0])||"";
+  const KIN2='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px';
+  w.innerHTML=`<table><tr><th>Datum</th><th class="center">Soort</th><th>🔔 Fluiten</th><th></th><th>📋 Wedstr.coörd.</th><th></th><th></th></tr>`+
+    clubDuties.map((d,i)=>{ const fl=(d.fluit&&d.fluit[0])||"", co=(d.coord&&d.coord[0])||""; const ty=clubType(d);
       const wa=(n,code)=>n?`<button class="btn" style="padding:3px 8px;background:#25D366;color:#0b3d1e;border-color:#25D366" onclick="remindClub('${n.replace(/'/g,"\\'")}','${code}',${i})">WhatsApp</button>`:'';
+      const nvt='<span class="mini">n.v.t.</span>';
       return `<tr>
-        <td>${new Date(d.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}</td>
-        <td><b>${fl||'—'}</b></td><td>${wa(fl,"fluit")}</td>
-        <td><b>${co||'—'}</b></td><td>${wa(co,"coord")}</td>
+        <td>${new Date(d.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
+            ${d.time?`<div class="mini">${d.time}</div>`:''}</td>
+        <td class="center"><select onchange="setClubType(${i},this.value)" style="${KIN2}">
+            <option value="both" ${ty==="both"?"selected":""}>beide</option>
+            <option value="fluit" ${ty==="fluit"?"selected":""}>alleen fluiten</option>
+            <option value="coord" ${ty==="coord"?"selected":""}>alleen coörd.</option></select></td>
+        <td>${ty==="coord"?nvt:`<b>${fl||'—'}</b>`}</td><td>${ty==="coord"?'':wa(fl,"fluit")}</td>
+        <td>${ty==="fluit"?nvt:`<b>${co||'—'}</b>`}</td><td>${ty==="fluit"?'':wa(co,"coord")}</td>
         <td><button class="del" onclick="delClubDate(${i})" title="datum verwijderen">×</button></td></tr>`;
     }).join("")+`</table>`;
 }
