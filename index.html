@@ -194,6 +194,9 @@
   .taskchip .x{cursor:pointer;color:var(--muted);font-size:11px}
   .taskchip .x:hover{color:var(--red)}
   .taskadd{font-size:11px !important;padding:2px 4px !important;opacity:.7}
+  .awaycell{display:flex;flex-direction:column;gap:4px;min-width:290px}
+  .awayrow{display:flex;align-items:center;gap:5px}
+  .awayrow .del{padding:0 6px;line-height:1.4}
 </style>
 </head>
 <body>
@@ -214,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-v</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-w</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1064,6 +1067,23 @@ function importData(ev){
 }
 
 /* ---------------- SQUAD TABLE ---------------- */
+// Afwezigheid: nette periodes met begin- en einddatum, meerdere per speelster.
+function awayCell(naam){
+  const nEsc=naam.replace(/'/g,"\\'");
+  const D='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:11.5px';
+  const ps=getAwayPeriods(naam);
+  const dagen=p=>{ if(!p.from) return ""; const a=new Date(p.from+"T00:00:00"), b=new Date((p.to||p.from)+"T00:00:00");
+    const d=Math.round((b-a)/86400000)+1; return d>0?(d===1?"1 dag":d+" dagen"):""; };
+  const rows=ps.map((p,i)=>`<div class="awayrow">
+      <input type="date" value="${p.from||''}" title="van" onchange="setAwayPeriod('${nEsc}',${i},'from',this.value)" style="${D}">
+      <span class="mini">t/m</span>
+      <input type="date" value="${p.to||''}" title="tot en met" min="${p.from||''}" onchange="setAwayPeriod('${nEsc}',${i},'to',this.value)" style="${D}">
+      <span class="mini" style="min-width:56px">${dagen(p)}</span>
+      <button class="del" title="periode verwijderen" onclick="delAwayPeriod('${nEsc}',${i})">×</button>
+    </div>`).join("");
+  return `<div class="awaycell">${rows||'<span class="mini">altijd beschikbaar</span>'}
+    <button class="btn" style="padding:2px 8px;font-size:11px" onclick="addAwayPeriod('${nEsc}')">+ periode</button></div>`;
+}
 function renderSquad(){
   const t=document.getElementById("squadTable"); if(!t)return;
   const IN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px';
@@ -1077,8 +1097,7 @@ function renderSquad(){
           <option value="staf" ${staf?'selected':''}>Staf</option></select></td>
       <td><input type="text" value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${p.n.replace(/'/g,"\\'")}',this.value)" onchange="scheduleSave()"
           style="width:120px;${IN}"></td>
-      <td><input type="text" value="${((store[p.n]&&store[p.n].away)||'').replace(/"/g,'&quot;')}" placeholder="bv. 22-08, 05-09..12-09" oninput="setAway('${p.n.replace(/'/g,"\\'")}',this.value)" onchange="scheduleSave()"
-          style="width:160px;${IN}"></td>
+      <td>${awayCell(p.n)}</td>
       ${staf
         ? `<td colspan="5" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:180px;${IN}">
              <span style="margin-left:8px">Staf doet mee met eten &amp; kas, niet met taken en FIFA-kaartjes.</span></td>`
@@ -1092,7 +1111,7 @@ function renderSquad(){
                <option value="nee" ${(!p.car&&!(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>❌ geen rijbewijs</option></select></td>`}
       <td class="center"><button class="del" title="verwijderen" onclick="delPerson('${rol}',${i})">×</button></td></tr>`;
   };
-  t.innerHTML=`<tr><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig (data)</th>
+  t.innerHTML=`<tr><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig van – tot</th>
       <th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th><th class="center">Pos</th><th class="center">Rijden</th><th class="center"></th></tr>`
     + PLAYERS.map((p,i)=>rij(p,"speelster",i)).join("")
     + STAFF.map((p,i)=>rij(p,"staf",i)).join("");
@@ -1423,8 +1442,40 @@ function normDate(s){ s=(s||"").trim(); let m;
   if(m=s.match(/^(\d{1,2})[-\/](\d{1,2})$/)){ const dd=m[1].padStart(2,"0"), mm=m[2].padStart(2,"0"); const yr=(+mm>=7)?"2026":"2027"; return yr+"-"+mm+"-"+dd; }
   return null;
 }
+/* ---- Afwezigheid als nette periodes: [{from:"YYYY-MM-DD", to:"YYYY-MM-DD", reden:""}] ---- */
+// Bestaande vrije tekst ("22-08, 05-09..12-09") wordt automatisch omgezet naar periodes.
+function getAwayPeriods(n){
+  store[n]=store[n]||{stats:{},note:""};
+  if(!Array.isArray(store[n].awayPeriods)){
+    const raw=(store[n].away||"").trim(); const out=[];
+    raw.split(",").forEach(tok=>{ tok=tok.trim(); if(!tok)return;
+      const p=tok.split(".."); const a=normDate(p[0]); const b=p[1]?normDate(p[1]):a;
+      if(a) out.push({from:a,to:b||a,reden:""}); });
+    store[n].awayPeriods=out;
+  }
+  return store[n].awayPeriods;
+}
+// Houd het tekstveld in sync — de agenda-functie op de server leest die nog.
+function syncAwayText(n){
+  const ps=getAwayPeriods(n).filter(p=>p&&p.from);
+  store[n].away=ps.map(p=>(p.to&&p.to!==p.from)?(p.from+".."+p.to):p.from).join(", ");
+}
+function addAwayPeriod(n){ getAwayPeriods(n).push({from:todayStr(),to:todayStr(),reden:""}); syncAwayText(n); afterAwayChange(n); }
+function delAwayPeriod(n,i){ const ps=getAwayPeriods(n); ps.splice(i,1); syncAwayText(n); afterAwayChange(n); }
+function setAwayPeriod(n,i,key,val){ const p=getAwayPeriods(n)[i]; if(!p)return; p[key]=val;
+  if(key==="from" && (!p.to || p.to<p.from)) p.to=p.from;      // einddatum nooit vóór de begindatum
+  syncAwayText(n); afterAwayChange(n,true); }
+function afterAwayChange(n,stil){
+  if(!stil) renderSquad();
+  if(typeof renderBalance==="function") renderBalance();
+  if(typeof renderBel==="function") renderBel();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
 function isAbsent(n,dateStr){
   if(!dateStr) return false;
+  const ps=getAwayPeriods(n);
+  if(ps.length) return ps.some(p=>p&&p.from && dateStr>=p.from && dateStr<=(p.to||p.from));
   const raw=(store[n]&&store[n].away)||""; if(!raw) return false;
   return raw.split(",").some(tok=>{ tok=tok.trim(); if(!tok)return false;
     const parts=tok.split(".."); const a=normDate(parts[0]); const b=parts[1]?normDate(parts[1]):a;
@@ -1448,9 +1499,13 @@ function assignTasks(){
   const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
   const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // Amber fluit niet
   const carSet=new Set(drivers);
-  // Beschikbaarheid: wie een deel van het seizoen weg is, hoort naar verhouding minder taken te krijgen.
+  // Beschikbaarheid: pas bij een LANGE afwezigheid (meer dan een kwart van het seizoen) rekenen we
+  // naar verhouding. Een vakantie of een paar weken weg verandert niets aan het aantal taken.
   const avail=availCounts();
-  const belasting=x=>{ const a=avail[x]||0; return a>0 ? (pts[x]/a) : Infinity; };
+  const maxAvail=Math.max(...Object.values(avail),1);
+  const effAvail={}; PLAYERS.forEach(p=>{ const a=avail[p.n]||0;
+    effAvail[p.n] = (a >= maxAvail*LANG_AFWEZIG_GRENS) ? maxAvail : a; });
+  const belasting=x=>{ const a=effAvail[x]||0; return a>0 ? (pts[x]/a) : Infinity; };
   // Kies 1 speelster: (1) afwezigen weg, (2) minimum inhalen, (3) laagste belasting naar verhouding,
   // (4) wie dit klusje het minst deed, (5) niet-rijders voorrang bij verenigingstaken, (6) langst geen taak.
   function pickOne(pool,used,key,idx,o){ o=o||{};
@@ -1821,6 +1876,10 @@ function exportICS(){
   a.download="SC_Stiens_VR1_2026-2027.ics"; a.click();
   flash("Agenda geëxporteerd 📅");
 }
+// Vanaf welke aanwezigheid rekenen we naar verhouding? 0.75 = wie méér dan een kwart van het
+// seizoen mist (bv. een stage van een half jaar) krijgt naar rato minder taken. Korte afwezigheid
+// zoals een vakantie telt niet mee — dan doe je gewoon je normale aantal taken.
+const LANG_AFWEZIG_GRENS=0.75;
 // Hoeveel gebeurtenissen is iemand beschikbaar? Wie een half seizoen weg is (bv. stage),
 // hoeft ook maar de helft van de taken te doen — daarom rekenen we met taken per beschikbare beurt.
 function availCounts(){
@@ -1847,7 +1906,7 @@ function renderBalance(){
   const max=Math.max(...Object.values(totals),1);
   b.innerHTML=PLAYERS.map(p=>{
     const tot=totals[p.n], club=cc[p.n]?cc[p.n].tot:0, a=av[p.n]||0;
-    const deel=a<maxAv;                       // is deze speelster een deel van het seizoen weg?
+    const deel=a < maxAv*LANG_AFWEZIG_GRENS;  // alleen bij lange afwezigheid tonen
     return `<div class="bar-row"><div>${p.n}${p.car?'':' <span class="mini">(geen auto)</span>'}${deel?` <span class="mini" title="beschikbaar bij ${a} van ${maxAv} gebeurtenissen">(${a}/${maxAv} aanwezig)</span>`:''}</div>
       <div class="bar"><span style="width:${tot/max*100}%"></span></div>
       <div class="center"><b>${tot}</b>${club?` <span class="mini">(${club} ver.)</span>`:''}</div></div>`;
@@ -2655,7 +2714,8 @@ function applyStaffGate(){
   if(typeof renderAgenda==="function") renderAgenda();   // bewerkvelden tonen/verbergen na in- of uitloggen
 }
 function renderAll(){
-  PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n); });  // schoon blessures + ruim lege check-ins/metingen op
+  PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);
+    if(typeof getAwayPeriods==="function") getAwayPeriods(p.n); });  // schoon blessures, ruim lege check-ins op, zet afwezigheid om naar periodes
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
