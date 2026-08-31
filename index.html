@@ -214,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-t</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-u</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -425,6 +425,9 @@
       </label>
       <label>&nbsp;
         <button class="btn" onclick="rebalanceFrom()" title="Alles vóór deze datum blijft staan en telt mee; daarna wordt opnieuw en eerlijk verdeeld">♻️ Herverdeel vanaf datum</button>
+      </label>
+      <label>&nbsp;
+        <button class="btn" onclick="saveNow()">💾 Opslaan</button>
       </label>
       <label>&nbsp;
         <button class="btn" onclick="exportICS()">📅 Exporteer agenda (.ics)</button>
@@ -2645,8 +2648,15 @@ function renderAll(){
 }
 async function cloudLoad(){
   if(!CLOUD) return;
+  let ok=false;
   try{ const {data,error}=await sb.from("dashboard_state").select("data").eq("id","main").maybeSingle();
-    if(!error && data && data.data){ applyState(data.data); } }catch(e){ console.warn("cloudLoad",e); }
+    if(!error){ ok=true; if(data && data.data) applyState(data.data); }
+    else console.warn("cloudLoad",error);
+  }catch(e){ console.warn("cloudLoad",e); }
+  // Alleen opslaan toestaan als het ophalen écht gelukt is; anders zouden we goede data kunnen overschrijven.
+  _cloudReady=ok;
+  if(!ok && typeof setSaveStatus==="function"){ const el=document.getElementById("saveStatus");
+    if(el){ el.textContent="⚠ Gegevens niet geladen — niet opslaan, ververs de pagina"; el.className="savestat error"; } }
   recoverPhonesFromLocal(); healPhones();
 }
 let _lastSaveAt=0, _statusTimer=null;
@@ -2661,9 +2671,20 @@ function setSaveStatus(state){
   else if(state==="error"){ el.textContent="Niet opgeslagen ✗ — probeer opnieuw"; el.className="savestat error"; }
   else { el.textContent="Alle wijzigingen bewaard"; el.className="savestat"; }
 }
+let _cloudReady=false;   // pas opslaan als de gedeelde gegevens binnen zijn
+// Handmatig opslaan met duidelijke terugkoppeling.
+async function saveNow(){
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof CLOUD==="undefined" || !CLOUD){ flash("Lokaal opgeslagen ✓"); return; }
+  if(!isStaff){ alert("Log eerst in als staf om te kunnen opslaan."); return; }
+  if(!_cloudReady){ alert("De gedeelde gegevens zijn nog niet geladen. Ververs de pagina en probeer het opnieuw —\nzo voorkomen we dat de verdeling van het team wordt overschreven."); return; }
+  const ok=await cloudSave();
+  flash(ok?"Opgeslagen en gedeeld ✓":"Opslaan mislukt — probeer het nog eens");
+}
 async function cloudSave(){
   if(!CLOUD) return true;
   if(!isStaff) return false;
+  if(!_cloudReady){ console.warn("cloudSave geblokkeerd: gedeelde data nog niet geladen"); return false; }
   backupPhonesLocal();
   _lastSaveAt=Date.now(); setSaveStatus("saving");
   try{ const {error}=await sb.from("dashboard_state").upsert({id:"main",data:collectState(),updated_at:new Date().toISOString()});
@@ -2745,15 +2766,19 @@ seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 const _rb=document.getElementById("cfgRebalDate"); if(_rb && !_rb.value) _rb.value=cutoffDefault();
 PLAYERS.forEach(p=>computePlayerStats(p.n));
-renderCards(); renderSquad(); buildFixtures(); assignTasks();
+// EERST de opgeslagen gegevens laden — nooit eerst een leeg rooster bouwen, want dat kan
+// (bij een snelle wijziging) de echte verdeling in de cloud overschrijven.
+try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; } }catch(e){}
+try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)) clubDuties=lc; }catch(e){}
+try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)) trainings=lt; }catch(e){}
+try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)) events=le; }catch(e){}
+try{ const la=JSON.parse(localStorage.getItem("scstiens_analyses")); if(Array.isArray(la)) analyses=la; }catch(e){}
+if(!fixtures.length) buildFixtures();          // alleen bij een compleet lege start
+else if(typeof recomputeSched==="function") recomputeSched();   // balans uit de bewaarde verdeling
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();
+renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
 renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
-try{ const lf=JSON.parse(localStorage.getItem("scstiens_fixtures")); if(Array.isArray(lf)&&lf.length){ fixtures=lf; tasksAssigned=true; renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); } }catch(e){}
-try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArray(lc)){ clubDuties=lc; renderClubDuties(); } }catch(e){}
-try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)){ trainings=lt; renderTrainings(); } }catch(e){}
-try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)){ events=le; renderAgenda(); } }catch(e){}
-try{ const la=JSON.parse(localStorage.getItem("scstiens_analyses")); if(Array.isArray(la)) analyses=la; }catch(e){}
 fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
 seedSeasonTrainings(); cleanTrainingClashes(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
