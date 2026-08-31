@@ -214,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-r</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-s</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1435,7 +1435,9 @@ function assignTasks(){
   const minWash=+((document.getElementById("cfgMinWash")||{}).value||0);
   const minFood=+((document.getElementById("cfgMinFood")||{}).value||0);
   const pts={}, sub={}, lastAny={}, partner={};
-  PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
+  const cc0=(typeof clubCounts==="function")?clubCounts():{};
+  // Verenigingstaken tellen mee in het totaal: wie daar al veel doet, krijgt minder wedstrijdtaken.
+  PLAYERS.forEach(p=>{pts[p.n]=(cc0[p.n]?cc0[p.n].tot:0); sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.map(p=>p.n);                        // vlaggen: iedereen (ook Amber)
@@ -1472,7 +1474,9 @@ function assignTasks(){
       if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx,{date:D}); if(d)f.drive.push(d);} }  // rijden: eerlijke rotatie onder rijders
     }
   });
-  sched={pts,sub}; tasksAssigned=true;
+  // In sched bewaren we alléén de wedstrijdtaken; de verenigingstaken worden bij het tonen opgeteld.
+  const ptsMatch={}; PLAYERS.forEach(p=>{ ptsMatch[p.n]=(pts[p.n]||0)-(cc0[p.n]?cc0[p.n].tot:0); });
+  sched={pts:ptsMatch,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders(); renderAgenda();
   if(typeof persistLocal==="function") persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
@@ -1791,24 +1795,39 @@ function exportICS(){
   a.download="SC_Stiens_VR1_2026-2027.ics"; a.click();
   flash("Agenda geëxporteerd 📅");
 }
+// Verenigingstaken (fluiten & coördinaat) tellen ook als werk: 1 taak = 1 punt.
+function clubCounts(){
+  const c={}; PLAYERS.forEach(p=>c[p.n]={fluit:0,coord:0,tot:0});
+  (clubDuties||[]).forEach(d=>{ if(!d)return;
+    (d.fluit||[]).forEach(n=>{ if(c[n]){c[n].fluit++; c[n].tot++;} });
+    (d.coord||[]).forEach(n=>{ if(c[n]){c[n].coord++; c[n].tot++;} }); });
+  return c;
+}
 function renderBalance(){
-  const b=document.getElementById("balance");
-  const max=Math.max(...Object.values(sched.pts),1);
+  const b=document.getElementById("balance"); if(!b)return;
+  const cc=clubCounts();
+  const totals={}; PLAYERS.forEach(p=>{ totals[p.n]=(sched.pts[p.n]||0)+(cc[p.n]?cc[p.n].tot:0); });
+  const max=Math.max(...Object.values(totals),1);
   b.innerHTML=PLAYERS.map(p=>{
-    const s=sched.sub[p.n], tot=sched.pts[p.n];
+    const tot=totals[p.n], club=cc[p.n]?cc[p.n].tot:0;
     return `<div class="bar-row"><div>${p.n}${p.car?'':' <span class="mini">(geen auto)</span>'}</div>
       <div class="bar"><span style="width:${tot/max*100}%"></span></div>
-      <div class="center"><b>${tot}</b></div></div>`;
+      <div class="center"><b>${tot}</b>${club?` <span class="mini">(${club} ver.)</span>`:''}</div></div>`;
   }).join("");
 }
 function renderPerPlayer(){
-  const t=document.getElementById("perPlayer");
+  const t=document.getElementById("perPlayer"); if(!t)return;
+  const cc=clubCounts();
   t.innerHTML=`<tr><th>Speelster</th><th class="center">🔵 Rijden</th><th class="center">🟣 Wassen</th>
-    <th class="center">🟡 Vlaggen</th><th class="center">🟢 Eten</th><th class="center">Totaal</th></tr>`+
-    PLAYERS.map(p=>{const s=sched.sub[p.n];return `<tr>
+    <th class="center">🟡 Vlaggen</th><th class="center">🟢 Eten</th>
+    <th class="center" style="border-left:2px solid var(--line)">🔔 Fluiten</th><th class="center">📋 Coörd.</th>
+    <th class="center" style="border-left:2px solid var(--gold)">Totaal</th></tr>`+
+    PLAYERS.map(p=>{ const s=sched.sub[p.n]||{drive:0,wash:0,flag:0,food:0}; const c=cc[p.n]||{fluit:0,coord:0,tot:0};
+      return `<tr>
       <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
       <td class="center">${s.flag}</td><td class="center">${s.food}</td>
-      <td class="center"><b>${sched.pts[p.n]}</b></td></tr>`;}).join("");
+      <td class="center" style="border-left:2px solid var(--line)">${c.fluit}</td><td class="center">${c.coord}</td>
+      <td class="center" style="border-left:2px solid var(--gold)"><b>${(sched.pts[p.n]||0)+c.tot}</b></td></tr>`;}).join("");
 }
 
 /* ---------------- METINGEN → STATS (gestandaardiseerde tests, over tijd) ---------------- */
@@ -2170,7 +2189,7 @@ function loadCoordSchedule(){
     else { clubDuties.push({date:d,type:"coord",time:"08:00 - 12:00",fluit:[],coord:[]}); added++; }
   });
   clubDuties.sort((a,b)=>a.date<b.date?-1:1);
-  renderClubDuties(); if(typeof renderAgenda==="function") renderAgenda();
+  renderClubDuties(); renderBalance(); renderPerPlayer(); if(typeof renderAgenda==="function") renderAgenda();
   if(typeof persistLocal==="function") persistLocal(); scheduleSave();
   flash(added?(added+" coördinaatbeurten toegevoegd ✓"):"Beurten stonden er al");
 }
@@ -2193,7 +2212,8 @@ function assignClubDuties(){
     if(ty==="coord"||ty==="both"){ if(!keep(d.coord,"coord",idx,used)){ const c=pick(coordPool,used,"coord",idx,d.date); d.coord=c?[c]:[]; } }
     else d.coord=[];
   });
-  renderClubDuties(); scheduleSave(); flash("Verenigingstaken verdeeld — bestaande behouden ✓");
+  renderClubDuties(); renderBalance(); renderPerPlayer(); if(typeof renderAgenda==="function") renderAgenda();
+  scheduleSave(); flash("Verenigingstaken verdeeld — bestaande behouden ✓");
 }
 function reassignClubDuties(){ if(!confirm("Alle verenigingstaken opnieuw verdelen? Bestaande verdeling gaat verloren.")) return;
   clubDuties.forEach(d=>{ d.fluit=[]; d.coord=[]; }); assignClubDuties(); }
