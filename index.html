@@ -214,7 +214,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-s</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-t</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -407,79 +407,79 @@
 
   <!-- ============ SCHEDULE ============ -->
   <section id="schedule">
-    <h2 class="sec">Eerlijke taakschema's</h2>
+    <h2 class="sec">⚖️ Taakverdeling</h2>
     <div class="note">
-      <b>Zo werkt de eerlijke verdeling:</b> elke taak (rijden, wassen, vlaggen, fluiten&nbsp;+&nbsp;coördinator, eten) telt als 1 punt.
-      Er wordt automatisch gekozen op basis van de <b>minste punten</b> (eerlijk totaal) én wie dat klusje het minst deed (variatie),
-      zodat het niet eentonig wordt. Wie geen auto/rijbewijs heeft, kan niet rijden en pakt automatisch extra was-/eettaken op —
-      zo eindigt iedereen op (bijna) evenveel punten.
-      <br><b>Rijden</b> en <b>vlaggen</b> worden eerlijk geroteerd (niet steeds dezelfde). <b>Wassen</b> en <b>koken</b> hebben een instelbaar
-      <b>minimum per persoon</b> (standaard 2×): wie er nog onder zit, komt eerst aan de beurt.
-      <b>Vlaggen</b> (grensrechter bij ónze wedstrijd) gebeurt bij elke wedstrijd. <b>Fluiten</b> en <b>Wedstrijdcoördinatie</b> zijn twee losse
-      <b>verenigingstaken voor de jeugd</b> (bv. MO13 fluiten of aanspreekpunt tot ~12:00) — los van onze eigen wedstrijd, alleen op <b>zaterdagen</b>;
-      <b>speelsters zonder auto/rijbewijs pakken die juist vaker op</b>, zodat het rijden voor de rest eerlijk verdeeld blijft.
-      <b>Eten/lunch</b> bij thuiswedstrijden wordt verzorgd door het <b>vaste corvee-duo van die week</b> (zie tabblad Team &amp; afspraken) — datzelfde duo ondersteunt die week ook de trainers bij het klaarzetten van materiaal. Amber fluit niet (eigen voorkeur) — ze vlagt en coördineert wel mee.
-      Bij het verdelen wordt rekening gehouden met <b>afwezigheid</b> (vul in bij Selectieoverzicht → Afwezig).
+      <b>Alle taken tellen mee in één telling</b> — rijden, wassen, vlaggen, lunch, fluiten en wedstrijdcoördinaat, elk 1 punt.
+      Wie iets niet kan of wil (geen rijbewijs, niet fluiten) krijgt vanzelf meer van de andere taken, zodat iedereen op een
+      vergelijkbaar totaal uitkomt. Afwezigheid (Selectieoverzicht → Afwezig) telt automatisch mee.
+      De <b>lunch</b> bij thuiswedstrijden ligt vast: dat doet het corvee-duo van die week.
     </div>
 
+    <!-- Stap 1: verdelen -->
     <div class="controls">
-      <label>Aantal wedstrijden
-        <input type="number" id="cfgMatches" value="22" min="1" max="40" style="width:80px">
-      </label>
-      <label>Startdatum (1e wedstrijd)
-        <input type="date" id="cfgStart" value="2026-09-05">
-      </label>
-      <label>Standaard aanvangstijd
-        <input type="time" id="cfgTime" value="14:30" style="width:100px">
-      </label>
-      <label>Rijders per uitwedstrijd
-        <input type="number" id="cfgDrivers" value="3" min="1" max="6" style="width:80px">
-      </label>
-      <label>Was-beurten per wedstrijd
-        <input type="number" id="cfgWash" value="1" min="1" max="3" style="width:80px">
-      </label>
-      <label>Min. wassen p.p.
-        <input type="number" id="cfgMinWash" value="2" min="0" max="10" style="width:70px">
-      </label>
-      <label>Min. koken p.p.
-        <input type="number" id="cfgMinFood" value="2" min="0" max="10" style="width:70px">
-      </label>
-      <label>Patroon
-        <select id="cfgPattern">
-          <option value="alt">Om en om thuis/uit</option>
-          <option value="allhome">Alle thuis</option>
-        </select>
-      </label>
       <label>&nbsp;
-        <button class="btn" onclick="buildFixtures()">🆕 Nieuw rooster</button>
+        <button class="btn primary" onclick="assignTasks()" title="Vult alle nog lege taken in en behoudt wat er al staat">⚖️ Verdeel taken</button>
       </label>
-      <label>&nbsp;
-        <button class="btn" onclick="loadProgram()">📋 Laad voorbereidingsprogramma</button>
-      </label>
-      <label>&nbsp;
-        <button class="btn primary" onclick="assignTasks()">⚖️ Verdeel openstaande taken</button>
-      </label>
-      <label>Herverdeel vanaf
+      <label>Herverdeel alles vanaf
         <input type="date" id="cfgRebalDate" style="width:150px">
       </label>
       <label>&nbsp;
-        <button class="btn primary" onclick="rebalanceFrom()" title="Verdeelt alleen de wedstrijden vanaf deze datum opnieuw; alles ervoor blijft staan">♻️ Herverdeel eerlijk</button>
-      </label>
-      <label>&nbsp;
-        <button class="btn" onclick="reassignAll()" title="Wist alles en verdeelt opnieuw">🔄 Alles opnieuw</button>
+        <button class="btn" onclick="rebalanceFrom()" title="Alles vóór deze datum blijft staan en telt mee; daarna wordt opnieuw en eerlijk verdeeld">♻️ Herverdeel vanaf datum</button>
       </label>
       <label>&nbsp;
         <button class="btn" onclick="exportICS()">📅 Exporteer agenda (.ics)</button>
       </label>
     </div>
-    <p class="hint" style="margin-top:-4px">Vul per wedstrijd de <b>datum</b>, <b>tijd</b>, <b>tegenstander</b> en <b>thuis/uit</b> in de tabel in.
-      <b>Verdeel openstaande taken</b> vult alleen wedstrijden in die nog geen verdeling hebben en <b>behoudt de bestaande verdeling</b> —
-      voeg je later nieuwe wedstrijden toe, klik dan gewoon opnieuw en alleen die nieuwe worden ingevuld (eerlijk t.o.v. wat iedereen al deed).
-      Is de balans scheefgegroeid (bijv. doordat je iemand ergens tussenuit hebt gehaald)? Gebruik dan <b>♻️ Herverdeel eerlijk</b>:
-      alles vóór de gekozen datum blijft staan en telt mee, alles erna wordt opnieuw verdeeld zodat wie achterloopt vaker aan de beurt komt.
-      Standaard staat die datum een maand vooruit, zodat afspraken die al gemaakt zijn niet omgegooid worden.
-      Gebruik <b>Alles opnieuw</b> alléén om aan het begin van het seizoen helemaal opnieuw te beginnen. De verdeling wordt automatisch bewaard en gedeeld.
-      Met <b>Exporteer agenda</b> maak je een <b>.ics</b> voor Apple Agenda, Google Calendar of Outlook.</p>
+    <p class="hint" style="margin-top:-4px">
+      <b>Verdeel taken</b> vult alleen wat nog leeg is en laat bestaande afspraken staan — klik er gerust opnieuw op als er wedstrijden bij komen.
+      Loopt de balans scheef? Gebruik <b>Herverdeel vanaf datum</b> (standaard een maand vooruit, zodat gemaakte afspraken blijven staan).
+    </p>
+
+    <details style="margin-bottom:14px">
+      <summary style="cursor:pointer;color:var(--gold);font-size:13px">⚙️ Instellingen &amp; rooster opbouwen</summary>
+      <div class="controls" style="margin-top:10px">
+        <label>Rijders per uitwedstrijd
+          <input type="number" id="cfgDrivers" value="3" min="1" max="6" style="width:80px">
+        </label>
+        <label>Was-beurten per wedstrijd
+          <input type="number" id="cfgWash" value="1" min="1" max="3" style="width:80px">
+        </label>
+        <label>Min. wassen p.p.
+          <input type="number" id="cfgMinWash" value="2" min="0" max="10" style="width:70px">
+        </label>
+        <label>Min. koken p.p.
+          <input type="number" id="cfgMinFood" value="2" min="0" max="10" style="width:70px">
+        </label>
+      </div>
+      <div class="controls">
+        <label>Aantal wedstrijden
+          <input type="number" id="cfgMatches" value="22" min="1" max="40" style="width:80px">
+        </label>
+        <label>Startdatum (1e wedstrijd)
+          <input type="date" id="cfgStart" value="2026-09-05">
+        </label>
+        <label>Standaard aanvangstijd
+          <input type="time" id="cfgTime" value="14:30" style="width:100px">
+        </label>
+        <label>Patroon
+          <select id="cfgPattern">
+            <option value="alt">Om en om thuis/uit</option>
+            <option value="allhome">Alle thuis</option>
+          </select>
+        </label>
+        <label>&nbsp;
+          <button class="btn" onclick="loadProgram()">📋 Laad wedstrijdprogramma</button>
+        </label>
+        <label>&nbsp;
+          <button class="btn" onclick="buildFixtures()">🆕 Leeg rooster</button>
+        </label>
+        <label>&nbsp;
+          <button class="btn" onclick="reassignAll()" title="Wist alles en verdeelt opnieuw">🔄 Alles opnieuw</button>
+        </label>
+      </div>
+      <p class="hint">Let op: <b>Laad wedstrijdprogramma</b>, <b>Leeg rooster</b> en <b>Alles opnieuw</b> wissen de huidige verdeling.
+        Gebruik ze alleen aan het begin van het seizoen.</p>
+    </details>
 
     <div class="grid2">
       <div>
@@ -524,8 +524,8 @@
     <h2 class="sec" style="margin-top:26px">🔔 Verenigingstaken jeugd (fluiten &amp; wedstrijdcoördinatie)</h2>
     <div class="note">
       Deze taken staan <b>los van de wedstrijden van VR1</b> — de vereniging levert hiervoor een eigen schema aan. Voeg de datums toe
-      zodra ze bekend zijn en klik op <b>Verdeel verenigingstaken</b>. Ze worden eerlijk geroteerd, <b>speelsters zonder auto/rijbewijs
-      krijgen voorrang</b> (zodat het rijden voor de rest eerlijk blijft), Amber doet geen fluiten (wel coördinatie), en afwezigheid telt mee.
+      zodra ze bekend zijn; ze worden verdeeld met dezelfde knop <b>Verdeel taken</b> hierboven, zodat ze meetellen in het totaal.
+      <b>Speelsters zonder auto/rijbewijs krijgen voorrang</b> (zij rijden immers niet) en Amber doet geen fluiten (wel coördinatie). Afwezigheid telt mee.
       <br>Het <b>wedstrijdcoördinaat-schema van de vereniging</b> is bekend: VR1 is aan de beurt op <b>3 okt, 13 feb en 29 mei</b> (08:00–12:00).
       Klik op <b>Laad coördinaatschema VR1</b> om die datums toe te voegen. Het <b>fluitschema</b> volgt nog — met <b>Soort</b> geef je per datum aan
       of het om fluiten, coördinaat of beide gaat.
@@ -538,8 +538,7 @@
         <option value="coord">alleen coördinaat</option></select></label>
       <label>&nbsp;<button class="btn" onclick="addClubDate()">➕ Toevoegen</button></label>
       <label>&nbsp;<button class="btn" onclick="loadCoordSchedule()" title="3 okt, 13 feb en 29 mei — de beurten van VR1">📋 Laad coördinaatschema VR1</button></label>
-      <label>&nbsp;<button class="btn primary" onclick="assignClubDuties()">⚖️ Verdeel verenigingstaken</button></label>
-      <label>&nbsp;<button class="btn" onclick="reassignClubDuties()">🔄 Alles opnieuw</button></label>
+      <label>&nbsp;<button class="btn primary" onclick="assignTasks()" title="Verdeelt alle taken samen, zodat het totaal eerlijk blijft">⚖️ Verdeel taken</button></label>
     </div>
     <div id="clubTable" style="overflow:auto"></div>
 
@@ -1428,59 +1427,76 @@ function isAbsent(n,dateStr){
     if(!a) return false; return dateStr>=a && dateStr<=(b||a);
   });
 }
+// ÉÉN eerlijke verdeling over ALLE taken: rijden, wassen, vlaggen, eten, fluiten en coördinaat.
+// Alles staat chronologisch op één hoop met één puntentelling, zodat wie een taak niet kán of wíl
+// doen (geen rijbewijs, niet fluiten) dat vanzelf compenseert met de taken die ze wél doet.
 function assignTasks(){
   if(!fixtures.length){buildFixtures();}
   const nDrivers=+document.getElementById("cfgDrivers").value;
   const nWash=+document.getElementById("cfgWash").value;
   const minWash=+((document.getElementById("cfgMinWash")||{}).value||0);
   const minFood=+((document.getElementById("cfgMinFood")||{}).value||0);
-  const pts={}, sub={}, lastAny={}, partner={};
-  const cc0=(typeof clubCounts==="function")?clubCounts():{};
-  // Verenigingstaken tellen mee in het totaal: wie daar al veel doet, krijgt minder wedstrijdtaken.
-  PLAYERS.forEach(p=>{pts[p.n]=(cc0[p.n]?cc0[p.n].tot:0); sub[p.n]={drive:0,wash:0,flag:0,food:0}; lastAny[p.n]=-99; partner[p.n]="";});
+  const pts={}, sub={}, lastAny={};
+  const SUBKEYS=["drive","wash","flag","food","fluit","coord"];
+  PLAYERS.forEach(p=>{ pts[p.n]=0; sub[p.n]={}; SUBKEYS.forEach(k=>sub[p.n][k]=0); lastAny[p.n]=-99; });
   const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
-  const flagPool=PLAYERS.map(p=>p.n);                        // vlaggen: iedereen (ook Amber)
-  // Kies 1 speelster. Volgorde: (1) afwezigen uitgesloten, (2) onder het minimum voor dit klusje eerst,
-  //   (3) eerlijke rotatie: wie dit klusje het minst deed, (4) laagste totaal (balans), (5) vermijd eet-partner, (6) langst geen taak, (7) willekeur.
+  const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
+  const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // Amber fluit niet
+  const carSet=new Set(drivers);
+  // Kies 1 speelster: (1) afwezigen weg, (2) minimum inhalen, (3) laagste totaal,
+  // (4) wie dit klusje het minst deed, (5) niet-rijders voorrang bij verenigingstaken, (6) langst geen taak.
   function pickOne(pool,used,key,idx,o){ o=o||{};
     const cand=pool.filter(n=>!used.has(n) && !isAbsent(n,o.date));
     if(!cand.length) return null;
-    const av=x=>(o.avoid&&o.avoid.has(x))?1:0;
     const bm=x=>(o.min && sub[x][key]<o.min)?0:1;
+    const nd=x=>o.nonDriver?(carSet.has(x)?1:0):0;
     cand.sort((a,b)=>
-      (bm(a)-bm(b)) || (pts[a]-pts[b]) ||            // 1) minimum inhalen  2) laagste totaal (eerlijke balans)
-      (sub[a][key]-sub[b][key]) ||                    // 3) wie dit klusje het minst deed (variatie)
-      (av(a)-av(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5)
+      (bm(a)-bm(b)) || (pts[a]-pts[b]) || (sub[a][key]-sub[b][key]) ||
+      (nd(a)-nd(b)) || (lastAny[a]-lastAny[b]) || (Math.random()-0.5)
     );
     const w=cand[0]; used.add(w); pts[w]++; sub[w][key]++; lastAny[w]=idx; return w;
   }
-  // Bestaande toewijzing behouden én meetellen voor de balans; alleen lege taken invullen.
   function keep(arr,key,idx,used){ if(!(arr&&arr.length))return false;
     arr.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n][key]++; lastAny[n]=idx; used.add(n); } }); return true; }
-  fixtures.forEach((f,idx)=>{
-    if(f.home!==true && f.home!==false){ f.drive=f.drive||[]; f.wash=f.wash||[]; f.flag=f.flag||[]; f.food=f.food||[]; return; }  // thuis/uit onbekend → nog niet verdelen
-    const used=new Set(); const D=f.date;
-    if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let i=0;i<nWash;i++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
-    if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }   // vlaggen: eerlijke rotatie
-    f.fluit=[]; f.coord=[];   // fluiten/coördinatie zijn losse verenigingstaken (eigen rooster, niet aan onze wedstrijd)
-    if(f.home){
-      f.drive=[];
-      // eten/lunch = corvee-duo van die week (afwezigen vallen af); handmatige ruil blijft staan
-      if(!f.foodManual) f.food=duoAvailableForDate(f.date);
-      f.food.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n].food++; lastAny[n]=idx; used.add(n); } });
+  // Alle gebeurtenissen op datum, zodat de balans door het seizoen heen meegroeit.
+  const agenda=[];
+  (fixtures||[]).forEach((f,i)=>{ if(f&&f.date) agenda.push({soort:"fix",date:f.date,o:f,i}); });
+  (clubDuties||[]).forEach((c,i)=>{ if(c&&c.date) agenda.push({soort:"club",date:c.date,o:c,i}); });
+  agenda.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : (a.soort<b.soort?-1:1));
+
+  agenda.forEach((it,idx)=>{
+    const used=new Set(); const D=it.date;
+    if(it.soort==="fix"){
+      const f=it.o;
+      if(f.home!==true && f.home!==false){ f.drive=f.drive||[]; f.wash=f.wash||[]; f.flag=f.flag||[]; f.food=f.food||[]; return; }
+      if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let k=0;k<nWash;k++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
+      if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }
+      f.fluit=[]; f.coord=[];                       // verenigingstaken hebben hun eigen datumlijst
+      if(f.home){
+        f.drive=[];
+        if(!f.foodManual) f.food=duoAvailableForDate(f.date);   // lunch = corvee-duo van die week
+        f.food.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n].food++; lastAny[n]=idx; used.add(n); } });
+      } else {
+        f.food=[];
+        if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let k=0;k<nDrivers;k++){const d=pickOne(drivers,used,"drive",idx,{date:D}); if(d)f.drive.push(d);} }
+      }
     } else {
-      f.food=[];
-      if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let i=0;i<nDrivers;i++){const d=pickOne(drivers,used,"drive",idx,{date:D}); if(d)f.drive.push(d);} }  // rijden: eerlijke rotatie onder rijders
+      const c=it.o; const ty=(typeof clubType==="function")?clubType(c):"both";
+      if(ty==="fluit"||ty==="both"){ if(!keep(c.fluit,"fluit",idx,used)){ const x=pickOne(fluitPool,used,"fluit",idx,{date:D,nonDriver:true}); c.fluit=x?[x]:[]; } }
+      else c.fluit=[];
+      if(ty==="coord"||ty==="both"){ if(!keep(c.coord,"coord",idx,used)){ const x=pickOne(allPool,used,"coord",idx,{date:D,nonDriver:true}); c.coord=x?[x]:[]; } }
+      else c.coord=[];
     }
   });
-  // In sched bewaren we alléén de wedstrijdtaken; de verenigingstaken worden bij het tonen opgeteld.
-  const ptsMatch={}; PLAYERS.forEach(p=>{ ptsMatch[p.n]=(pts[p.n]||0)-(cc0[p.n]?cc0[p.n].tot:0); });
+  // sched bewaart alleen de wedstrijdtaken; verenigingstaken worden bij het tonen opgeteld.
+  const ptsMatch={}; PLAYERS.forEach(p=>{ const s=sub[p.n]; ptsMatch[p.n]=s.drive+s.wash+s.flag+s.food; });
   sched={pts:ptsMatch,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders(); renderAgenda();
+  if(typeof renderClubDuties==="function") renderClubDuties();
   if(typeof persistLocal==="function") persistLocal();
   if(typeof CLOUD!=="undefined" && CLOUD && isStaff) cloudSave();
-  flash("Openstaande taken verdeeld — bestaande verdeling behouden ✓");
+  flash("Alle taken eerlijk verdeeld — bestaande verdeling behouden ✓");
 }
 // Eerlijk herverdelen vanaf een datum: alles vóór die datum blijft staan (en telt mee voor de
 // balans), alles erna wordt opnieuw en eerlijk verdeeld — zo halen achterblijvers hun schade in.
@@ -1489,21 +1505,24 @@ function rebalanceFrom(){
   const el=document.getElementById("cfgRebalDate");
   const cutoff=(el&&el.value)||cutoffDefault();
   const todo=fixtures.filter(f=>f&&f.date>=cutoff&&(f.home===true||f.home===false));
-  if(!todo.length){ alert("Geen wedstrijden gevonden vanaf "+cutoff+"."); return; }
+  const todoClub=(clubDuties||[]).filter(c=>c&&c.date>=cutoff);
+  if(!todo.length && !todoClub.length){ alert("Geen wedstrijden of verenigingstaken gevonden vanaf "+cutoff+"."); return; }
   const d=new Date(cutoff+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
-  if(!confirm("De taken van "+todo.length+" wedstrijd(en) vanaf "+d+" worden opnieuw verdeeld.\n\n"+
+  if(!confirm("Vanaf "+d+" worden "+todo.length+" wedstrijd(en) en "+todoClub.length+" verenigingstaak/-taken opnieuw verdeeld.\n\n"+
               "Alles vóór die datum blijft ongewijzigd en telt mee, zodat wie tot nu toe minder deed nu vaker aan de beurt komt.\n\nDoorgaan?")) return;
   fixtures.forEach(f=>{ if(!f||f.date<cutoff) return;
     f.drive=[]; f.wash=[]; f.flag=[];
     if(!f.foodManual) f.food=[];      // handmatige lunch-ruil blijft staan
   });
+  (clubDuties||[]).forEach(c=>{ if(!c||c.date<cutoff) return; c.fluit=[]; c.coord=[]; });
   assignTasks();
   flash("Opnieuw verdeeld vanaf "+d+" ✓");
 }
 // Bewuste volledige reset: wist alles en verdeelt opnieuw (alleen doen als er nog niets is uitgevoerd).
 function reassignAll(){
   if(!confirm("Let op: dit wist de HELE huidige taakverdeling en maakt een nieuwe. Doe dit alleen aan het begin van het seizoen — niet als er al taken zijn uitgevoerd, want dan gaat het overzicht van wie wat deed verloren. Doorgaan?")) return;
-  fixtures.forEach(f=>{ f.drive=[]; f.wash=[]; f.flag=[]; f.fluit=[]; f.coord=[]; f.food=[]; });
+  fixtures.forEach(f=>{ f.drive=[]; f.wash=[]; f.flag=[]; f.fluit=[]; f.coord=[]; f.food=[]; delete f.foodManual; });
+  (clubDuties||[]).forEach(c=>{ c.fluit=[]; c.coord=[]; });
   assignTasks();
   flash("Volledige verdeling opnieuw gemaakt");
 }
