@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-y</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-z</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1874,11 +1874,12 @@ function renderAnalyse(){
 function renderAnTrend(){
   const w=document.getElementById("anTrend"); if(!w)return;
   if(analyses.length<1){ w.innerHTML='<p class="hint">Zodra je meerdere wedstrijden hebt geïmporteerd, zie je hier de ontwikkeling.</p>'; return; }
-  const KEYS=[["Balbezit","%"],["Passnauwkeurigheid","%"],["Duelwinst","%"],["Schoten",""],["Schoten op doel",""]];
+  const KEYS=[["Balbezit","%"],["Passnauwkeurigheid","%"],["Duelwinst","%"],["Schoten",""],["Schoten op doel",""],["xg",""]];
   const list=analyses.slice().sort((a,b)=>a.date<b.date?-1:1);
+  const LBL={"xg":"xG"};
   w.innerHTML=`<table><tr><th>Wedstrijd</th><th class="center">Uitslag</th>`+
-    KEYS.map(k=>`<th class="center">${k[0]}</th>`).join("")+`</tr>`+
-    list.map(a=>{ const cells=KEYS.map(k=>{ const s=a.tot.find(x=>x.stat.toLowerCase()===k[0].toLowerCase());
+    KEYS.map(k=>`<th class="center">${LBL[k[0]]||k[0]}</th>`).join("")+`</tr>`+
+    list.map(a=>{ const cells=KEYS.map(k=>{ const s=anVal(a,k[0]);   // via synoniemen, ook bij andere benamingen
         return `<td class="center">${s?anFmt(s.us,s.unit):"–"}</td>`; }).join("");
       const win=a.us>a.them?"var(--green)":a.us<a.them?"var(--red)":"var(--gold)";
       return `<tr><td class="mini">${new Date(a.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} — <b>${a.opp}</b></td>
