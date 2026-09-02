@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-x</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-y</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1659,12 +1659,22 @@ function anFmt(v,unit){ if(v==null||v==="")return "–";
   if(unit==="percentage"){ const p=anPct(v); return p==null?"–":(Math.round(p*10)/10).toFixed(1).replace(".",",")+"%"; }
   const n=parseFloat(v); return isNaN(n)?String(v):String(Math.round(n*100)/100).replace(".",","); }
 // Zoekt in een werkblad de rij die begint met "Statistiek" en leest alles daaronder.
+// Filtert tussenkopjes ("Aanvullende statistiek …") en voetnoten eruit: een geldige regel heeft
+// minstens één getal in de kolommen voor ons/de tegenstander.
+function anGetal(v){ if(v==null||v==="")return false; const n=parseFloat(String(v).replace(",",".")); return !isNaN(n); }
 function anRows(sheet){
   const aoa=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});
   let h=-1; for(let i=0;i<aoa.length;i++){ if(String((aoa[i]||[])[0]||"").trim().toLowerCase()==="statistiek"){ h=i; break; } }
   if(h<0) return {head:[],rows:[]};
-  return {head:(aoa[h]||[]).map(x=>x==null?"":String(x).trim()),
-          rows:aoa.slice(h+1).filter(r=>r&&r[0]!=null&&String(r[0]).trim()!=="")};
+  const rows=aoa.slice(h+1).filter(r=>{
+    if(!r || r[0]==null) return false;
+    const lbl=String(r[0]).trim();
+    if(!lbl) return false;
+    if(lbl.length>60) return false;                                  // voetnoot/toelichting
+    if(/^aanvullende|^statistiek$|^toelichting|^bron/i.test(lbl)) return false;   // tussenkopje
+    return anGetal(r[1]) || anGetal(r[2]);                           // moet een meetwaarde hebben
+  });
+  return {head:(aoa[h]||[]).map(x=>x==null?"":String(x).trim()), rows};
 }
 function importAnalyse(ev){
   const files=[...(ev.target.files||[])]; if(!files.length) return;
@@ -1698,7 +1708,7 @@ function importAnalyse(ev){
         added++;
       }catch(err){ console.warn(err); alert("Kon "+file.name+" niet lezen: "+err.message); }
       if(++done===files.length){
-        fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+        cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
         if(typeof persistLocal==="function") persistLocal();
         if(typeof scheduleSave==="function") scheduleSave();
         if(added) flash(added+" analyse(s) geïmporteerd ✓");
@@ -1708,6 +1718,22 @@ function importAnalyse(ev){
   });
   ev.target.value="";
 }
+// Eerder ingelezen analyses opschonen: tussenkopjes en voetnoten die als statistiek waren opgeslagen.
+function cleanAnalyses(){
+  let weg=0;
+  (analyses||[]).forEach(a=>{
+    const f=x=>{ const l=String((x&&x.stat)||"").trim();
+      if(!l||l.length>60) return false;
+      if(/^aanvullende|^statistiek$|^toelichting|^bron/i.test(l)) return false;
+      return anGetal(x.us)||anGetal(x.them); };
+    if(Array.isArray(a.tot)){ const n=a.tot.length; a.tot=a.tot.filter(f); weg+=n-a.tot.length; }
+    if(Array.isArray(a.half)){ const n=a.half.length;
+      a.half=a.half.filter(x=>{ const l=String((x&&x.stat)||"").trim();
+        return l && l.length<=60 && !/^aanvullende|^statistiek$|^toelichting|^bron/i.test(l); });
+      weg+=n-a.half.length; }
+  });
+  return weg;
+}
 function fillAnalyseSel(reset){
   const s=document.getElementById("anSel"); if(!s)return; const cur=s.value;
   s.innerHTML=analyses.map((a,i)=>`<option value="${i}">${new Date(a.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"})} — ${a.opp} (${a.us}–${a.them})</option>`).join("");
@@ -1716,10 +1742,32 @@ function fillAnalyseSel(reset){
 function curAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:0; return analyses[i]||null; }
 function delAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:-1; const a=analyses[i]; if(!a){ alert("Geen analyse geselecteerd."); return; }
   if(!confirm("Analyse van "+a.opp+" verwijderen?")) return;
-  analyses.splice(i,1); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+  analyses.splice(i,1); cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
   if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
 // Samenhangende cijfers samenvoegen tot één regel: "238 / 448 (53,1%)" i.p.v. vier losse regels.
-function anVal(a,naam){ const s=(a.tot||[]).find(x=>x.stat.toLowerCase()===naam.toLowerCase()); return s||null; }
+// Verschillende exportversies gebruiken andere namen voor dezelfde statistiek.
+const AN_SYN={
+  "passes":["passes","passpogingen","passes totaal"],
+  "geslaagde passes":["geslaagde passes (eventlaag)","geslaagde passes","geslaagde passes (veo analytics)"],
+  "passnauwkeurigheid":["passnauwkeurigheid","pass nauwkeurigheid"],
+  "gewonnen duels":["gewonnen duels","duels gewonnen"],
+  "verloren duels":["verloren duels","duels verloren"],
+  "duelwinst":["duelwinst","duelwinstpercentage","duelwinst percentage"],
+  "onderscheppingen":["onderscheppingen","intercepties"],
+  "schoten op doel":["schoten op doel","schoten op goal"],
+  "losse-balveroveringen":["losse-balveroveringen","balbezit gewonnen","tweede-balveroveringen"],
+  "xg":["xg","verwachte goals"],
+  "xa":["xa-kandidaat","xa","verwachte assists"],
+};
+function anVal(a,naam){
+  const key=naam.toLowerCase();
+  const kandidaten=AN_SYN[key]||[key];
+  for(const k of kandidaten){
+    const s=(a.tot||[]).find(x=>String(x.stat).trim().toLowerCase()===k);
+    if(s) return s;
+  }
+  return null;
+}
 function anNum(a,naam,wie){ const s=anVal(a,naam); if(!s)return null; const v=parseFloat(wie==="them"?s.them:s.us); return isNaN(v)?null:v; }
 function anPctOf(a,naam,wie){ const s=anVal(a,naam); if(!s)return null; return anPct(wie==="them"?s.them:s.us); }
 function anNum0(v){ return v==null?"–":String(Math.round(v)); }
@@ -1736,11 +1784,15 @@ function anGroepen(a){
   const groepen=[];
   // Aanvallend
   const sU=sch("us"), sT=sch("them");
+  const dec=(v)=>v==null?"–":(Math.round(v*100)/100).toFixed(2).replace(".",",");
   groepen.push({titel:"⚽ Aanvallend", rijen:[
     rij("Doelpunten", anNum0(g("Doelpunten","us")), anNum0(g("Doelpunten","them")), g("Doelpunten","us"), g("Doelpunten","them")),
     rij("Schoten (op doel)", anNum0(sU.tot)+(sU.op!=null?" ("+anNum0(sU.op)+")":""), anNum0(sT.tot)+(sT.op!=null?" ("+anNum0(sT.op)+")":""), sU.tot, sT.tot),
+    (g("xg","us")!=null||g("xg","them")!=null)? rij("xG (verwachte goals)", dec(g("xg","us")), dec(g("xg","them")), g("xg","us"), g("xg","them")) : null,
+    (g("xa","us")!=null||g("xa","them")!=null)? rij("xA (verwachte assists)", dec(g("xa","us")), dec(g("xa","them")), g("xa","us"), g("xa","them")) : null,
     rij("Dribbels", anNum0(g("Dribbels","us")), anNum0(g("Dribbels","them")), g("Dribbels","us"), g("Dribbels","them")),
-  ].filter(r=>r.us!=="–"||r.them!=="–")});
+    (g("Penalty's","us")!=null)? rij("Penalty's", anNum0(g("Penalty's","us")), anNum0(g("Penalty's","them")), null, null) : null,
+  ].filter(Boolean).filter(r=>r.us!=="–"||r.them!=="–")});
   // Opbouw
   const pU=pas("us"), pT=pas("them");
   groepen.push({titel:"🔄 Opbouw &amp; balbezit", rijen:[
@@ -1754,8 +1806,9 @@ function anGroepen(a){
     rij("Tackles", anNum0(g("Tackles","us")), anNum0(g("Tackles","them")), g("Tackles","us"), g("Tackles","them")),
     rij("Onderscheppingen", anNum0(g("Onderscheppingen","us")), anNum0(g("Onderscheppingen","them")), g("Onderscheppingen","us"), g("Onderscheppingen","them")),
     rij("Reddingen keeper", anNum0(g("Reddingen","us")), anNum0(g("Reddingen","them")), g("Reddingen","us"), g("Reddingen","them")),
+    rij("Balveroveringen", anNum0(g("losse-balveroveringen","us")), anNum0(g("losse-balveroveringen","them")), g("losse-balveroveringen","us"), g("losse-balveroveringen","them")),
     rij("Overtredingen", anNum0(g("Overtredingen","us")), anNum0(g("Overtredingen","them")), null, null),
-  ].filter(Boolean)});
+  ].filter(Boolean).filter(r=>r.us!=="–"||r.them!=="–")});
   // Spelhervattingen
   groepen.push({titel:"🚩 Spelhervattingen", rijen:[
     rij("Corners", anNum0(g("Corners","us")), anNum0(g("Corners","them")), g("Corners","us"), g("Corners","them")),
@@ -2878,7 +2931,7 @@ const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood
 renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
 renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
-fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
 seedSeasonTrainings(); cleanTrainingClashes(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
