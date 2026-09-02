@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-w</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-x</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -2319,6 +2319,29 @@ function remindClub(n,code,ci){ const d=clubDuties[ci]; if(!d)return;
   const task = code==="fluit" ? "fluiten bij de jeugd (bv. MO13)" : "wedstrijdcoördinatie voor de jeugdwedstrijden (tot ~12:00)";
   openWAmsg(n, "Hoi "+n+"! Kleine herinnering: op "+ds+" heb je een verenigingstaak bij SC Stiens — "+task+". Alvast bedankt!");
 }
+// Verenigingstaken handmatig aanpassen (zelfde werkwijze als bij de wedstrijdtaken).
+function clubPool(key){ return key==="fluit" ? PLAYERS.filter(p=>!p.noRef).map(p=>p.n) : PLAYERS.map(p=>p.n); }
+function clubCell(i,key){
+  const c=clubDuties[i]; if(!c) return "";
+  const list=c[key]||[];
+  const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="clubTaskRemove(${i},'${key}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
+  const bezet=new Set([...(c.fluit||[]),...(c.coord||[])]);
+  const pool=clubPool(key).filter(n=>!bezet.has(n) && !isAbsent(n,c.date));
+  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
+  return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select></div>`;
+}
+function clubTaskAdd(i,key,name){ if(!name)return; const c=clubDuties[i]; if(!c)return;
+  c[key]=c[key]||[]; if(!c[key].includes(name)) c[key].push(name); afterClubEdit(); }
+function clubTaskRemove(i,key,name){ const c=clubDuties[i]; if(!c||!c[key])return;
+  c[key]=c[key].filter(x=>x!==name); afterClubEdit(); }
+function afterClubEdit(){
+  renderClubDuties(); if(typeof renderBalance==="function") renderBalance();
+  if(typeof renderPerPlayer==="function") renderPerPlayer();
+  if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof renderClubBoetes==="function") renderClubBoetes();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
 function renderClubDuties(){
   const w=document.getElementById("clubTable"); if(!w)return;
   if(!clubDuties.length){ w.innerHTML='<p class="hint">Nog geen data. Voeg hierboven de datums toe zodra het verenigingsschema bekend is, en klik op <b>Verdeel verenigingstaken</b>.</p>'; return; }
@@ -2334,8 +2357,8 @@ function renderClubDuties(){
             <option value="both" ${ty==="both"?"selected":""}>beide</option>
             <option value="fluit" ${ty==="fluit"?"selected":""}>alleen fluiten</option>
             <option value="coord" ${ty==="coord"?"selected":""}>alleen coörd.</option></select></td>
-        <td>${ty==="coord"?nvt:`<b>${fl||'—'}</b>`}</td><td>${ty==="coord"?'':wa(fl,"fluit")}</td>
-        <td>${ty==="fluit"?nvt:`<b>${co||'—'}</b>`}</td><td>${ty==="fluit"?'':wa(co,"coord")}</td>
+        <td>${ty==="coord"?nvt:clubCell(i,"fluit")}</td><td>${ty==="coord"?'':wa(fl,"fluit")}</td>
+        <td>${ty==="fluit"?nvt:clubCell(i,"coord")}</td><td>${ty==="fluit"?'':wa(co,"coord")}</td>
         <td><button class="del" onclick="delClubDate(${i})" title="datum verwijderen">×</button></td></tr>`;
     }).join("")+`</table>`;
 }
