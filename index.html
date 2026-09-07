@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-a</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-b</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -948,9 +948,40 @@ function cardGoalHTML(n){
   return h;
 }
 // Blessure uit de laatste check-in: 🤕 op de kaart als de meest recente meting een blessure meldt.
-// "geen", "nee", "-", "n.v.t." e.d. betekenen géén blessure
-function isNoInjury(inj){ const s=((inj==null?"":String(inj))).trim().toLowerCase();
-  return s==="" || ["geen","nee","neen","none","-","–","n.v.t.","n.v.t","nvt","0","fit","niks","niets","na","x"].includes(s); }
+/* Herkennen of een antwoord "geen blessure" betekent. Speelsters vullen van alles in:
+   "nee", "Neee", "nvt", "-", "niks aan de hand", "gelukkig niet", "geen". Daarom normaliseren we
+   de tekst en kijken we naar ontkenningen. Staat er een lichaamsdeel of klacht in, dan telt het
+   altijd als blessure — ook bij "nee, alleen wat last van mijn knie". */
+const BLESSURE_WOORDEN=["enkel","knie","hamstring","lies","kuit","scheen","rug","nek","schouder","elleboog","pols","hand","vinger",
+  "voet","teen","hiel","achilles","dij","bil","heup","buik","hoofd","hersen","arm","been","spier","band","kruisband","meniscus",
+  "verrekking","verrekt","verstuik","zwik","breuk","gebroken","scheur","gescheurd","kneuzing","ontsteking","pijn","klacht","last",
+  "blessure","geblesseerd","operatie","herstel","fysio","tape","brace"];
+function _normTekst(s){
+  return String(s==null?"":s).toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")   // accenten weg
+    .replace(/[^a-z0-9\s]/g," ")                        // leestekens weg
+    .replace(/(.)\1{1,}/g,"$1")                         // "neee" → "ne", "niks" blijft
+    .replace(/\s+/g," ").trim();
+}
+function isNoInjury(inj){
+  const ruw=String(inj==null?"":inj).trim();
+  if(!ruw) return true;
+  // "geen last", "geen pijn", "niet geblesseerd" → de klacht is juist ontkend
+  const laag=ruw.toLowerCase()
+    .replace(/\b(geen|niet|nooit|nergens|gn)\s+(last|pijn|klachten|klacht|blessure|blessures|geblesseerd)\b/g," ");
+  if(BLESSURE_WOORDEN.some(w=>laag.includes(w))) return false;   // noemt een klacht → wél blessure
+  const t=_normTekst(ruw);
+  if(!t) return true;
+  if(/^0+$/.test(t)) return true;                                 // "0", "00"
+  const compact=t.replace(/\s+/g,"");                             // "n v t" → "nvt"
+  // ontkenningen (na normalisatie is "neee" → "ne", "geen" → "gen", "niets" → "niets")
+  const GEEN=["ne","nen","no","nop","nope","nee","neen","gen","geen","nvt","nv t","nt","niet","nits","niets","niks","nix",
+              "na","nb","fit","gezond","ok","oke","okay","prima","goed","alles goed","gelukkig niet","gelukig niet","x"];
+  if(GEEN.includes(t) || GEEN.includes(compact)) return true;
+  // korte zinnetjes die met een ontkenning beginnen, bv. "nee hoor", "geen last" (zonder klachtwoord)
+  if(t.split(" ").length<=4 && /^(ne|nen|nee|neen|no|nop|nope|gen|geen|niet|niks|nits|niets|nvt)\b/.test(t)) return true;
+  return false;
+}
 function currentInjury(n){
   const ws=(store[n]&&store[n].wellbeing)||[];
   if(!ws.length) return null;
