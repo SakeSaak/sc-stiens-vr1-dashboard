@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.08.17-z</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-a</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1099,8 +1099,8 @@ function renderSquad(){
           style="width:120px;${IN}"></td>
       <td>${awayCell(p.n)}</td>
       ${staf
-        ? `<td colspan="5" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:180px;${IN}">
-             <span style="margin-left:8px">Staf doet mee met eten &amp; kas, niet met taken en FIFA-kaartjes.</span></td>`
+        ? `<td colspan="5" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:170px;${IN}">
+             <input type="email" value="${(p.email||'').replace(/"/g,'&quot;')}" placeholder="inlog-e-mail" title="Het e-mailadres waarmee dit staflid inlogt — zo zien we wie iets heeft ingevoerd" onchange="setPerson('staf',${i},'email',this.value)" style="width:190px;margin-left:6px;${IN}"></td>`
         : `<td class="center"><input type="text" value="${p.age||''}" onchange="setPerson('speelster',${i},'age',this.value)" style="width:46px;text-align:center;${IN}"></td>
            <td><input type="text" value="${(p.city||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'city',this.value)" style="width:110px;${IN}"></td>
            <td><input type="text" value="${(p.job||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'job',this.value)" style="width:150px;${IN}"></td>
@@ -2572,7 +2572,9 @@ function fReasonChange(){ /* bedrag komt uit het boetereglement (zie addFineFrom
 function fillKasPlayers(){ ["fPlayer","foodCook"].forEach(id=>{const s=document.getElementById(id); if(!s)return; const cur=s.value;
   s.innerHTML=kasPeople().map(n=>`<option value="${n}">${n}${isStaffMember(n)?" (staf)":""}</option>`).join(""); if(cur)s.value=cur;}); }
 
-function addFine(player,reason,amount,date){ kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false});
+function addFine(player,reason,amount,date){
+  kas().fines.push({id:uid(),date:date||todayStr(),player,reason,amount:+amount,paid:false,
+                    by:(typeof whoAmI==="function"?whoAmI():""), at:new Date().toISOString()});
   renderFines(); renderKasOverview(); scheduleSave(); flash("Boete: "+player); }
 function addFineFromForm(){ const p=document.getElementById("fPlayer").value; const reason=document.getElementById("fReason").value;
   const date=document.getElementById("fDate").value||todayStr();
@@ -2588,11 +2590,13 @@ function renderFines(){ const w=document.getElementById("finesList"); if(!w)retu
   const potOpen=kas().fines.filter(f=>!f.paid).reduce((a,f)=>a+f.amount,0);
   const F=kas().fines.slice().sort((a,b)=>a.date<b.date?1:-1);
   w.innerHTML=`<p class="hint">💰 Pot ontvangen: <b style="color:var(--green)">${eur(potPaid)}</b> · nog open: <b style="color:var(--gold)">${eur(potOpen)}</b></p>`+
-    (F.length?`<table><tr><th>Datum</th><th>Speelster</th><th>Reden</th><th class="center">Bedrag</th><th class="center">Betaald</th><th></th></tr>`+
-      F.map(f=>`<tr><td class="mini">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td>
+    (F.length?`<table><tr><th>Datum</th><th>Speelster</th><th>Reden</th><th class="center">Bedrag</th><th class="mini">Ingevoerd door</th><th class="center">Betaald</th><th></th></tr>`+
+      F.map(f=>{ const inv=f.by?`${f.by}${f.at?`<span class="mini" title="${new Date(f.at).toLocaleString("nl-NL")}"></span>`:""}`:'<span class="mini">—</span>';
+        return `<tr><td class="mini">${new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td>
         <td><b>${f.player}</b></td><td class="mini">${f.reason}</td><td class="center">${eur(f.amount)}</td>
+        <td class="mini" title="${f.at?new Date(f.at).toLocaleString("nl-NL"):""}">${inv}</td>
         <td class="center"><input type="checkbox" ${f.paid?"checked":""} onclick="toggleFinePaid('${f.id}')"></td>
-        <td><button class="del" onclick="delFine('${f.id}')">×</button></td></tr>`).join("")+`</table>`
+        <td><button class="del" onclick="delFine('${f.id}')">×</button></td></tr>`; }).join("")+`</table>`
      :`<p class="hint">Nog geen boetes.</p>`);
 }
 
@@ -2609,7 +2613,8 @@ function addFoodFromForm(){ const date=document.getElementById("foodDate").value
   const total=+document.getElementById("foodTotal").value;
   const shareWith=[...document.querySelectorAll(".foodshare:checked")].map(c=>c.value).filter(n=>n!==cook);
   if(!total||!shareWith.length){ alert("Vul een bedrag in en vink aan met wie je deelt."); return; }
-  kas().food.push({id:uid(),date,cook,total,shareWith,paid:{}});
+  kas().food.push({id:uid(),date,cook,total,shareWith,paid:{},
+                   by:(typeof whoAmI==="function"?whoAmI():""), at:new Date().toISOString()});
   document.getElementById("foodTotal").value="";
   renderFood(); renderKasOverview(); scheduleSave(); flash("Eten: "+eur(total/shareWith.length)+" p.p."); }
 function toggleFoodPaid(id,name){ const f=kas().food.find(x=>x.id===id); if(f){f.paid[name]=!f.paid[name];} renderFood(); renderKasOverview(); scheduleSave(); }
@@ -2864,12 +2869,25 @@ function cloudSubscribe(){
       applyState(payload.new.data); recoverPhonesFromLocal(); renderAll(); flash("Bijgewerkt vanuit de cloud ↻"); }
   ).subscribe();
 }
+/* Wie is er ingelogd? Het e-mailadres komt uit de staf-login; via het e-mailveld bij een staflid
+   (Selectieoverzicht) tonen we een leesbare naam in plaats van het adres. */
+let currentUserEmail="";
+function whoAmI(){
+  if(!currentUserEmail) return "staf";
+  const s=STAFF.find(x=>x.email && x.email.trim().toLowerCase()===currentUserEmail.toLowerCase());
+  if(s) return s.n;
+  const p=PLAYERS.find(x=>x.email && x.email.trim().toLowerCase()===currentUserEmail.toLowerCase());
+  if(p) return p.n;
+  return currentUserEmail.split("@")[0];
+}
 async function refreshAuthUI(){
   const bar=document.getElementById("authbar"); if(!bar) return;
   if(!CLOUD){ bar.innerHTML='<span class="authmode">💾 Lokaal (niet gedeeld) — cloud nog niet ingesteld</span>'; applyStaffGate(); return; }
-  try{ const {data}=await sb.auth.getSession(); isStaff=!!(data && data.session); }catch(e){ isStaff=false; }
+  try{ const {data}=await sb.auth.getSession(); isStaff=!!(data && data.session);
+       currentUserEmail=(data&&data.session&&data.session.user&&data.session.user.email)||""; }
+  catch(e){ isStaff=false; currentUserEmail=""; }
   bar.innerHTML = isStaff
-    ? '<span class="authmode ok">✔ Ingelogd als staf — je kunt bewerken; wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
+    ? '<span class="authmode ok">✔ Ingelogd als <b>'+whoAmI()+'</b> — je kunt bewerken; wijzigingen worden gedeeld</span> <button class="btn" onclick="staffLogout()">Uitloggen</button>'
     : '<span class="authmode">👁 Alleen-lezen — log in als staf om te bewerken</span> <button class="btn" onclick="staffLogin()">🔒 Staf inloggen</button>';
   applyStaffGate();
   setSaveStatus();
