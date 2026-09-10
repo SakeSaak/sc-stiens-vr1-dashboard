@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-c</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.10-a</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1560,11 +1560,17 @@ function assignTasks(){
   (clubDuties||[]).forEach((c,i)=>{ if(c&&c.date) agenda.push({soort:"club",date:c.date,o:c,i}); });
   agenda.sort((a,b)=> a.date<b.date?-1 : a.date>b.date?1 : (a.soort<b.soort?-1:1));
 
+  // Reserveer eerst iedereen die op deze dag al een taak heeft, zodat niemand twee taken
+  // op dezelfde dag krijgt (bv. fluiten én coördinaat, of vlaggen én wassen).
+  function reserveer(o,keys,used){ keys.forEach(k=>(o[k]||[]).forEach(n=>used.add(n))); }
   agenda.forEach((it,idx)=>{
     const used=new Set(); const D=it.date;
     if(it.soort==="fix"){
       const f=it.o;
       if(f.home!==true && f.home!==false){ f.drive=f.drive||[]; f.wash=f.wash||[]; f.flag=f.flag||[]; f.food=f.food||[]; return; }
+      reserveer(f,["drive","wash","flag","food"],used);
+      // Heeft iemand die dag al een verenigingstaak (fluiten/coördinaat)? Dan niet nóg een taak.
+      (clubDuties||[]).forEach(c=>{ if(c&&c.date===f.date) reserveer(c,["fluit","coord"],used); });
       if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let k=0;k<nWash;k++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
       if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }
       f.fluit=[]; f.coord=[];                       // verenigingstaken hebben hun eigen datumlijst
@@ -1578,6 +1584,10 @@ function assignTasks(){
       }
     } else {
       const c=it.o; const ty=(typeof clubType==="function")?clubType(c):"both";
+      reserveer(c,["fluit","coord"],used);
+      // Speelt VR1 die dag zelf? Dan tellen die taken ook mee voor de dagbezetting.
+      const eigen=(fixtures||[]).find(f=>f&&f.date===c.date);
+      if(eigen) reserveer(eigen,["drive","wash","flag","food"],used);
       if(ty==="fluit"||ty==="both"){ if(!keep(c.fluit,"fluit",idx,used)){ const x=pickOne(fluitPool,used,"fluit",idx,{date:D,nonDriver:true}); c.fluit=x?[x]:[]; } }
       else c.fluit=[];
       if(ty==="coord"||ty==="both"){ if(!keep(c.coord,"coord",idx,used)){ const x=pickOne(allPool,used,"coord",idx,{date:D,nonDriver:true}); c.coord=x?[x]:[]; } }
@@ -1642,7 +1652,9 @@ function eligiblePool(task){ return task==="drive" ? PLAYERS.filter(p=>p.car).ma
 function taskCell(idx,task){
   const f=fixtures[idx]; const list=f[task]||[];
   const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="taskRemove(${idx},'${task}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
-  const pool=eligiblePool(task).filter(n=>!list.includes(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
+  const bezet=new Set(); ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n)));
+  (clubDuties||[]).forEach(c=>{ if(c&&c.date===f.date) ["fluit","coord"].forEach(k=>(c[k]||[]).forEach(n=>bezet.add(n))); });
+  const pool=eligiblePool(task).filter(n=>!bezet.has(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
   const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
   return `<div class="taskcell">${chips}${add}</div>`;
@@ -2430,6 +2442,7 @@ function clubCell(i,key){
   const list=c[key]||[];
   const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="clubTaskRemove(${i},'${key}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
   const bezet=new Set([...(c.fluit||[]),...(c.coord||[])]);
+  (fixtures||[]).forEach(f=>{ if(f&&f.date===c.date) ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=clubPool(key).filter(n=>!bezet.has(n) && !isAbsent(n,c.date));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
   return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select></div>`;
