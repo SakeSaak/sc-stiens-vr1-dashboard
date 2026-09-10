@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-b</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.01-c</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -544,7 +544,8 @@
         <option value="fluit">alleen fluiten</option>
         <option value="coord">alleen coördinaat</option></select></label>
       <label>&nbsp;<button class="btn" onclick="addClubDate()">➕ Toevoegen</button></label>
-      <label>&nbsp;<button class="btn" onclick="loadCoordSchedule()" title="3 okt, 13 feb en 29 mei — de beurten van VR1">📋 Laad coördinaatschema VR1</button></label>
+      <label>&nbsp;<button class="btn" onclick="loadCoordSchedule()" title="3 okt, 13 feb en 29 mei — de beurten van VR1">📋 Laad coördinaatschema</button></label>
+      <label>&nbsp;<button class="btn" onclick="loadFluitSchedule()" title="19 sep en 3 okt — MO15/1">🔔 Laad fluitschema</button></label>
       <label>&nbsp;<button class="btn primary" onclick="assignTasks()" title="Verdeelt alle taken samen, zodat het totaal eerlijk blijft">⚖️ Verdeel taken</button></label>
     </div>
     <div id="clubTable" style="overflow:auto"></div>
@@ -1357,7 +1358,8 @@ function renderAgenda(){
     items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · "),src:"fix",i});
   });
   (clubDuties||[]).forEach((c,i)=>{ if(!c||!c.date)return; const parts=[]; const ty=(typeof clubType==="function")?clubType(c):"both";
-    if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")); if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
+    if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")+(c.fluitTeam?" ("+c.fluitTeam+")":""));
+    if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
     if(c.time)parts.push(c.time);
     const titel = ty==="coord"?"Wedstrijdcoördinaat" : ty==="fluit"?"Fluiten jeugd" : "Fluiten / coördinatie";
     items.push({date:c.date,time:"",icon:"🔔",cat:"Verenigingstaak",title:titel,det:parts.join(" · "),src:"club",i});
@@ -2361,13 +2363,30 @@ function clubType(d){ return d.type||"both"; }        // oude regels zonder type
 function setClubType(i,v){ if(clubDuties[i]){ clubDuties[i].type=v;
   if(v==="coord") clubDuties[i].fluit=[]; if(v==="fluit") clubDuties[i].coord=[];
   renderClubDuties(); if(typeof renderAgenda==="function") renderAgenda(); scheduleSave(); } }
+// Fluitschema van de vereniging (najaar 2026) — de beurten van VR1, met het team dat gefloten wordt.
+const FLUIT_VR1=[
+  {date:"2026-09-19", team:"MO15/1"},
+  {date:"2026-10-03", team:"MO15/1"},
+];
+function loadFluitSchedule(){
+  let added=0;
+  FLUIT_VR1.forEach(f=>{
+    const best=clubDuties.find(x=>x.date===f.date);
+    if(best){ best.type = (clubType(best)==="coord") ? "both" : "fluit"; best.fluitTeam=f.team; }
+    else { clubDuties.push({date:f.date,type:"fluit",fluitTeam:f.team,fluit:[],coord:[]}); added++; }
+  });
+  clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+  renderClubDuties(); renderBalance(); renderPerPlayer(); if(typeof renderAgenda==="function") renderAgenda();
+  if(typeof persistLocal==="function") persistLocal(); scheduleSave();
+  flash(added?(added+" fluitbeurt(en) toegevoegd ✓"):"Fluitbeurten bijgewerkt ✓");
+}
 // Wedstrijdcoördinaat-schema van de vereniging (seizoen 2026/2027) — de beurten van VR1.
 const COORD_VR1=["2026-10-03","2027-02-13","2027-05-29"];
 function loadCoordSchedule(){
   let added=0;
   COORD_VR1.forEach(d=>{
     const best=clubDuties.find(x=>x.date===d);
-    if(best){ best.type="coord"; best.time="08:00 - 12:00"; }
+    if(best){ best.type = (clubType(best)==="fluit") ? "both" : "coord"; best.time="08:00 - 12:00"; }
     else { clubDuties.push({date:d,type:"coord",time:"08:00 - 12:00",fluit:[],coord:[]}); added++; }
   });
   clubDuties.sort((a,b)=>a.date<b.date?-1:1);
@@ -2437,7 +2456,8 @@ function renderClubDuties(){
       const nvt='<span class="mini">n.v.t.</span>';
       return `<tr>
         <td>${new Date(d.date+"T00:00:00").toLocaleDateString("nl-NL",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
-            ${d.time?`<div class="mini">${d.time}</div>`:''}</td>
+            ${d.time?`<div class="mini">${d.time}</div>`:''}
+            ${d.fluitTeam?`<div class="mini">fluiten: ${d.fluitTeam}</div>`:''}</td>
         <td class="center"><select onchange="setClubType(${i},this.value)" style="${KIN2}">
             <option value="both" ${ty==="both"?"selected":""}>beide</option>
             <option value="fluit" ${ty==="fluit"?"selected":""}>alleen fluiten</option>

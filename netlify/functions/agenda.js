@@ -108,7 +108,8 @@ exports.handler = async () => {
 
   club.forEach((c,i)=>{ if(!c || !c.date) return;
     const ty=c.type||"both";
-    const d=[]; if(c.fluit && c.fluit.length) d.push("Fluiten: "+names(c.fluit)); if(c.coord && c.coord.length) d.push("Coördinatie: "+names(c.coord));
+    const d=[]; if(c.fluit && c.fluit.length) d.push("Fluiten: "+names(c.fluit)+(c.fluitTeam?" ("+c.fluitTeam+")":""));
+    if(c.coord && c.coord.length) d.push("Coördinatie: "+names(c.coord));
     if(c.time) d.push("Tijd: "+c.time);
     const titel = ty==="coord" ? "🔔 Wedstrijdcoördinaat" : ty==="fluit" ? "🔔 Fluiten jeugd" : "🔔 Verenigingstaak jeugd";
     ev("c"+i+"-"+c.date+"@scstiens", titel, c.date, "", 0, d.join("\n"));
