@@ -110,9 +110,15 @@ exports.handler = async () => {
     const ty=c.type||"both";
     const d=[]; if(c.fluit && c.fluit.length) d.push("Fluiten: "+names(c.fluit)+(c.fluitTeam?" ("+c.fluitTeam+")":""));
     if(c.coord && c.coord.length) d.push("Coördinatie: "+names(c.coord));
-    if(c.time) d.push("Tijd: "+c.time);
     const titel = ty==="coord" ? "🔔 Wedstrijdcoördinaat" : ty==="fluit" ? "🔔 Fluiten jeugd" : "🔔 Verenigingstaak jeugd";
-    ev("c"+i+"-"+c.date+"@scstiens", titel, c.date, "", 0, d.join("\n"));
+    // begintijd bekend → afspraak met tijd; anders een dag-item
+    let start=(typeof c.time==="string"&&/^\d{1,2}:\d{2}$/.test(c.time))?c.time:"";
+    let dur=90;
+    if(start && typeof c.end==="string" && /^\d{1,2}:\d{2}$/.test(c.end)){
+      const a=start.split(":").map(Number), b=c.end.split(":").map(Number);
+      const m=(b[0]*60+b[1])-(a[0]*60+a[1]); if(m>0) dur=m;
+    }
+    ev("c"+i+"-"+c.date+"@scstiens", titel, c.date, start, dur, d.join("\n"));
   });
 
   // Zomer-hardloopprogramma: markering bovenaan elke week (dag-item op de maandag), zelf in te plannen.
