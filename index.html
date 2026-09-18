@@ -217,7 +217,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.17-a</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.18-a</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -774,7 +774,7 @@ let PLAYERS = [
   {n:"Jetty De Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
   {n:"Sigrid", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
   {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
-  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Nee", car:false, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; vlagt wel en pakt daarom extra andere taken op"},
+  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; vlagt en rijdt wel"},
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
 ];
 const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
@@ -822,7 +822,14 @@ function setPerson(rol,i,key,val){
   else p[key]=val;
   if(typeof persistLocal==="function") persistLocal();
   if(typeof scheduleSave==="function") scheduleSave();
-  if(key==="car"){ renderSquad(); }          // rijders-pool verandert
+  if(key==="car"){                            // rijderslijst verandert → overal opnieuw tekenen
+    renderSquad();
+    if(typeof renderSchedTable==="function") renderSchedTable();
+    if(typeof renderBalance==="function") renderBalance();
+    if(typeof renderPerPlayer==="function") renderPerPlayer();
+    if(typeof renderClubDuties==="function") renderClubDuties();
+    if(typeof renderBel==="function") renderBel();
+  }
   if(key==="pos"||key==="posrole") renderCards();
 }
 // Naam wijzigen: verplaatst álle gekoppelde gegevens mee (taken, boetes, eten, duo's, check-ins).
