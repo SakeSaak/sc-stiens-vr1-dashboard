@@ -847,10 +847,20 @@ function vindSpeelster(n){
     return pk===k || pk===sk || naamSleutel(standaardNaam(p.n))===sk; }) || null;
 }
 
-function standaardAl(){
-  try{ return JSON.parse(localStorage.getItem("scstiens_standaard_ingevoegd"))||[]; }
+/* Welke standaardnamen al een keer langs zijn geweest. Deze lijst hoort bij de gedeelde
+   gegevens: anders zou een telefoon die de ledenlijst voor het eerst ophaalt een speelster
+   opnieuw aanmaken die hier net is hernoemd of verwijderd. */
+let STANDAARD_GEZIEN = (function(){
+  try{ const l=JSON.parse(localStorage.getItem("scstiens_standaard_ingevoegd")); return Array.isArray(l)?l:[]; }
   catch(e){ return []; }
+})();
+function markeerGezien(naam){
+  if(naam && STANDAARD_GEZIEN.indexOf(naam)<0){ STANDAARD_GEZIEN.push(naam); bewaarGezien(); }
 }
+function bewaarGezien(){
+  try{ localStorage.setItem("scstiens_standaard_ingevoegd", JSON.stringify(STANDAARD_GEZIEN)); }catch(e){}
+}
+function standaardAl(){ return STANDAARD_GEZIEN; }
 function vulAanMetStandaard(){
   if(!Array.isArray(PLAYERS)) return false;
   const al=standaardAl();
@@ -858,6 +868,7 @@ function vulAanMetStandaard(){
   PLAYERS_STANDAARD.forEach(p=>{
     const bestaat=vindSpeelster(p.n);
     if(bestaat){
+      if(al.indexOf(p.n)<0) al.push(p.n);        // staat er al: nooit meer opnieuw aanmaken
       /* Zelf toegevoegd via het Selectieoverzicht: dan staat de positie nog op "—".
          Vul die aan, anders staat een aanvalster tussen het middenveld. */
       if(!bestaat.pos || bestaat.pos==="—"){
@@ -877,7 +888,7 @@ function vulAanMetStandaard(){
       }
     }catch(e){}
   });
-  try{ localStorage.setItem("scstiens_standaard_ingevoegd", JSON.stringify(al)); }catch(e){}
+  bewaarGezien();
   if(herstelLinies()) nieuw=true;
   if(vulPosities()) nieuw=true;
   return nieuw;
@@ -927,7 +938,9 @@ function addPerson(rol){
 function delPerson(rol,i){
   const arr=personArr(rol); const p=arr[i]; if(!p) return;
   if(!confirm("Weet je zeker dat je "+p.n+" wilt verwijderen?\n\nTaken, boetes en check-ins van deze persoon blijven bewaard, maar zij verdwijnt uit alle keuzelijsten.")) return;
-  arr.splice(i,1); afterPeopleChange(); flash(p.n+" verwijderd");
+  arr.splice(i,1);
+  if(rol!=="staf" && typeof markeerGezien==="function") markeerGezien(p.n);
+  afterPeopleChange(); flash(p.n+" verwijderd");
 }
 function setPerson(rol,i,key,val){
   const p=personArr(rol)[i]; if(!p) return;
@@ -963,6 +976,14 @@ function renamePerson(rol,i,neu){
   (K.food||[]).forEach(f=>{ if(f.cook===oud) f.cook=neu; f.shareWith=swap(f.shareWith);
     if(f.paid && Object.prototype.hasOwnProperty.call(f.paid,oud)){ f.paid[neu]=f.paid[oud]; delete f.paid[oud]; } });
   if(typeof MOOD_TOKENS==="object" && MOOD_TOKENS[oud]){ MOOD_TOKENS[neu]=MOOD_TOKENS[oud]; delete MOOD_TOKENS[oud]; }
+  /* De wedstrijddata hangt ook aan de naam: die moet mee, anders raakt zij haar
+     wedstrijdcijfers kwijt en vallen haar kaartcijfers terug op alleen de metingen. */
+  if(typeof markeerGezien==="function") markeerGezien(oud);   // niet opnieuw aanmaken onder de oude naam
+  if(typeof MATCHDATA==="object" && MATCHDATA && MATCHDATA[oud]){
+    MATCHDATA[neu]=MATCHDATA[oud]; delete MATCHDATA[oud];
+    try{ saveMatchdata(); }catch(e){}
+    try{ computePlayerStats(neu); }catch(e){}
+  }
   afterPeopleChange();
   flash(oud+" heet nu "+neu+" ✓");
 }
@@ -2375,9 +2396,12 @@ function matchdataUit(rijen){
   const nieuw={}; let gevonden=0, onbekend=[];
   rijen.forEach(r=>{
     const ruw=String(r["Speelster"]||r["speelster"]||"").trim();
-    if(!ruw) return;
-    const speelster=vindSpeelster(ruw);          // spelling in het bestand mag afwijken
-    if(!speelster){ onbekend.push(ruw); return; }
+    const voluit=String(r["Volledige naam"]||r["volledige naam"]||"").trim();
+    if(!ruw && !voluit) return;
+    /* Eerst op de korte naam, anders op de volledige naam. Zo blijft het bestand kloppen
+       als iemand in het Selectieoverzicht is hernoemd (Iris -> Iris Dijkmeijer). */
+    const speelster=vindSpeelster(ruw) || (voluit? vindSpeelster(voluit) : null);
+    if(!speelster){ onbekend.push(ruw||voluit); return; }
     const naam=speelster.n;
     const st={};
     ALLE_STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
@@ -3283,8 +3307,13 @@ function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].ph
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses,
   /* het weekbestand uit Veo hoort bij de gedeelde gegevens: anders zien andere apparaten
      alleen de trainingsmetingen en rekenen zij de kaartjes lager uit. */
-  matchdata:(typeof MATCHDATA!=="undefined"?MATCHDATA:{})}; }
+  matchdata:(typeof MATCHDATA!=="undefined"?MATCHDATA:{}),
+  standaardGezien:(typeof STANDAARD_GEZIEN!=="undefined"?STANDAARD_GEZIEN:[])}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
+  if(st && Array.isArray(st.standaardGezien) && typeof STANDAARD_GEZIEN!=="undefined"){
+    st.standaardGezien.forEach(n=>{ if(STANDAARD_GEZIEN.indexOf(n)<0) STANDAARD_GEZIEN.push(n); });
+    bewaarGezien();
+  }
   if(st && st.matchdata && typeof st.matchdata==="object" && typeof MATCHDATA!=="undefined"){
     MATCHDATA=st.matchdata; try{ saveMatchdata(); }catch(e){} }
   if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
