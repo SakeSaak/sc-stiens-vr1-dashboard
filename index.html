@@ -248,7 +248,18 @@
       <button class="btn" onclick="exportData()">⬇︎ Exporteer data (JSON)</button>
       <label class="btn" style="cursor:pointer">⬆︎ Importeer<input type="file" accept=".json" onchange="importData(event)" hidden></label>
       <button class="btn" onclick="window.print()">🖨 Print / PDF</button>
-    </div>
+      <label class="btn" style="cursor:pointer;display:flex;align-items:center;gap:6px">↕ Volgorde
+        <select id="kaartSort" onchange="zetKaartSort(this.value)"
+          style="background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:12.5px">
+          <option value="linie">Per linie</option>
+          <option value="ovr">OVR hoog → laag</option>
+          <option value="naam">Op naam</option>
+          <option value="eigen">Selectievolgorde</option>
+        </select>
+      </label>
+      <label class="btn" style="cursor:pointer;display:flex;align-items:center;gap:6px" title="Geblesseerde en afwezige speelsters onderaan">
+        <input type="checkbox" id="kaartOnder" onchange="zetKaartOnder(this.checked)" style="accent-color:var(--gold)"> 🤕 onderaan
+      </label>
     <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR worden <b>automatisch berekend uit de metingen</b> en zijn hier
       niet handmatig aan te passen — vul de tests in op het tabblad <b>Metingen</b>. Tot er metingen zijn, staan ze op <b>–</b>. In het
       onderste vak van elke kaart kun je wel losse video-notities kwijt (bv. observaties, xG). Klik daarna op <b>Opslaan</b>.</p>
@@ -290,6 +301,13 @@
     <p class="hint" style="margin-top:-4px">Vul alleen de tests in die je die dag hebt afgenomen; lege velden worden overgeslagen. Leeg = de vorige meting van die test blijft gelden.</p>
     <div style="overflow:auto">
       <table id="measTable"></table>
+    </div>
+    <div id="measGKBox" style="margin-top:18px">
+      <h2 class="sec" style="font-size:15px">🧤 Keeperstesten</h2>
+      <p class="hint" style="margin-top:-2px">De keepster heeft een eigen kaartje met RED, OPB, DIS, BER, UIT en DUE.
+        Sprinttijden en een afrondtest zeggen niets over keepen, dus die staan hier niet. De ijking van deze testen is
+        een startpunt — pas 'm aan bij Testinstellingen zodra jullie weten waar het niveau ligt.</p>
+      <div style="overflow:auto"><table id="measTableGK"></table></div>
     </div>
 
 
@@ -792,8 +810,17 @@ let PLAYERS = [
   {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
   {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; vlagt en rijdt wel"},
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
+  {n:"Iris Terpstra", age:"", city:"", job:"", pos:"RW", role:"att", form:"—", top:"Rechtsvoor", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
+  {n:"Yannika", age:"", city:"", job:"", pos:"CM", role:"mid", form:"—", top:"Middenveld (komt uit VR2)", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
 ];
 const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
+/* De keepster krijgt haar eigen zes: sprinttijd en afrondtest zeggen niets over keepen. */
+const GK_STAT_KEYS = ["RED","OPB","DIS","BER","UIT","DUE"];
+const STAT_LABEL = {RED:"Reddingen", OPB:"Opbouw", DIS:"Distributie", BER:"Bereik",
+                    UIT:"Uittrappen", DUE:"Duels"};
+function isKeeper(n){ const p=PLAYERS.find(x=>x.n===n); return !!p && p.role==="gk"; }
+function keysFor(n){ return isKeeper(n) ? GK_STAT_KEYS : STAT_KEYS; }
+const ALLE_STAT_KEYS = STAT_KEYS.concat(GK_STAT_KEYS);
 
 /* Staf — eet mee en betaalt mee, maar telt niet mee in FIFA-kaartjes, metingen of taakschema's. */
 let STAFF = [
@@ -897,6 +924,8 @@ const POS3 = {
   "Bente":["LB","RB","RW"],
   "Amber Merkx":["RW","LW","ST"],
   "Alyssa Visser":["CB","CDM","CM"],
+  "Iris Terpstra":["RW","LW","ST"],
+  "Yannika":["CM","CAM","RB"],
 };
 function posList(p){ return POS3[p.n] || [p.pos]; }
 
@@ -912,7 +941,7 @@ const DEVGOALS = {
   "Iris":{dev:"1-tegen-1, afronden, aannames, voorzetten onder druk",proc:"Meer coachen, simpeler spel, wedstrijden winnen",link:"SHO"},
   "Merle":{dev:"Verdedigen en 1-tegen-1 situaties",proc:"Beter verdedigen (1-1), zo fit mogelijk",link:"DEF"},
   "Sacha":{dev:"Nauwkeurige passing en strakke lange bal",proc:"Basis: passing, schot op goal, coachen",link:"PAS"},
-  "Arwen Kuipers":{dev:"Coaching, hoge ballen, uittrappen & meevoetballen",proc:"Beter ingespeeld, focus vasthouden",link:"PAS"},
+  "Arwen Kuipers":{dev:"Coaching, hoge ballen, uittrappen & meevoetballen",proc:"Beter ingespeeld, focus vasthouden",link:"UIT"},
   "Esmee Diekstra":{dev:"Rust aan de bal, overzicht, zelfvertrouwen",proc:"Overzicht houden, rust aan de bal",link:"PAS"},
   "Jetty De Ruiter":{dev:"Handelingssnelheid en sterk aan de bal",proc:"Plezier terugvinden, positief blijven",link:"DRI"},
   "Sigrid":{dev:"Ruimte creëren, looplijnen, omschakelen; lange bal",proc:"Communiceren, fit worden, koppen",link:"PAS"},
@@ -1065,14 +1094,65 @@ function saveStats(){
 }
 function ovr(n){
   const s=(store[n]&&store[n].stats)||{};
-  const vals=STAT_KEYS.map(k=>parseInt(s[k])).filter(v=>!isNaN(v));
+  const vals=keysFor(n).map(k=>parseInt(s[k])).filter(v=>!isNaN(v));
   if(vals.length<6) return "–";
   return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
 }
 function initials(name){return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
+/* ---- volgorde van de kaartjes ---- */
+let KAART_SORT = (function(){ try{ return localStorage.getItem("scstiens_kaartsort")||"linie"; }catch(e){ return "linie"; } })();
+let KAART_ONDER = (function(){ try{ return localStorage.getItem("scstiens_kaartonder")!=="0"; }catch(e){ return true; } })();
+const LINIE_VOLG = {gk:0, def:1, mid:2, att:3};
+
+/* Speelt zij nu niet mee? Geblesseerd volgens de laatste check-in, of vandaag afwezig. */
+function nietBeschikbaar(n){
+  try{ if(currentInjury(n)) return 1; }catch(e){}
+  try{
+    const vandaag=new Date().toISOString().slice(0,10);
+    if((getAwayPeriods(n)||[]).some(p=>p&&p.from&&p.from<=vandaag&&(p.to||p.from)>=vandaag)) return 2;
+  }catch(e){}
+  return 0;
+}
+
+function gesorteerdeSpelers(){
+  const lijst = PLAYERS.map((p,i)=>({p,i,weg:nietBeschikbaar(p.n)}));
+  const ovrNum = n => { const v=ovr(n); return (v==="–"||v==null) ? -1 : +v; };
+  const vergelijk = {
+    linie: (a,b)=> (LINIE_VOLG[a.p.role]??9)-(LINIE_VOLG[b.p.role]??9) || ovrNum(b.p.n)-ovrNum(a.p.n) || a.p.n.localeCompare(b.p.n,"nl"),
+    ovr:   (a,b)=> ovrNum(b.p.n)-ovrNum(a.p.n) || a.p.n.localeCompare(b.p.n,"nl"),
+    naam:  (a,b)=> a.p.n.localeCompare(b.p.n,"nl"),
+    eigen: (a,b)=> a.i-b.i
+  }[KAART_SORT] || ((a,b)=>a.i-b.i);
+  return lijst.sort((a,b)=>{
+    if(KAART_ONDER && (a.weg?1:0)!==(b.weg?1:0)) return (a.weg?1:0)-(b.weg?1:0);
+    if(KAART_ONDER && a.weg!==b.weg) return a.weg-b.weg;
+    return vergelijk(a,b);
+  }).map(x=>x.p);
+}
+
+function zetKaartSort(v){ KAART_SORT=v;
+  try{ localStorage.setItem("scstiens_kaartsort",v); }catch(e){} renderCards(); }
+function zetKaartOnder(v){ KAART_ONDER=!!v;
+  try{ localStorage.setItem("scstiens_kaartonder", v?"1":"0"); }catch(e){} renderCards(); }
+
 function renderCards(){
   const g=document.getElementById("cardGrid"); g.innerHTML="";
-  PLAYERS.forEach((p,idx)=>{
+  const sel=document.getElementById("kaartSort"); if(sel) sel.value=KAART_SORT;
+  const chk=document.getElementById("kaartOnder"); if(chk) chk.checked=KAART_ONDER;
+  let vorigeLinie=null;
+  gesorteerdeSpelers().forEach((p,idx)=>{
+    if(KAART_SORT==="linie"){
+      const weg=nietBeschikbaar(p.n)&&KAART_ONDER;
+      const kop = weg ? "niet-beschikbaar" : p.role;
+      if(kop!==vorigeLinie){
+        vorigeLinie=kop;
+        const h=document.createElement("div");
+        h.style.cssText="grid-column:1/-1;margin:6px 0 -6px;font-size:13px;font-weight:700;"+
+          "letter-spacing:.5px;text-transform:uppercase;color:"+(weg?"var(--muted)":"var(--gold)");
+        h.textContent = weg ? "Niet beschikbaar" : (ROLE_LABEL[p.role]||p.role);
+        g.appendChild(h);
+      }
+    }
     const s=(store[p.n]&&store[p.n].stats)||{};
     const note=(store[p.n]&&store[p.n].note)||"";
     const el=document.createElement("div");
@@ -1091,7 +1171,7 @@ function renderCards(){
       ${injuryBadgeHTML(p.n)}
       <div class="divider"></div>
       <div class="stats">
-        ${STAT_KEYS.map(k=>`<div class="stat"><b>${k}</b>
+        ${keysFor(p.n).map(k=>`<div class="stat"><b>${k}</b>
           <span class="statval" data-stat="${k}">${s[k]!=null?s[k]:'–'}</span></div>`).join("")}
       </div>
       <div class="foot">
@@ -2068,8 +2148,15 @@ const TESTS=[
   {k:"broadjumpL",stat:"PHY",lbl:"Broad jump 1-been — links",unit:"cm",     top:220,  low:120,  step:"1"},
   {k:"broadjumpR",stat:"PHY",lbl:"Broad jump 1-been — rechts",unit:"cm",    top:220,  low:120,  step:"1"},
   {k:"skater",   stat:"PHY", lbl:"Lateral skater jump",      unit:"cm",     top:180,  low:90,   step:"1"},
+  /* Keepertesten. De ijking is een startpunt voor seniorenvrouwen; pas 'm aan bij
+     Testinstellingen zodra jullie weten waar jullie niveau ligt. */
+  {k:"gkreflex", stat:"RED", lbl:"Reactietest (ballen gepakt)", unit:"van 10", top:9, low:3, step:"1", gk:true},
+  {k:"gkuittrap",stat:"UIT", lbl:"Uittrap — afstand",           unit:"m",      top:55,low:30,step:"1", gk:true},
+  {k:"gkhoog",   stat:"DUE", lbl:"Hoge ballen (gepakt)",        unit:"van 10", top:9, low:4, step:"1", gk:true},
+  {k:"gkopbouw", stat:"OPB", lbl:"Opbouwtest (aangekomen)",     unit:"van 20", top:18,low:8, step:"1", gk:true},
+  {k:"gkbereik", stat:"BER", lbl:"Uitkomen 12 m",               unit:"s",      top:2.10,low:3.00,step:"0.01", gk:true},
 ];
-const STAT_TESTS={}; STAT_KEYS.forEach(s=>STAT_TESTS[s]=TESTS.filter(t=>t.stat===s));
+const STAT_TESTS={}; ALLE_STAT_KEYS.forEach(s=>STAT_TESTS[s]=TESTS.filter(t=>t.stat===s));
 function convert(val,t){ const v=parseFloat(val); if(isNaN(v)||!t)return null; const f=(v-t.low)/(t.top-t.low); return Math.round(clamp(50+f*49,1,99)); }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function selDate(){ const el=document.getElementById("measDate"); return (el&&el.value)?el.value:todayStr(); }
@@ -2086,9 +2173,9 @@ function valAsOf(n,k,date){ const ss=getSessions(n).filter(s=>!date||s.date<=dat
 function latestVal(n,k){ return valAsOf(n,k,null); }
 // stats zoals ze golden op 'date' (of nu, als date leeg): gemiddelde van geconverteerde tests per stat
 function statsAsOf(n,date){ const out={};
-  STAT_KEYS.forEach(stat=>{ const vals=(STAT_TESTS[stat]||[]).map(t=>convert(valAsOf(n,t.k,date),t)).filter(v=>v!=null);
+  keysFor(n).forEach(stat=>{ const vals=(STAT_TESTS[stat]||[]).map(t=>convert(valAsOf(n,t.k,date),t)).filter(v=>v!=null);
     if(vals.length) out[stat]=Math.round(vals.reduce((a,b)=>a+b,0)/vals.length); });
-  const all=STAT_KEYS.map(s=>out[s]).filter(v=>v!=null);
+  const all=keysFor(n).map(s=>out[s]).filter(v=>v!=null);
   out.OVR=(all.length===6)?Math.round(all.reduce((a,b)=>a+b,0)/6):null; return out;
 }
 /* ---------------- WEDSTRIJDDATA (weekbestand naast de metingen) ----------------
@@ -2141,7 +2228,7 @@ function matchdataUit(rijen){
     if(!naam) return;
     if(!namen.has(naam)){ onbekend.push(naam); return; }
     const st={};
-    STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
+    ALLE_STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
     nieuw[naam]={ stats:st, wedstrijden:+r["Wedstrijden"]||0, minuten:+r["Minuten"]||0,
                   status:String(r["Status"]||"").trim() };
     gevonden++;
@@ -2224,10 +2311,11 @@ function renderMatchdata(){
   }
   const rows=namen.map(n=>{
     const md=MATCHDATA[n];
-    const cellen=STAT_KEYS.map(k=>{
+    const cellen=keysFor(n).map(k=>{
       const h=statHerkomst(n,k);
       if(h.wed==null) return '<td class="center" style="color:var(--muted)">–</td>';
-      return '<td class="center"><b>'+(h.uit??'–')+'</b><br><span class="mini" style="color:var(--muted)">'+
+      return '<td class="center"><span class="mini" style="color:var(--muted)">'+k+'</span><br><b>'+
+             (h.uit??'–')+'</b><br><span class="mini" style="color:var(--muted)">'+
              (h.test??'–')+' / '+h.wed+'</span></td>';
     }).join("");
     return '<tr><td>'+n+'</td><td class="center">'+md.wedstrijden+'</td><td class="center">'+
@@ -2237,12 +2325,13 @@ function renderMatchdata(){
     (MATCHDATA.__geladen||'onbekend')+'. Per stat staat boven het gecombineerde cijfer en eronder '+
     'klein <i>test / wedstrijd</i>.</p><div style="overflow:auto"><table><tr><th>Speelster</th>'+
     '<th class="center">Wedstr.</th><th class="center">Min.</th>'+
-    STAT_KEYS.map(k=>'<th class="center">'+k+'</th>').join("")+'</tr>'+rows+'</table></div>';
+    '<th class="center" colspan="6">per stat: gecombineerd, daaronder test / wedstrijd</th>'+
+    '</tr>'+rows+'</table></div>';
 }
 
 function computePlayerStats(n){ store[n]=store[n]||{stats:{},note:""}; const s=store[n].stats=store[n].stats||{};
   // metingen en wedstrijddata samen; elke meetsessie en elke wedstrijd telt even zwaar
-  STAT_KEYS.forEach(k=>{ const v=gecombineerd(n,k); if(v!=null) s[k]=v; else delete s[k]; }); }  // stat wist mee als alle metingen weg zijn
+  keysFor(n).forEach(k=>{ const v=gecombineerd(n,k); if(v!=null) s[k]=v; else delete s[k]; }); }  // stat wist mee als alle metingen weg zijn
 function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); renderDev(); flash("Stats herberekend ✓"); }
 
 // LIVE invoer op de gekozen datum
@@ -2259,12 +2348,12 @@ function measInput(n,k,val){
 }
 function updateCardStats(n){ const c=document.querySelector(`.fcard[data-n="${CSS.escape(n)}"]`); if(!c)return;
   const s=(store[n]&&store[n].stats)||{};
-  STAT_KEYS.forEach(k=>{const el=c.querySelector(`[data-stat="${k}"]`); if(el)el.textContent=(s[k]!=null?s[k]:'–');});
+  keysFor(n).forEach(k=>{const el=c.querySelector(`[data-stat="${k}"]`); if(el)el.textContent=(s[k]!=null?s[k]:'–');});
   const o=c.querySelector('[data-ovr]'); if(o)o.textContent=ovr(n);
 }
 function updateMeasComputed(n){ const row=document.querySelector(`#measTable tr[data-n="${CSS.escape(n)}"]`); if(!row)return;
   const s=(store[n]&&store[n].stats)||{};
-  STAT_KEYS.forEach(k=>{const c=row.querySelector(`.comp[data-c="${k}"] b`); if(c)c.textContent=(s[k]??'–');});
+  keysFor(n).forEach(k=>{const c=row.querySelector(`.comp[data-c="${k}"] b`); if(c)c.textContent=(s[k]??'–');});
   const o=row.querySelector('.comp[data-c="OVR"] b'); if(o)o.textContent=ovr(n);
 }
 function changeMeasDate(){ renderMeasTable(); }
@@ -2279,20 +2368,31 @@ function targetMark(val,tt){
     : `<div class="mini" style="color:var(--muted);margin-top:2px">${higherBetter?'-':'+'}${Math.abs(Math.round((tt.target-v)*(tt.step==='1'?1:10))/(tt.step==='1'?1:10))}</div>`;
 }
 function renderMeasTable(){
-  const t=document.getElementById("measTable"); if(!t)return; const date=selDate();
+  bouwMeasTabel("measTable", STAT_KEYS, PLAYERS.filter(p=>p.role!=="gk"));
+  bouwMeasTabel("measTableGK", GK_STAT_KEYS, PLAYERS.filter(p=>p.role==="gk"));
+  const box=document.getElementById("measGKBox");
+  if(box) box.style.display = PLAYERS.some(p=>p.role==="gk") ? "" : "none";
+}
+/* Eén tabel per groep: veldspeelsters krijgen de veldtesten, keepsters de keepertesten. */
+function bouwMeasTabel(id, keys, spelers){
+  const t=document.getElementById(id); if(!t) return;
+  if(!spelers.length){ t.innerHTML=""; return; }
+  const date=selDate();
   let h1=`<tr><th rowspan="2">Speelster</th>`;
-  STAT_KEYS.forEach(stat=>{ const ts=STAT_TESTS[stat]; if(ts.length) h1+=`<th class="center" colspan="${ts.length}" style="border-left:2px solid var(--line)">${stat}</th>`; });
-  h1+=`<th class="center" colspan="7" style="border-left:2px solid var(--gold)">Berekende stats</th></tr>`;
+  keys.forEach(stat=>{ const ts=STAT_TESTS[stat]||[]; if(ts.length) h1+=`<th class="center" colspan="${ts.length}" style="border-left:2px solid var(--line)">${stat}</th>`; });
+  h1+=`<th class="center" colspan="${keys.length+1}" style="border-left:2px solid var(--gold)">Berekende stats</th></tr>`;
   let h2=`<tr>`;
-  STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ const strf=tt.target!=null?`<br><span style="color:var(--gold)">streef ${tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target}</span>`:''; h2+=`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''} title="${tt.lbl}${tt.target!=null?' — gewenst niveau: '+(tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target)+' '+tt.unit:''}">${tt.lbl}<br><span style="opacity:.6">${tt.unit}</span>${strf}</th>`; }); });
-  h2+=`<th class="center" style="border-left:2px solid var(--gold)">PAC</th><th class="center">SHO</th><th class="center">PAS</th><th class="center">DRI</th><th class="center">DEF</th><th class="center">PHY</th><th class="center">OVR</th></tr>`;
-  t.innerHTML=h1+h2+PLAYERS.map(p=>{
-    const nEsc=p.n.replace(/'/g,"\\'"); const sess=sessionFor(p.n,date,false); const r=(sess&&sess.results)||{}; const s=(store[p.n]&&store[p.n].stats)||{};
+  keys.forEach(stat=>{ (STAT_TESTS[stat]||[]).forEach((tt,i)=>{ const strf=tt.target!=null?`<br><span style="color:var(--gold)">streef ${tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target}</span>`:''; h2+=`<th class="center mini" ${i===0?'style="border-left:2px solid var(--line)"':''} title="${tt.lbl}${tt.target!=null?' — gewenst niveau: '+(tt.targetHi?tt.target+'–'+tt.targetHi:'≥'+tt.target)+' '+tt.unit:''}">${tt.lbl}<br><span style="opacity:.6">${tt.unit}</span>${strf}</th>`; }); });
+  keys.forEach((k,i)=>{ h2+=`<th class="center"${i===0?' style="border-left:2px solid var(--gold)"':''} title="${STAT_LABEL[k]||k}">${k}</th>`; });
+  h2+=`<th class="center">OVR</th></tr>`;
+  t.innerHTML=h1+h2+spelers.map(p=>{
+    const nEsc=p.n.replace(/'/g,"\'"); const sess=sessionFor(p.n,date,false); const r=(sess&&sess.results)||{}; const s=(store[p.n]&&store[p.n].stats)||{};
     let row=`<tr data-n="${p.n}"><td><b>${p.n}</b> <span class="mini">${p.pos}</span></td>`;
-    STAT_KEYS.forEach(stat=>{ STAT_TESTS[stat].forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="text" inputmode="decimal" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
+    keys.forEach(stat=>{ (STAT_TESTS[stat]||[]).forEach((tt,i)=>{ row+=`<td class="center" ${i===0?'style="border-left:2px solid var(--line)"':''}><input type="text" inputmode="decimal" value="${r[tt.k]!=null?r[tt.k]:''}" placeholder="${tt.unit}"
       style="width:58px;background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;text-align:center"
       oninput="measInput('${nEsc}','${tt.k}',this.value)">${targetMark(r[tt.k],tt)}</td>`; }); });
-    row+=`<td class="center comp" data-c="PAC" style="border-left:2px solid var(--gold)"><b>${s.PAC??'–'}</b></td><td class="center comp" data-c="SHO"><b>${s.SHO??'–'}</b></td><td class="center comp" data-c="PAS"><b>${s.PAS??'–'}</b></td><td class="center comp" data-c="DRI"><b>${s.DRI??'–'}</b></td><td class="center comp" data-c="DEF"><b>${s.DEF??'–'}</b></td><td class="center comp" data-c="PHY"><b>${s.PHY??'–'}</b></td><td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
+    keys.forEach((k,i)=>{ row+=`<td class="center comp" data-c="${k}"${i===0?' style="border-left:2px solid var(--gold)"':''}><b>${s[k]??'–'}</b></td>`; });
+    row+=`<td class="center comp" data-c="OVR"><b>${ovr(p.n)}</b></td></tr>`;
     return row;
   }).join("");
 }
@@ -2350,7 +2450,7 @@ function renderDev(){
               oninput="setGoalField('${nEsc}',${i},'text',this.value)" onchange="pushGoals('${nEsc}')">
             <select class="glink pub" title="gekoppelde stat" onchange="setGoalField('${nEsc}',${i},'link',this.value)">
               <option value="">— stat —</option>
-              ${STAT_KEYS.map(k=>`<option value="${k}" ${g.link===k?'selected':''}>${k}</option>`).join("")}
+              ${ALLE_STAT_KEYS.map(k=>`<option value="${k}" ${g.link===k?'selected':''}>${k}</option>`).join("")}
             </select>
             <span class="curstat">${g.link?g.link+': '+cur:''}</span>
             <select class="gstatus pub" style="color:${STATUS_COLOR[g.status]}" onchange="setGoalStatus('${nEsc}',${i},this.value)">
