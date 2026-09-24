@@ -292,6 +292,22 @@
       <table id="measTable"></table>
     </div>
 
+
+    <details style="margin-top:16px" id="matchdataDetails">
+      <summary style="cursor:pointer;color:var(--gold);font-weight:600">⚽ Wedstrijddata uit Veo (weekbestand)</summary>
+      <p class="hint" style="margin-top:8px">Upload hier elke week het bestand met de wedstrijdcijfers. Het tabblad
+        <b>Kaartdata</b> wordt ingelezen. Vanaf dat moment is elke stat het gemiddelde van de metingen en de wedstrijden,
+        waarbij <b>één meetsessie even zwaar telt als één wedstrijd</b>. Bij de keeper tellen alleen PAS en DEF mee uit de
+        wedstrijd: sprinten en afronden doet zij daar niet.</p>
+      <div class="controls">
+        <label>📂 Weekbestand
+          <input type="file" id="matchdataFile" accept=".xlsx,.xls,.csv" onchange="leesWedstrijdbestand(event)">
+        </label>
+        <label>&nbsp;<button class="btn" onclick="wisWedstrijddata()">🗑 Wedstrijddata wissen</button></label>
+      </div>
+      <div id="matchdataBox"></div>
+    </details>
+
     <details style="margin-top:16px">
       <summary style="cursor:pointer;color:var(--gold);font-weight:600">⚙️ Testinstellingen (ijking per test)</summary>
       <p class="hint" style="margin-top:8px">Elke test rekent lineair om naar 0–99: <b>Top</b> = topwaarde → 99, <b>Zwak</b> = zwakke waarde → 50.
@@ -2075,8 +2091,158 @@ function statsAsOf(n,date){ const out={};
   const all=STAT_KEYS.map(s=>out[s]).filter(v=>v!=null);
   out.OVR=(all.length===6)?Math.round(all.reduce((a,b)=>a+b,0)/6):null; return out;
 }
-function computePlayerStats(n){ store[n]=store[n]||{stats:{},note:""}; const s=store[n].stats=store[n].stats||{}; const cur=statsAsOf(n,null);
-  STAT_KEYS.forEach(k=>{ if(cur[k]!=null) s[k]=cur[k]; else delete s[k]; }); }  // stat wist mee als alle metingen weg zijn
+/* ---------------- WEDSTRIJDDATA (weekbestand naast de metingen) ----------------
+   Elke trainingsmeting en elke wedstrijd telt even zwaar. Een stat is dus het
+   gewogen gemiddelde van de testwaarde (n meetsessies) en de wedstrijdwaarde
+   (n wedstrijden). Zonder geladen wedstrijddata verandert er niets. */
+let MATCHDATA = loadMatchdata();
+function loadMatchdata(){ try{ return JSON.parse(localStorage.getItem("scstiens_matchdata"))||{}; }
+  catch(e){ return {}; } }
+function saveMatchdata(){ try{ localStorage.setItem("scstiens_matchdata", JSON.stringify(MATCHDATA)); }catch(e){} }
+
+/* aantal meetsessies waarin minstens één test voor deze stat is ingevuld */
+function meetSessies(n, stat){
+  const keys=(STAT_TESTS[stat]||[]).map(t=>t.k);
+  try{
+    return (getSessions(n)||[]).filter(s=>s&&s.results&&keys.some(k=>{
+      const v=s.results[k]; return v!=null && v!==""; })).length;
+  }catch(e){ return 0; }
+}
+
+/* de gecombineerde waarde voor één stat */
+function gecombineerd(n, stat){
+  const test = statsAsOf(n,null)[stat];
+  const md = MATCHDATA[n];
+  const wed = md && md.stats ? md.stats[stat] : null;
+  const nWed = md ? (+md.wedstrijden||0) : 0;
+  const nTest = meetSessies(n, stat);
+  if(wed==null || !nWed) return (test==null? null : test);
+  if(test==null || !nTest) return Math.round(wed);
+  return Math.round((test*nTest + wed*nWed)/(nTest+nWed));
+}
+
+/* herkomst van een stat, voor het overzicht in Metingen */
+function statHerkomst(n, stat){
+  const md=MATCHDATA[n];
+  return { test: statsAsOf(n,null)[stat],
+           nTest: meetSessies(n,stat),
+           wed: (md&&md.stats)? md.stats[stat] : null,
+           nWed: md? (+md.wedstrijden||0) : 0,
+           uit: gecombineerd(n,stat) };
+}
+
+/* ---- inlezen van het weekbestand ---- */
+function matchdataUit(rijen){
+  // rijen: array van objecten met Speelster, Wedstrijden, Minuten, PAC..PHY
+  const nieuw={}; let gevonden=0, onbekend=[];
+  const namen=new Set(PLAYERS.map(p=>p.n));
+  rijen.forEach(r=>{
+    const naam=String(r["Speelster"]||r["speelster"]||"").trim();
+    if(!naam) return;
+    if(!namen.has(naam)){ onbekend.push(naam); return; }
+    const st={};
+    STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
+    nieuw[naam]={ stats:st, wedstrijden:+r["Wedstrijden"]||0, minuten:+r["Minuten"]||0,
+                  status:String(r["Status"]||"").trim() };
+    gevonden++;
+  });
+  return {nieuw, gevonden, onbekend};
+}
+
+function matchdataToepassen(res, bestandsnaam){
+  if(!res.gevonden){ alert("Geen bruikbare rijen gevonden. Controleer of het tabblad 'Kaartdata' heet "+
+    "en of de namen overeenkomen met het Selectieoverzicht."); return; }
+  MATCHDATA = res.nieuw;
+  MATCHDATA.__bestand = bestandsnaam;
+  MATCHDATA.__geladen = new Date().toISOString().slice(0,10);
+  saveMatchdata();
+  PLAYERS.forEach(p=>computePlayerStats(p.n));
+  renderCards(); renderMeasTable(); renderProgress(); renderDev(); renderMatchdata();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+  let msg="Wedstrijddata geladen voor "+res.gevonden+" speelsters ✓";
+  if(res.onbekend.length) msg+=" — niet herkend: "+res.onbekend.join(", ");
+  flash(msg);
+}
+
+function leesWedstrijdbestand(ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  ev.target.value="";
+  const naam=f.name.toLowerCase();
+  if(naam.endsWith(".csv")){
+    const r=new FileReader();
+    r.onload=e=>{
+      const tekst=String(e.target.result);
+      const sep = tekst.split("\n")[0].includes(";") ? ";" : ",";
+      const regels=tekst.split(/\r?\n/).filter(x=>x.trim());
+      const kop=regels[0].split(sep).map(x=>x.trim().replace(/^"|"$/g,""));
+      const rijen=regels.slice(1).map(l=>{ const d=l.split(sep); const o={};
+        kop.forEach((k,i)=>o[k]=(d[i]||"").trim().replace(/^"|"$/g,"")); return o; });
+      matchdataToepassen(matchdataUit(rijen), f.name);
+    };
+    r.readAsText(f); return;
+  }
+  laadSheetJS().then(()=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      try{
+        const wb=XLSX.read(new Uint8Array(e.target.result), {type:"array"});
+        const blad = wb.SheetNames.find(s=>s.toLowerCase()==="kaartdata") || wb.SheetNames[0];
+        const rijen=XLSX.utils.sheet_to_json(wb.Sheets[blad], {range:3, defval:""});
+        matchdataToepassen(matchdataUit(rijen), f.name);
+      }catch(err){ alert("Kon het bestand niet lezen: "+err.message); }
+    };
+    r.readAsArrayBuffer(f);
+  }).catch(()=>alert("De Excel-lezer kon niet geladen worden (geen internet?). "+
+    "Sla het tabblad 'Kaartdata' op als CSV en upload dat."));
+}
+
+function laadSheetJS(){
+  if(window.XLSX) return Promise.resolve();
+  return new Promise((ok,fout)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=ok; s.onerror=fout; document.head.appendChild(s);
+  });
+}
+
+function wisWedstrijddata(){
+  if(!confirm("Wedstrijddata verwijderen? De kaartjes vallen dan terug op alleen de metingen.")) return;
+  MATCHDATA={}; saveMatchdata();
+  PLAYERS.forEach(p=>computePlayerStats(p.n));
+  renderCards(); renderMeasTable(); renderProgress(); renderDev(); renderMatchdata();
+  if(typeof persistLocal==="function") persistLocal();
+  flash("Wedstrijddata verwijderd");
+}
+
+function renderMatchdata(){
+  const el=document.getElementById("matchdataBox"); if(!el) return;
+  const namen=PLAYERS.map(p=>p.n).filter(n=>MATCHDATA[n]);
+  if(!namen.length){
+    el.innerHTML='<p class="hint">Nog geen wedstrijddata geladen. De kaartjes gebruiken nu alleen de metingen.</p>';
+    return;
+  }
+  const rows=namen.map(n=>{
+    const md=MATCHDATA[n];
+    const cellen=STAT_KEYS.map(k=>{
+      const h=statHerkomst(n,k);
+      if(h.wed==null) return '<td class="center" style="color:var(--muted)">–</td>';
+      return '<td class="center"><b>'+(h.uit??'–')+'</b><br><span class="mini" style="color:var(--muted)">'+
+             (h.test??'–')+' / '+h.wed+'</span></td>';
+    }).join("");
+    return '<tr><td>'+n+'</td><td class="center">'+md.wedstrijden+'</td><td class="center">'+
+           md.minuten+'</td>'+cellen+'</tr>';
+  }).join("");
+  el.innerHTML='<p class="hint">Bestand: <b>'+(MATCHDATA.__bestand||'onbekend')+'</b>, geladen op '+
+    (MATCHDATA.__geladen||'onbekend')+'. Per stat staat boven het gecombineerde cijfer en eronder '+
+    'klein <i>test / wedstrijd</i>.</p><div style="overflow:auto"><table><tr><th>Speelster</th>'+
+    '<th class="center">Wedstr.</th><th class="center">Min.</th>'+
+    STAT_KEYS.map(k=>'<th class="center">'+k+'</th>').join("")+'</tr>'+rows+'</table></div>';
+}
+
+function computePlayerStats(n){ store[n]=store[n]||{stats:{},note:""}; const s=store[n].stats=store[n].stats||{};
+  // metingen en wedstrijddata samen; elke meetsessie en elke wedstrijd telt even zwaar
+  STAT_KEYS.forEach(k=>{ const v=gecombineerd(n,k); if(v!=null) s[k]=v; else delete s[k]; }); }  // stat wist mee als alle metingen weg zijn
 function applyMeas(){ PLAYERS.forEach(p=>computePlayerStats(p.n)); renderCards(); renderMeasTable(); renderProgress(); renderDev(); flash("Stats herberekend ✓"); }
 
 // LIVE invoer op de gekozen datum
@@ -2883,7 +3049,7 @@ function applyStaffGate(){
 }
 function renderAll(){
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);
-    if(typeof getAwayPeriods==="function") getAwayPeriods(p.n); });  // schoon blessures, ruim lege check-ins op, zet afwezigheid om naar periodes
+    if(typeof getAwayPeriods==="function") getAwayPeriods(p.n);  try{renderMatchdata();}catch(e){} });  // schoon blessures, ruim lege check-ins op, zet afwezigheid om naar periodes
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
