@@ -1200,10 +1200,31 @@ function currentInjury(n){
   const inj=((last&&last.vals&&last.vals.injury)||"").trim();
   if(isNoInjury(inj)) return null;
   const rec=(last.vals.recovery!=null && last.vals.recovery!=="")?last.vals.recovery:null;
-  return {injury:inj, recovery:rec};
+  /* De weken zijn ingevuld op de dag van de check-in; vanaf dan telt de tijd door. */
+  let rest=null, terug=null, verlopen=false;
+  if(rec!=null && +rec>0 && last.date){
+    const start=new Date(last.date+"T00:00:00");
+    const eind=new Date(start.getTime() + (+rec)*7*86400000);
+    const vandaag=new Date(new Date().toISOString().slice(0,10)+"T00:00:00");
+    rest=Math.round((eind-vandaag)/86400000);       // resterende dagen
+    terug=eind.toISOString().slice(0,10);
+    verlopen = rest<=0;
+  }
+  return {injury:inj, recovery:rec, sinds:last.date, restDagen:rest, terug:terug, verlopen:verlopen};
+}
+/* "nog 2 wk", "nog 5 dagen" of "termijn verstreken" — en null als er geen termijn is ingevuld. */
+function hersteltekst(ci, lang){
+  if(!ci || ci.restDagen==null) return null;
+  const d=new Date(ci.terug+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
+  if(ci.verlopen) return lang ? ("hersteltermijn verstreken op "+d) : "termijn verstreken";
+  const t = ci.restDagen<14 ? ("nog "+ci.restDagen+(ci.restDagen===1?" dag":" dagen"))
+                            : ("nog "+Math.ceil(ci.restDagen/7)+" wk");
+  return lang ? (t+", terug rond "+d) : t;
 }
 function injuryBadgeHTML(n){ const ci=currentInjury(n); if(!ci) return "";
-  return `<div style="text-align:center;margin:0 0 6px"><span class="cardinjury">🤕 Geblesseerd${ci.injury?(" — "+esc(ci.injury)):""}${ci.recovery!=null?(" ("+ci.recovery+" wk)"):""}</span></div>`;
+  const t=hersteltekst(ci,false);
+  const titel=hersteltekst(ci,true);
+  return `<div style="text-align:center;margin:0 0 6px"><span class="cardinjury"${titel?(' title="'+esc(titel)+'"'):''}>🤕 Geblesseerd${ci.injury?(" — "+esc(ci.injury)):""}${t?(" ("+t+")"):""}</span></div>`;
 }
 
 /* ---------------- SC STIENS EMBLEEM ---------------- */
@@ -1335,16 +1356,33 @@ function flash(msg){
   d.style.cssText="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gold);color:#1a1200;padding:10px 20px;border-radius:999px;font-weight:700;z-index:99;box-shadow:0 8px 20px rgba(0,0,0,.4)";
   document.body.appendChild(d); setTimeout(()=>d.remove(),1400);
 }
+/* Volledige back-up: niet alleen de kaartcijfers maar alles wat ook naar de cloud gaat —
+   ledenlijst, programma, taken, kas, analyses en de wedstrijddata. */
 function exportData(){
   saveStats();
-  const blob=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});
+  const pakket=Object.assign({__versie:2, __gemaakt:new Date().toISOString()}, collectState());
+  const blob=new Blob([JSON.stringify(pakket,null,2)],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download="sc_stiens_kaartjes_data.json"; a.click();
+  a.download="sc_stiens_backup_"+todayStr()+".json"; a.click();
 }
 function importData(ev){
   const f=ev.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=e=>{try{store=JSON.parse(e.target.result);localStorage.setItem("scstiens_stats",JSON.stringify(store));PLAYERS.forEach(p=>computePlayerStats(p.n));renderCards();renderMeasTable();fillProgPlayers();renderProgress();renderDev();renderMoodAll();renderBel();flash("Geïmporteerd ✓");}catch(err){alert("Ongeldig bestand");}};
+  r.onload=e=>{try{
+    const d=JSON.parse(e.target.result);
+    if(d && d.store){                       // volledige back-up
+      if(!confirm("Dit vervangt alle gegevens (ledenlijst, programma, taken, kas, analyses en "+
+                  "wedstrijddata) door de inhoud van dit bestand. Doorgaan?")) return;
+      applyState(d);
+    } else {                                // oud bestand: alleen de kaartcijfers
+      store=d; localStorage.setItem("scstiens_stats",JSON.stringify(store));
+    }
+    PLAYERS.forEach(p=>computePlayerStats(p.n));
+    if(typeof persistLocal==="function") persistLocal();
+    if(typeof renderAll==="function") renderAll();
+    else { renderCards();renderMeasTable();fillProgPlayers();renderProgress();renderDev();renderMoodAll();renderBel(); }
+    flash("Geïmporteerd ✓");
+  }catch(err){alert("Ongeldig bestand");}};
   r.readAsText(f);
 }
 
@@ -2722,13 +2760,15 @@ function renderMoodTable(){
 function renderMoodTeam(){
   const wrap=document.getElementById("moodTeam"); if(!wrap)return; const date=moodDate();
   const rows=PLAYERS.map(p=>{ const s=wellSession(p.n,date,false); const v=(s&&s.vals)||{};
-    return {n:p.n,sc:wellScore(p.n,date),injury:isNoInjury(v.injury)?"":String(v.injury).trim(),rec:(+v.recovery>0?v.recovery:"")}; });
+    const ci=currentInjury(p.n);
+    return {n:p.n,sc:wellScore(p.n,date),injury:isNoInjury(v.injury)?"":String(v.injury).trim(),
+            rec:(+v.recovery>0?v.recovery:""), herstel:hersteltekst(ci,true)}; });
   rows.sort((a,b)=>{ if(a.injury&&!b.injury)return -1; if(!a.injury&&b.injury)return 1;
     if(a.sc==null&&b.sc==null)return 0; if(a.sc==null)return 1; if(b.sc==null)return -1; return a.sc-b.sc; });
   wrap.innerHTML=rows.map(r=>`<div class="moodchip" style="border-left-color:${r.injury?'#ffb74d':moodColor(r.sc)}">
       <span class="face">${r.injury?'🤕':moodFace(r.sc)}</span>
       <div><div class="mname">${r.n}</div>
-        <div class="mscore">${r.sc!=null?r.sc.toFixed(1)+" / 5":"nog geen invoer"}${r.injury?` · 🤕 ${r.injury}${r.rec!==''?' ('+r.rec+' wk)':''}`:''}</div></div>
+        <div class="mscore">${r.sc!=null?r.sc.toFixed(1)+" / 5":"nog geen invoer"}${r.injury?` · 🤕 ${r.injury}${r.herstel?' ('+r.herstel+')':(r.rec!==''?' ('+r.rec+' wk)':'')}`:''}</div></div>
       ${(r.sc!=null&&r.sc<3)?'<span class="flag">let op</span>':''}
     </div>`).join("");
 }
