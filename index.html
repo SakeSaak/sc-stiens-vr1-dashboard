@@ -54,6 +54,9 @@
 
   /* ---- FIFA CARDS (SC Stiens thema: zwart/oranje/geel) ---- */
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:20px}
+  /* Op een telefoon passen er twee kaartjes naast elkaar; scheelt de helft aan scrollen. */
+  @media(max-width:560px){.cards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .fcard{padding:24px 10px 12px}}
   .fcard{position:relative;border-radius:16px;padding:26px 15px 14px;
     background:linear-gradient(160deg,#26251f 0%,#1a1a1c 45%,#111113 100%);
     border:1px solid var(--gold);box-shadow:0 10px 26px rgba(0,0,0,.5);color:#f6f6f8;
