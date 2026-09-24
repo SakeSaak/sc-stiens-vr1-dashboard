@@ -878,6 +878,7 @@ function vulAanMetStandaard(){
     }catch(e){}
   });
   try{ localStorage.setItem("scstiens_standaard_ingevoegd", JSON.stringify(al)); }catch(e){}
+  if(herstelLinies()) nieuw=true;
   return nieuw;
 }
 
@@ -941,6 +942,7 @@ function setPerson(rol,i,key,val){
     if(typeof renderClubDuties==="function") renderClubDuties();
     if(typeof renderBel==="function") renderBel();
   }
+  if(key==="pos"){ const l=linieUitPos(val); if(l && p.role!==l) p.role=l; }
   if(key==="pos"||key==="posrole") renderCards();
 }
 // Naam wijzigen: verplaatst álle gekoppelde gegevens mee (taken, boetes, eten, duo's, check-ins).
@@ -995,7 +997,26 @@ const POS3 = {
   "Iris Terpstra":["RW","LW","ST"],
   "Yannika":["CM","CAM","RB"],
 };
-function posList(p){ return POS3[p.n] || POS3[standaardNaam(p.n)] || [p.pos]; }
+/* De linie hoort bij de positie. Voeg je iemand handmatig toe, dan krijgt zij "mid" als
+   startwaarde; zet je haar daarna op LW, dan moet zij ook in de aanval staan. */
+const LINIE_VAN_POS = {GK:"gk", CB:"def", LB:"def", RB:"def", LWB:"def", RWB:"def",
+                       CDM:"mid", CM:"mid", CAM:"mid", LM:"mid", RM:"mid",
+                       LW:"att", RW:"att", ST:"att", CF:"att"};
+function linieUitPos(pos){ return LINIE_VAN_POS[String(pos==null?"":pos).toUpperCase().trim()] || null; }
+/* Zet de linie gelijk aan de positie waar die twee elkaar tegenspreken. */
+function herstelLinies(){
+  let gewijzigd=false;
+  PLAYERS.forEach(pl=>{ const l=linieUitPos(pl.pos); if(l && pl.role!==l){ pl.role=l; gewijzigd=true; } });
+  return gewijzigd;
+}
+/* Haar eigen positie voorop, daarna de alternatieven uit de teamvragenlijst. */
+function posList(p){
+  const lijst = POS3[p.n] || POS3[standaardNaam(p.n)] || [];
+  const eigen = (p.pos && p.pos!=="—") ? p.pos : null;
+  if(!lijst.length) return eigen ? [eigen] : ["—"];
+  if(!eigen || lijst[0]===eigen) return lijst;
+  return [eigen].concat(lijst.filter(x=>x!==eigen)).slice(0,3);
+}
 
 /* Individuele leerdoelen uit de teamvragenlijst (ontwikkelpunt + procesdoel + gekoppelde stat) */
 const DEVGOALS = {
@@ -2380,8 +2401,16 @@ function renderMatchdata(){
     return '<tr><td>'+n+'</td><td class="center">'+md.wedstrijden+'</td><td class="center">'+
            md.minuten+'</td>'+cellen+'</tr>';
   }).join("");
+  /* Duidelijk maken of dit bestand alleen hier staat of voor iedereen. */
+  const gedeeld = (typeof CLOUD!=="undefined" && CLOUD && typeof isStaff!=="undefined" && isStaff);
+  const deelTekst = gedeeld
+    ? '<span style="color:var(--green)">Gedeeld met alle apparaten ✓</span>'
+    : ((typeof CLOUD!=="undefined" && CLOUD)
+        ? '<span style="color:var(--yellow)">Staat alleen op dit apparaat — log in als staf en klik Opslaan om '+
+          'het met je telefoon en de rest van het team te delen.</span>'
+        : '<span style="color:var(--muted)">Lokaal opgeslagen (geen cloudverbinding).</span>');
   el.innerHTML='<p class="hint">Bestand: <b>'+(MATCHDATA.__bestand||'onbekend')+'</b>, geladen op '+
-    (MATCHDATA.__geladen||'onbekend')+'. Per stat staat boven het gecombineerde cijfer en eronder '+
+    (MATCHDATA.__geladen||'onbekend')+'. '+deelTekst+'<br>Per stat staat boven het gecombineerde cijfer en eronder '+
     'klein <i>test / wedstrijd</i>.</p><div style="overflow:auto"><table><tr><th>Speelster</th>'+
     '<th class="center">Wedstr.</th><th class="center">Min.</th>'+
     '<th class="center" colspan="6">per stat: gecombineerd, daaronder test / wedstrijd</th>'+
