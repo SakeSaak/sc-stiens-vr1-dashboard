@@ -813,6 +813,70 @@ let PLAYERS = [
   {n:"Iris Terpstra", age:"", city:"", job:"", pos:"RW", role:"att", form:"—", top:"Rechtsvoor", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
   {n:"Yannika", age:"", city:"", job:"", pos:"CM", role:"mid", form:"—", top:"Middenveld (komt uit VR2)", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
 ];
+/* De ledenlijst hierboven is de standaard. Zodra er een bewaarde lijst is (lokaal of uit
+   de cloud) verving die de standaard helemaal, waardoor nieuwe namen nooit doorkwamen.
+   vulAanMetStandaard() zet ontbrekende standaardnamen er alsnog bij - per naam hooguit
+   een keer, zodat iemand die je via het Selectieoverzicht verwijdert ook weg blijft. */
+const PLAYERS_STANDAARD = PLAYERS.map(p=>Object.assign({},p));
+
+/* Namen vergelijken zonder hoofdletters, accenten en leestekens, plus een paar
+   spellingen die in de praktijk voorkomen. Zo levert een handmatig toegevoegde
+   "Yanika" geen tweede kaartje op naast "Yannika". */
+const NAAM_VARIANT = {"yanika":"Yannika", "yannica":"Yannika", "janika":"Yannika",
+                      "iris t":"Iris Terpstra", "iris terpsta":"Iris Terpstra"};
+function naamSleutel(s){
+  return String(s==null?"":s).normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+}
+/* De standaardspelling bij een naam, of de naam zelf als die niet bekend is. */
+function standaardNaam(n){
+  const k=naamSleutel(n);
+  const hit=PLAYERS_STANDAARD.find(p=>naamSleutel(p.n)===k);
+  if(hit) return hit.n;
+  const v=NAAM_VARIANT[k];
+  return v || n;
+}
+/* De rij uit de ledenlijst die bij deze naam hoort, ongeacht de spelling. */
+function vindSpeelster(n){
+  const k=naamSleutel(n), sk=naamSleutel(standaardNaam(n));
+  return PLAYERS.find(p=>{ const pk=naamSleutel(p.n);
+    return pk===k || pk===sk || naamSleutel(standaardNaam(p.n))===sk; }) || null;
+}
+
+function standaardAl(){
+  try{ return JSON.parse(localStorage.getItem("scstiens_standaard_ingevoegd"))||[]; }
+  catch(e){ return []; }
+}
+function vulAanMetStandaard(){
+  if(!Array.isArray(PLAYERS)) return false;
+  const al=standaardAl();
+  let nieuw=false;
+  PLAYERS_STANDAARD.forEach(p=>{
+    const bestaat=vindSpeelster(p.n);
+    if(bestaat){
+      /* Zelf toegevoegd via het Selectieoverzicht: dan staat de positie nog op "—".
+         Vul die aan, anders staat een aanvalster tussen het middenveld. */
+      if(!bestaat.pos || bestaat.pos==="—"){
+        bestaat.pos=p.pos; bestaat.role=p.role;
+        if(!bestaat.top) bestaat.top=p.top;
+        if(!bestaat.form || bestaat.form==="—") bestaat.form=p.form;
+        nieuw=true;
+      }
+      return;
+    }
+    if(al.indexOf(p.n)>=0) return;
+    PLAYERS.push(Object.assign({},p)); al.push(p.n); nieuw=true;
+    try{
+      if(typeof MOOD_TOKENS==="object" && MOOD_TOKENS && !MOOD_TOKENS[p.n]){
+        MOOD_TOKENS[p.n]=[...crypto.getRandomValues(new Uint8Array(5))]
+          .map(b=>b.toString(16).padStart(2,"0")).join("");
+      }
+    }catch(e){}
+  });
+  try{ localStorage.setItem("scstiens_standaard_ingevoegd", JSON.stringify(al)); }catch(e){}
+  return nieuw;
+}
+
 const STAT_KEYS = ["PAC","SHO","PAS","DRI","DEF","PHY"];
 /* De keepster krijgt haar eigen zes: sprinttijd en afrondtest zeggen niets over keepen. */
 const GK_STAT_KEYS = ["RED","OPB","DIS","BER","UIT","DUE"];
@@ -927,7 +991,7 @@ const POS3 = {
   "Iris Terpstra":["RW","LW","ST"],
   "Yannika":["CM","CAM","RB"],
 };
-function posList(p){ return POS3[p.n] || [p.pos]; }
+function posList(p){ return POS3[p.n] || POS3[standaardNaam(p.n)] || [p.pos]; }
 
 /* Individuele leerdoelen uit de teamvragenlijst (ontwikkelpunt + procesdoel + gekoppelde stat) */
 const DEVGOALS = {
@@ -1139,20 +1203,9 @@ function renderCards(){
   const g=document.getElementById("cardGrid"); g.innerHTML="";
   const sel=document.getElementById("kaartSort"); if(sel) sel.value=KAART_SORT;
   const chk=document.getElementById("kaartOnder"); if(chk) chk.checked=KAART_ONDER;
-  let vorigeLinie=null;
+  /* geen kopregels: die duwen het raster uit elkaar. De volgorde spreekt voor zich,
+     en op elk kaartje staat de linie al linksboven. */
   gesorteerdeSpelers().forEach((p,idx)=>{
-    if(KAART_SORT==="linie"){
-      const weg=nietBeschikbaar(p.n)&&KAART_ONDER;
-      const kop = weg ? "niet-beschikbaar" : p.role;
-      if(kop!==vorigeLinie){
-        vorigeLinie=kop;
-        const h=document.createElement("div");
-        h.style.cssText="grid-column:1/-1;margin:6px 0 -6px;font-size:13px;font-weight:700;"+
-          "letter-spacing:.5px;text-transform:uppercase;color:"+(weg?"var(--muted)":"var(--gold)");
-        h.textContent = weg ? "Niet beschikbaar" : (ROLE_LABEL[p.role]||p.role);
-        g.appendChild(h);
-      }
-    }
     const s=(store[p.n]&&store[p.n].stats)||{};
     const note=(store[p.n]&&store[p.n].note)||"";
     const el=document.createElement("div");
@@ -2222,11 +2275,12 @@ function statHerkomst(n, stat){
 function matchdataUit(rijen){
   // rijen: array van objecten met Speelster, Wedstrijden, Minuten, PAC..PHY
   const nieuw={}; let gevonden=0, onbekend=[];
-  const namen=new Set(PLAYERS.map(p=>p.n));
   rijen.forEach(r=>{
-    const naam=String(r["Speelster"]||r["speelster"]||"").trim();
-    if(!naam) return;
-    if(!namen.has(naam)){ onbekend.push(naam); return; }
+    const ruw=String(r["Speelster"]||r["speelster"]||"").trim();
+    if(!ruw) return;
+    const speelster=vindSpeelster(ruw);          // spelling in het bestand mag afwijken
+    if(!speelster){ onbekend.push(ruw); return; }
+    const naam=speelster.n;
     const st={};
     ALLE_STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
     nieuw[naam]={ stats:st, wedstrijden:+r["Wedstrijden"]||0, minuten:+r["Minuten"]||0,
@@ -3122,6 +3176,7 @@ function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].ph
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
   if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
+  if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
   if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
   if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
@@ -3285,6 +3340,7 @@ try{ const lp=JSON.parse(localStorage.getItem("scstiens_people"));
           if(Array.isArray(lp.staff)) STAFF=lp.staff;
           if(Array.isArray(lp.duos)&&lp.duos.length) DUOS=lp.duos;
           if(lp.tokens&&typeof lp.tokens==="object") Object.assign(MOOD_TOKENS,lp.tokens); } }catch(e){}
+vulAanMetStandaard();
 seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
 const _rb=document.getElementById("cfgRebalDate"); if(_rb && !_rb.value) _rb.value=cutoffDefault();
