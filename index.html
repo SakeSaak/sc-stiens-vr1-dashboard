@@ -879,6 +879,7 @@ function vulAanMetStandaard(){
   });
   try{ localStorage.setItem("scstiens_standaard_ingevoegd", JSON.stringify(al)); }catch(e){}
   if(herstelLinies()) nieuw=true;
+  if(vulPosities()) nieuw=true;
   return nieuw;
 }
 
@@ -1006,16 +1007,63 @@ function linieUitPos(pos){ return LINIE_VAN_POS[String(pos==null?"":pos).toUpper
 /* Zet de linie gelijk aan de positie waar die twee elkaar tegenspreken. */
 function herstelLinies(){
   let gewijzigd=false;
-  PLAYERS.forEach(pl=>{ const l=linieUitPos(pl.pos); if(l && pl.role!==l){ pl.role=l; gewijzigd=true; } });
+  PLAYERS.forEach(pl=>{ if(pl.roleVast) return;            // linie handmatig gekozen: laten staan
+    const l=linieUitPos(pl.pos); if(l && pl.role!==l){ pl.role=l; gewijzigd=true; } });
   return gewijzigd;
 }
-/* Haar eigen positie voorop, daarna de alternatieven uit de teamvragenlijst. */
+/* Alle posities die in het Selectieoverzicht te kiezen zijn, in veldvolgorde. */
+const POS_KEUZE = ["GK","CB","LB","RB","LWB","RWB","CDM","CM","CAM","LM","RM","LW","RW","ST"];
+const LINIE_LABEL = {gk:"Keeper", def:"Verdediging", mid:"Middenveld", att:"Aanval"};
+
+/* De drie posities van een speelster. Staat er nog niets bij haar, dan vallen we terug op
+   de antwoorden uit de teamvragenlijst en anders op haar hoofdpositie. */
 function posList(p){
+  if(Array.isArray(p.pos3)){
+    const l=p.pos3.filter(x=>x && x!=="—");
+    if(l.length) return l.slice(0,3);
+  }
   const lijst = POS3[p.n] || POS3[standaardNaam(p.n)] || [];
   const eigen = (p.pos && p.pos!=="—") ? p.pos : null;
   if(!lijst.length) return eigen ? [eigen] : ["—"];
   if(!eigen || lijst[0]===eigen) return lijst;
   return [eigen].concat(lijst.filter(x=>x!==eigen)).slice(0,3);
+}
+/* Eenmalig de drie posities vastleggen bij iedereen die ze nog niet heeft, zodat ze
+   daarna gewoon te wijzigen zijn. */
+function vulPosities(){
+  let gewijzigd=false;
+  PLAYERS.forEach(pl=>{
+    if(Array.isArray(pl.pos3) && pl.pos3.length===3) return;
+    const l=posList(pl); pl.pos3=[l[0]||"—", l[1]||"", l[2]||""];
+    if(!pl.pos || pl.pos==="—") pl.pos=pl.pos3[0];
+    gewijzigd=true;
+  });
+  return gewijzigd;
+}
+
+/* Een van de drie posities wijzigen. De eerste is de hoofdpositie en bepaalt de linie,
+   tenzij de linie handmatig is vastgezet. */
+function setPos3(i, slot, val){
+  const pl=PLAYERS[i]; if(!pl) return;
+  if(!Array.isArray(pl.pos3)) pl.pos3=[pl.pos||"—","",""];
+  pl.pos3[slot]=val;
+  if(slot===0 && val && val!=="—"){
+    pl.pos=val;
+    if(!pl.roleVast){ const l=linieUitPos(val); if(l) pl.role=l; }
+  }
+  afterPosChange();
+}
+/* De linie zelf kiezen. "auto" volgt weer de hoofdpositie. */
+function setLinie(i, val){
+  const pl=PLAYERS[i]; if(!pl) return;
+  if(val==="auto"){ delete pl.roleVast; const l=linieUitPos(pl.pos); if(l) pl.role=l; }
+  else { pl.role=val; pl.roleVast=true; }
+  afterPosChange();
+}
+function afterPosChange(){
+  renderSquad(); renderCards();
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
 }
 
 /* Individuele leerdoelen uit de teamvragenlijst (ontwikkelpunt + procesdoel + gekoppelde stat) */
@@ -1297,6 +1345,27 @@ function awayCell(naam){
   return `<div class="awaycell">${rows||'<span class="mini">altijd beschikbaar</span>'}
     <button class="btn" style="padding:2px 8px;font-size:11px" onclick="addAwayPeriod('${nEsc}')">+ periode</button></div>`;
 }
+/* De drie keuzelijstjes met posities en het lijstje met de linie. */
+function posKeuze(p,i){
+  const S='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px 2px;font-size:12px;width:62px';
+  const huidig=posList(p);
+  return [0,1,2].map(s=>{
+    const v=(Array.isArray(p.pos3)? (p.pos3[s]||"") : (huidig[s]||""));
+    /* De hoofdpositie mag niet leeg: daar hangt de linie aan. */
+    const opties=(s===0?[]:['<option value="">–</option>'])
+      .concat(POS_KEUZE.map(x=>'<option value="'+x+'"'+(x===v?' selected':'')+'>'+x+'</option>')).join("");
+    return '<select title="'+(s===0?'hoofdpositie':'alternatief '+s)+'" onchange="setPos3('+i+','+s+',this.value)" style="'+
+           S+(s===0?';font-weight:700':'')+'">'+opties+'</select>';
+  }).join(' ');
+}
+function linieKeuze(p,i){
+  const S='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px 2px;font-size:12px;width:112px';
+  const opties=['<option value="auto"'+(p.roleVast?'':' selected')+'>Automatisch'+
+                (p.role&&LINIE_LABEL[p.role]?' ('+LINIE_LABEL[p.role]+')':'')+'</option>']
+    .concat(Object.keys(LINIE_LABEL).map(k=>'<option value="'+k+'"'+(p.roleVast&&p.role===k?' selected':'')+'>'+LINIE_LABEL[k]+'</option>')).join("");
+  return '<select onchange="setLinie('+i+',this.value)" style="'+S+'">'+opties+'</select>';
+}
+
 function renderSquad(){
   const t=document.getElementById("squadTable"); if(!t)return;
   const IN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px';
@@ -1312,12 +1381,13 @@ function renderSquad(){
           style="width:120px;${IN}"></td>
       <td>${awayCell(p.n)}</td>
       ${staf
-        ? `<td colspan="5" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:170px;${IN}">
+        ? `<td colspan="6" class="mini"><input type="text" value="${(p.role||'').replace(/"/g,'&quot;')}" placeholder="rol, bv. Hoofdtrainer" onchange="setPerson('staf',${i},'role',this.value)" style="width:170px;${IN}">
              <input type="email" value="${(p.email||'').replace(/"/g,'&quot;')}" placeholder="inlog-e-mail" title="Het e-mailadres waarmee dit staflid inlogt — zo zien we wie iets heeft ingevoerd" onchange="setPerson('staf',${i},'email',this.value)" style="width:190px;margin-left:6px;${IN}"></td>`
         : `<td class="center"><input type="text" value="${p.age||''}" onchange="setPerson('speelster',${i},'age',this.value)" style="width:46px;text-align:center;${IN}"></td>
            <td><input type="text" value="${(p.city||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'city',this.value)" style="width:110px;${IN}"></td>
            <td><input type="text" value="${(p.job||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'job',this.value)" style="width:150px;${IN}"></td>
-           <td class="center"><input type="text" value="${(p.pos||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'pos',this.value)" style="width:60px;text-align:center;${IN}"></td>
+           <td class="center" style="white-space:nowrap">${posKeuze(p,i)}</td>
+           <td class="center">${linieKeuze(p,i)}</td>
            <td class="center"><select onchange="setPerson('speelster',${i},'car',this.value)" style="${IN}">
                <option value="ja" ${p.car?'selected':''}>✅ auto</option>
                <option value="rijbewijs" ${(!p.car&&(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>🚙 geen auto</option>
@@ -1325,7 +1395,10 @@ function renderSquad(){
       <td class="center"><button class="del" title="verwijderen" onclick="delPerson('${rol}',${i})">×</button></td></tr>`;
   };
   t.innerHTML=`<tr><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig van – tot</th>
-      <th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th><th class="center">Pos</th><th class="center">Rijden</th><th class="center"></th></tr>`
+      <th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
+      <th class="center" title="Drie posities, net als in de vragenlijst. De eerste is de hoofdpositie.">Posities (1 · 2 · 3)</th>
+      <th class="center" title="Volgt vanzelf de hoofdpositie; hier kun je het overschrijven.">Linie</th>
+      <th class="center">Rijden</th><th class="center"></th></tr>`
     + PLAYERS.map((p,i)=>rij(p,"speelster",i)).join("")
     + STAFF.map((p,i)=>rij(p,"staf",i)).join("");
 }
