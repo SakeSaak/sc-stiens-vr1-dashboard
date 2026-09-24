@@ -2357,6 +2357,7 @@ function wisWedstrijddata(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderMeasTable(); renderProgress(); renderDev(); renderMatchdata();
   if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();   // ook uit de gedeelde gegevens halen
   flash("Wedstrijddata verwijderd");
 }
 
@@ -3177,8 +3178,13 @@ let sb = CLOUD ? window.supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let isStaff=false;
 
 function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].phone; }); }
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses}; }
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses,
+  /* het weekbestand uit Veo hoort bij de gedeelde gegevens: anders zien andere apparaten
+     alleen de trainingsmetingen en rekenen zij de kaartjes lager uit. */
+  matchdata:(typeof MATCHDATA!=="undefined"?MATCHDATA:{})}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
+  if(st && st.matchdata && typeof st.matchdata==="object" && typeof MATCHDATA!=="undefined"){
+    MATCHDATA=st.matchdata; try{ saveMatchdata(); }catch(e){} }
   if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
   if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
