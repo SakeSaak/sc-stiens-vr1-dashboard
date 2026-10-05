@@ -220,7 +220,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-c</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-d</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1559,7 +1559,8 @@ const RUILINGEN=[
   // Arwen rijdt 30 jan voor Iris
   {date:"2027-01-30", taak:"drive", uit:"Iris Dijkmeijer",  in:"Arwen Kuipers"},
 ];
-function applyRuilingen(){
+function applyRuilingen(){ try{ _applyRuilingen(); }catch(e){ console.warn("applyRuilingen",e); } }
+function _applyRuilingen(){
   if(!store || typeof store!=="object") return;
   if(store.__ruilSeed>=RUIL_SEED_VERSION) return;
   if(!Array.isArray(fixtures) || !fixtures.length) return;      // wacht tot het programma geladen is
@@ -1575,7 +1576,7 @@ function applyRuilingen(){
     f[r.taak]=Array.isArray(f[r.taak])?f[r.taak]:[];
     if(r.uit) f[r.taak]=f[r.taak].filter(n=>n!==r.uit);
     if(r.in && !f[r.taak].includes(r.in)) f[r.taak].push(r.in);
-    setLock(f,r.taak,true);                                      // vastzetten
+    if(r.in) setNameLock(f,r.taak,r.in,true);                    // vastzetten op naam
   });
   // 3) Amber rijdt alleen incidenteel (ouders): niet meer automatisch inroosteren.
   //    De vastgezette rit van 30 januari blijft; de overige rijbeurten vallen vrij.
