@@ -54,6 +54,12 @@
 
   /* ---- FIFA CARDS (SC Stiens thema: zwart/oranje/geel) ---- */
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:20px}
+  /* Scheidingsregel tussen de blokken (VR1 / VR2 / niet beschikbaar) — over de volle breedte,
+     zodat het raster er niet door uit elkaar wordt getrokken. */
+  .cards .kaartgroep{grid-column:1/-1;display:flex;align-items:center;gap:10px;
+    margin:4px 0 -8px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--gold);opacity:.8}
+  .cards .kaartgroep::after{content:"";flex:1;height:1px;background:var(--line)}
   /* Op een telefoon passen er twee kaartjes naast elkaar; scheelt de helft aan scrollen. */
   @media(max-width:560px){.cards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
     .fcard{padding:24px 10px 12px}}
@@ -220,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-f</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-g</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1345,8 +1351,16 @@ function nietBeschikbaar(n){
   return 0;
 }
 
+/* De kaartjes staan in drie blokken: eerst VR1, dan de dames die meedoen uit VR2,
+   en onderaan wie er nu niet bij is (geblesseerd of afwezig). */
+const KAART_GROEP_LABEL={0:"", 1:"Meegespeeld uit VR2", 2:"Nu niet beschikbaar"};
+function kaartGroep(p){
+  const weg=nietBeschikbaar(p.n);
+  if(KAART_ONDER && weg) return 2;
+  return p.gast?1:0;
+}
 function gesorteerdeSpelers(){
-  const lijst = PLAYERS.map((p,i)=>({p,i,weg:nietBeschikbaar(p.n)}));
+  const lijst = PLAYERS.map((p,i)=>({p,i,weg:nietBeschikbaar(p.n),groep:kaartGroep(p)}));
   const ovrNum = n => { const v=ovr(n); return (v==="–"||v==null) ? -1 : +v; };
   const vergelijk = {
     linie: (a,b)=> (LINIE_VOLG[a.p.role]??9)-(LINIE_VOLG[b.p.role]??9) || ovrNum(b.p.n)-ovrNum(a.p.n) || a.p.n.localeCompare(b.p.n,"nl"),
@@ -1355,8 +1369,8 @@ function gesorteerdeSpelers(){
     eigen: (a,b)=> a.i-b.i
   }[KAART_SORT] || ((a,b)=>a.i-b.i);
   return lijst.sort((a,b)=>{
-    if(KAART_ONDER && (a.weg?1:0)!==(b.weg?1:0)) return (a.weg?1:0)-(b.weg?1:0);
-    if(KAART_ONDER && a.weg!==b.weg) return a.weg-b.weg;
+    if(a.groep!==b.groep) return a.groep-b.groep;                 // VR1 → VR2 → niet beschikbaar
+    if(KAART_ONDER && a.weg!==b.weg) return a.weg-b.weg;          // binnen "niet beschikbaar": blessure vóór afwezig
     return vergelijk(a,b);
   }).map(x=>x.p);
 }
@@ -1370,9 +1384,19 @@ function renderCards(){
   const g=document.getElementById("cardGrid"); g.innerHTML="";
   const sel=document.getElementById("kaartSort"); if(sel) sel.value=KAART_SORT;
   const chk=document.getElementById("kaartOnder"); if(chk) chk.checked=KAART_ONDER;
-  /* geen kopregels: die duwen het raster uit elkaar. De volgorde spreekt voor zich,
-     en op elk kaartje staat de linie al linksboven. */
+  /* Geen kopregels per linie: die duwen het raster uit elkaar en op elk kaartje staat de
+     linie al linksboven. Wél een smalle scheidingsregel vóór de VR2-dames en vóór wie er
+     nu niet bij is, zodat die blokken herkenbaar zijn. */
+  let vorigeGroep=0;
   gesorteerdeSpelers().forEach((p,idx)=>{
+    const groep=kaartGroep(p);
+    if(groep!==vorigeGroep && KAART_GROEP_LABEL[groep]){
+      const kop=document.createElement("div");
+      kop.className="kaartgroep";
+      kop.textContent=KAART_GROEP_LABEL[groep];
+      g.appendChild(kop);
+    }
+    vorigeGroep=groep;
     const s=(store[p.n]&&store[p.n].stats)||{};
     const note=(store[p.n]&&store[p.n].note)||"";
     const el=document.createElement("div");
