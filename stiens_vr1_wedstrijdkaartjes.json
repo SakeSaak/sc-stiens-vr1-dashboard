@@ -1,0 +1,644 @@
+{
+ "bron": {
+  "wedstrijden": [
+   {
+    "sleutel": "burgum",
+    "tegenstander": "Burgum VR1",
+    "datum": "2026-06-06",
+    "soort": "oefen",
+    "duur_minuten": 94.8
+   },
+   {
+    "sleutel": "bmj",
+    "tegenstander": "BMJ VR1",
+    "datum": "2026-08-26",
+    "soort": "beker",
+    "duur_minuten": 98.0
+   },
+   {
+    "sleutel": "zwaluwen",
+    "tegenstander": "Leeuwarder Zwaluwen",
+    "datum": "2026-09-01",
+    "soort": "beker",
+    "duur_minuten": 94.2
+   },
+   {
+    "sleutel": "sintanna",
+    "tegenstander": "Sint Annaparochie VR1",
+    "datum": "2026-09-05",
+    "soort": "beker",
+    "duur_minuten": 85.4
+   },
+   {
+    "sleutel": "knick",
+    "tegenstander": "Knickerbockers VR2",
+    "datum": "2026-09-19",
+    "soort": "competitie",
+    "duur_minuten": 88.6
+   }
+  ],
+  "referentie": {
+   "veldspeelsters": 129,
+   "keepers": 8
+  },
+  "toelichting": "Geijkt op het 15e en 90e percentiel van alle gevolgde speelsters van beide teams. Elke deelmaat is gewogen naar zijn gemeten betrouwbaarheid."
+ },
+ "speelsters": [
+  {
+   "naam": "Sacha Havenstroom",
+   "roepnaam": "Sacha",
+   "rugnummer": null,
+   "positie": "CB",
+   "alternatief": [
+    "CDM",
+    "ST"
+   ],
+   "linie": "def",
+   "ovr": 78,
+   "stats": {
+    "PAC": 84,
+    "SHO": 61,
+    "PAS": 88,
+    "DRI": 84,
+    "DEF": 79,
+    "PHY": 71
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 379,
+   "gevolgde_minuten": 379,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Arwen Kuipers",
+   "roepnaam": "Arwen",
+   "rugnummer": 1,
+   "positie": "GK",
+   "alternatief": [],
+   "linie": "gk",
+   "ovr": 75,
+   "stats": {
+    "RED": 78,
+    "OPB": 74,
+    "DIS": 86,
+    "BER": 67,
+    "UIT": 68,
+    "DUE": 75
+   },
+   "volgorde": [
+    "RED",
+    "OPB",
+    "DIS",
+    "BER",
+    "UIT",
+    "DUE"
+   ],
+   "speelminuten": 461,
+   "gevolgde_minuten": 276,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": true
+  },
+  {
+   "naam": "Coby Keizer",
+   "roepnaam": "Coby",
+   "rugnummer": 18,
+   "positie": "CB",
+   "alternatief": [
+    "RB",
+    "LB"
+   ],
+   "linie": "def",
+   "ovr": 75,
+   "stats": {
+    "PAC": 76,
+    "SHO": 57,
+    "PAS": 80,
+    "DRI": 69,
+    "DEF": 67,
+    "PHY": 86
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 420,
+   "gevolgde_minuten": 420,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Esmee Diekstra",
+   "roepnaam": "Esmee Diekstra",
+   "rugnummer": null,
+   "positie": "LB",
+   "alternatief": [
+    "RB",
+    "LW"
+   ],
+   "linie": "def",
+   "ovr": 74,
+   "stats": {
+    "PAC": 76,
+    "SHO": 58,
+    "PAS": 70,
+    "DRI": 72,
+    "DEF": 79,
+    "PHY": 72
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 181,
+   "gevolgde_minuten": 181,
+   "wedstrijden": 3,
+   "betrouwbaarheid": "middel",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Grietine Bergsma",
+   "roepnaam": "Grietine",
+   "rugnummer": 3,
+   "positie": "LB",
+   "alternatief": [
+    "RB",
+    "CB"
+   ],
+   "linie": "def",
+   "ovr": 74,
+   "stats": {
+    "PAC": 82,
+    "SHO": 57,
+    "PAS": 71,
+    "DRI": 68,
+    "DEF": 76,
+    "PHY": 76
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 429,
+   "gevolgde_minuten": 429,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Sigrid ter Voort",
+   "roepnaam": "Sigrid",
+   "rugnummer": 6,
+   "positie": "CB",
+   "alternatief": [
+    "CAM",
+    "CDM"
+   ],
+   "linie": "def",
+   "ovr": 72,
+   "stats": {
+    "PAC": 68,
+    "SHO": 58,
+    "PAS": 81,
+    "DRI": 76,
+    "DEF": 70,
+    "PHY": 70
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 460,
+   "gevolgde_minuten": 460,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Maja Runic",
+   "roepnaam": "Maja",
+   "rugnummer": 2,
+   "positie": "RB",
+   "alternatief": [
+    "LB",
+    "CB"
+   ],
+   "linie": "def",
+   "ovr": 71,
+   "stats": {
+    "PAC": 66,
+    "SHO": 63,
+    "PAS": 73,
+    "DRI": 70,
+    "DEF": 72,
+    "PHY": 75
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 132,
+   "gevolgde_minuten": 132,
+   "wedstrijden": 4,
+   "betrouwbaarheid": "middel",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Renske",
+   "roepnaam": "Renske",
+   "rugnummer": null,
+   "positie": "CM",
+   "alternatief": [
+    "CAM",
+    "ST"
+   ],
+   "linie": "mid",
+   "ovr": 70,
+   "stats": {
+    "PAC": 70,
+    "SHO": 75,
+    "PAS": 64,
+    "DRI": 65,
+    "DEF": 75,
+    "PHY": 80
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 413,
+   "gevolgde_minuten": 413,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Nynke Kuiken",
+   "roepnaam": "Nynke",
+   "rugnummer": 17,
+   "positie": "RW",
+   "alternatief": [
+    "LW",
+    "ST"
+   ],
+   "linie": "att",
+   "ovr": 69,
+   "stats": {
+    "PAC": 76,
+    "SHO": 62,
+    "PAS": 65,
+    "DRI": 65,
+    "DEF": 80,
+    "PHY": 78
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 300,
+   "gevolgde_minuten": 300,
+   "wedstrijden": 4,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Iris Dijkmeijer",
+   "roepnaam": "Iris",
+   "rugnummer": 11,
+   "positie": "RW",
+   "alternatief": [
+    "CM",
+    "CAM"
+   ],
+   "linie": "att",
+   "ovr": 69,
+   "stats": {
+    "PAC": 82,
+    "SHO": 65,
+    "PAS": 61,
+    "DRI": 64,
+    "DEF": 67,
+    "PHY": 70
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 383,
+   "gevolgde_minuten": 383,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Amber Merkx",
+   "roepnaam": "Amber",
+   "rugnummer": null,
+   "positie": "RW",
+   "alternatief": [
+    "LW",
+    "ST"
+   ],
+   "linie": "att",
+   "ovr": 69,
+   "stats": {
+    "PAC": 66,
+    "SHO": 69,
+    "PAS": 67,
+    "DRI": 66,
+    "DEF": 72,
+    "PHY": 80
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 341,
+   "gevolgde_minuten": 341,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Bente Palma",
+   "roepnaam": "Bente",
+   "rugnummer": 7,
+   "positie": "LB",
+   "alternatief": [
+    "RB",
+    "RW"
+   ],
+   "linie": "def",
+   "ovr": 68,
+   "stats": {
+    "PAC": 78,
+    "SHO": 60,
+    "PAS": 63,
+    "DRI": 61,
+    "DEF": 69,
+    "PHY": 69
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 448,
+   "gevolgde_minuten": 448,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Esmee Terpstra",
+   "roepnaam": "Esmee Terpstra",
+   "rugnummer": 13,
+   "positie": "RW",
+   "alternatief": [
+    "LW",
+    "RB"
+   ],
+   "linie": "att",
+   "ovr": 63,
+   "stats": {
+    "PAC": 64,
+    "SHO": 60,
+    "PAS": 59,
+    "DRI": 60,
+    "DEF": 69,
+    "PHY": 78
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 277,
+   "gevolgde_minuten": 277,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Jetty De Ruiter",
+   "roepnaam": "Jetty",
+   "rugnummer": 5,
+   "positie": "ST",
+   "alternatief": [
+    "CAM",
+    "CM"
+   ],
+   "linie": "att",
+   "ovr": 62,
+   "stats": {
+    "PAC": 59,
+    "SHO": 70,
+    "PAS": 63,
+    "DRI": 56,
+    "DEF": 57,
+    "PHY": 54
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 323,
+   "gevolgde_minuten": 323,
+   "wedstrijden": 5,
+   "betrouwbaarheid": "hoog",
+   "voorlopig": false,
+   "is_keeper": false
+  },
+  {
+   "naam": "Mare",
+   "roepnaam": "Mare",
+   "rugnummer": null,
+   "positie": "RB",
+   "alternatief": [
+    "CB",
+    "LB"
+   ],
+   "linie": "def",
+   "ovr": 75,
+   "stats": {
+    "PAC": 60,
+    "SHO": 61,
+    "PAS": 71,
+    "DRI": 68,
+    "DEF": 84,
+    "PHY": 82
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 73,
+   "gevolgde_minuten": 73,
+   "wedstrijden": 1,
+   "betrouwbaarheid": "laag",
+   "voorlopig": true,
+   "is_keeper": false
+  },
+  {
+   "naam": "Yanika",
+   "roepnaam": "Yanika",
+   "rugnummer": null,
+   "positie": "CM",
+   "alternatief": [
+    "CAM",
+    "RB"
+   ],
+   "linie": "mid",
+   "ovr": 70,
+   "stats": {
+    "PAC": 72,
+    "SHO": 63,
+    "PAS": 69,
+    "DRI": 70,
+    "DEF": 71,
+    "PHY": 74
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 13,
+   "gevolgde_minuten": 13,
+   "wedstrijden": 1,
+   "betrouwbaarheid": "laag",
+   "voorlopig": true,
+   "is_keeper": false
+  },
+  {
+   "naam": "Iris Terpstra",
+   "roepnaam": "Iris Terpstra",
+   "rugnummer": null,
+   "positie": "CB",
+   "alternatief": [
+    "CDM",
+    "CM"
+   ],
+   "linie": "def",
+   "ovr": 67,
+   "stats": {
+    "PAC": 68,
+    "SHO": 61,
+    "PAS": 65,
+    "DRI": 61,
+    "DEF": 68,
+    "PHY": 68
+   },
+   "volgorde": [
+    "PAC",
+    "SHO",
+    "PAS",
+    "DRI",
+    "DEF",
+    "PHY"
+   ],
+   "speelminuten": 58,
+   "gevolgde_minuten": 58,
+   "wedstrijden": 2,
+   "betrouwbaarheid": "laag",
+   "voorlopig": true,
+   "is_keeper": false
+  }
+ ],
+ "betrouwbaarheid_per_maat": {
+  "topsnelheid": 0.81,
+  "sprints90": 0.71,
+  "hsr90": 0.82,
+  "afstand90": 0.95,
+  "pass_pct": 0.72,
+  "passes90": 0.92,
+  "ontvangen90": 0.8,
+  "balcontacten90": 0.92,
+  "progressief90": 0.85,
+  "schoten90": 0.53,
+  "sot90": 0.19,
+  "dribbels90": 0.54,
+  "def90": 0.63,
+  "tackles90": 0.67,
+  "duelwinst": 0.13,
+  "duels_gew90": 0.69,
+  "duels90": 0.85,
+  "reddingen90": 0.97,
+  "doeltrappen90": 0.97
+ }
+}

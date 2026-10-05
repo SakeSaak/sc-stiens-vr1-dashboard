@@ -220,7 +220,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.09.18-a</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-a</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1537,6 +1537,43 @@ function generateSeasonTrainings(silent){
   if(!silent) flash(added?(added+" trainingen toegevoegd ✓"):"Alle trainingen stonden er al");
   return added;
 }
+/* Doorgegeven ruilingen uit de team- en persoonlijke app (okt 2026). Eenmalig toegepast en
+   meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
+const RUIL_SEED_VERSION=1;
+const RUILINGEN=[
+  // Grietine vlagde 19 sep voor Sigrid
+  {date:"2026-09-19", taak:"flag",  uit:"Sigrid",           in:"Grietine Bergsma"},
+  // tegenprestatie: Sigrid rijdt 14 nov voor Grietine (Sigrid staat er al in → alleen vastzetten)
+  {date:"2026-11-14", taak:"drive", uit:null,               in:"Sigrid"},
+  // Amber rijdt 30 jan voor Grietine (Grietine gevlagd voor Amber begin seizoen)
+  {date:"2027-01-30", taak:"drive", uit:"Grietine Bergsma", in:"Amber Merkx"},
+  // Iris rijdt 10 okt voor Arwen
+  {date:"2026-10-10", taak:"drive", uit:"Arwen Kuipers",    in:"Iris Dijkmeijer"},
+  // Arwen rijdt 30 jan voor Iris
+  {date:"2027-01-30", taak:"drive", uit:"Iris Dijkmeijer",  in:"Arwen Kuipers"},
+];
+function applyRuilingen(){
+  if(!store || typeof store!=="object") return;
+  if(store.__ruilSeed>=RUIL_SEED_VERSION) return;
+  if(!Array.isArray(fixtures) || !fixtures.length) return;      // wacht tot het programma geladen is
+  // 1) Bente is 28 okt t/m 3 dec afwezig (doorgegeven op 28 sep)
+  const ps=(typeof getAwayPeriods==="function")?getAwayPeriods("Bente"):null;
+  if(ps && !ps.some(p=>p&&p.from==="2026-10-28")){
+    ps.push({from:"2026-10-28",to:"2026-12-03",reden:"doorgegeven via app"});
+    if(typeof syncAwayText==="function") syncAwayText("Bente");
+  }
+  // 2) de ruilingen zelf
+  RUILINGEN.forEach(r=>{
+    const f=fixtures.find(x=>x && x.date===r.date); if(!f) return;
+    f[r.taak]=Array.isArray(f[r.taak])?f[r.taak]:[];
+    if(r.uit) f[r.taak]=f[r.taak].filter(n=>n!==r.uit);
+    if(r.in && !f[r.taak].includes(r.in)) f[r.taak].push(r.in);
+    setLock(f,r.taak,true);                                      // vastzetten
+  });
+  store.__ruilSeed=RUIL_SEED_VERSION;
+  if(typeof persistLocal==="function") persistLocal();
+  if(typeof scheduleSave==="function") scheduleSave();
+}
 // Trainingen die op een wedstrijddag vallen zijn dubbelingen (bv. 26 aug: beker i.p.v. training).
 // Eén keer automatisch opruimen; daarna kun je zelf altijd trainingen toevoegen of verwijderen.
 const CLASH_CLEAN_VERSION=1;
@@ -1929,18 +1966,21 @@ function rebalanceFrom(){
   if(!confirm("Vanaf "+d+" worden "+todo.length+" wedstrijd(en) en "+todoClub.length+" verenigingstaak/-taken opnieuw verdeeld.\n\n"+
               "Alles vóór die datum blijft ongewijzigd en telt mee, zodat wie tot nu toe minder deed nu vaker aan de beurt komt.\n\nDoorgaan?")) return;
   fixtures.forEach(f=>{ if(!f||f.date<cutoff) return;
-    f.drive=[]; f.wash=[]; f.flag=[];
-    if(!f.foodManual) f.food=[];      // handmatige lunch-ruil blijft staan
+    ["drive","wash","flag"].forEach(k=>{ if(!isLocked(f,k)) f[k]=[]; });   // vastgezette taken blijven
+    if(!f.foodManual && !isLocked(f,"food")) f.food=[];
   });
-  (clubDuties||[]).forEach(c=>{ if(!c||c.date<cutoff) return; c.fluit=[]; c.coord=[]; });
+  (clubDuties||[]).forEach(c=>{ if(!c||c.date<cutoff) return;
+    ["fluit","coord"].forEach(k=>{ if(!isLocked(c,k)) c[k]=[]; }); });
   assignTasks();
   flash("Opnieuw verdeeld vanaf "+d+" ✓");
 }
 // Bewuste volledige reset: wist alles en verdeelt opnieuw (alleen doen als er nog niets is uitgevoerd).
 function reassignAll(){
   if(!confirm("Let op: dit wist de HELE huidige taakverdeling en maakt een nieuwe. Doe dit alleen aan het begin van het seizoen — niet als er al taken zijn uitgevoerd, want dan gaat het overzicht van wie wat deed verloren. Doorgaan?")) return;
-  fixtures.forEach(f=>{ f.drive=[]; f.wash=[]; f.flag=[]; f.fluit=[]; f.coord=[]; f.food=[]; delete f.foodManual; });
-  (clubDuties||[]).forEach(c=>{ c.fluit=[]; c.coord=[]; });
+  fixtures.forEach(f=>{ f.fluit=[]; f.coord=[];
+    ["drive","wash","flag","food"].forEach(k=>{ if(!isLocked(f,k)) f[k]=[]; });   // vastgezette ruilingen blijven
+    if(!isLocked(f,"food")) delete f.foodManual; });
+  (clubDuties||[]).forEach(c=>{ ["fluit","coord"].forEach(k=>{ if(!isLocked(c,k)) c[k]=[]; }); });
   assignTasks();
   flash("Volledige verdeling opnieuw gemaakt");
 }
@@ -1970,13 +2010,28 @@ function taskCell(idx,task){
   const pool=eligiblePool(task).filter(n=>!bezet.has(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
   const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
-  return `<div class="taskcell">${chips}${add}</div>`;
+  const slot=`<span style="cursor:pointer;font-size:11px" onclick="toggleLock(${idx},'${task}')">${lockIcon(isLocked(f,task))}</span>`;
+  return `<div class="taskcell">${chips}${add}${slot}</div>`;
 }
+/* ---- Slot op een taak: een handmatige ruil blijft staan, ook bij herverdelen ---- */
+function isLocked(o,key){ return !!(o && Array.isArray(o.locked) && o.locked.includes(key)); }
+function setLock(o,key,on){ if(!o) return; o.locked=Array.isArray(o.locked)?o.locked:[];
+  if(on){ if(!o.locked.includes(key)) o.locked.push(key); }
+  else o.locked=o.locked.filter(k=>k!==key);
+  if(!o.locked.length) delete o.locked; }
+function toggleLock(idx,key){ const f=fixtures[idx]; if(!f)return; setLock(f,key,!isLocked(f,key)); afterTaskEdit(); }
+function toggleClubLock(i,key){ const c=clubDuties[i]; if(!c)return; setLock(c,key,!isLocked(c,key)); afterClubEdit(); }
+function lockIcon(locked){ return locked
+  ? '<span title="Vastgezet — blijft staan bij herverdelen" style="color:var(--gold)">🔒</span>'
+  : '<span title="Niet vastgezet — kan bij herverdelen wijzigen" style="opacity:.35">🔓</span>'; }
+
 function taskAdd(idx,task,name){ if(!name)return; const f=fixtures[idx]; f[task]=f[task]||[]; if(!f[task].includes(name)) f[task].push(name);
   if(task==="food") f.foodManual=true;   // handmatige ruil: niet overschrijven door het corvee-duo
+  setLock(f,task,true);                  // handmatig aangepast = automatisch vastgezet
   afterTaskEdit(); }
 function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f[task]=f[task].filter(x=>x!==name);
   if(task==="food") f.foodManual=true;
+  setLock(f,task,true);
   afterTaskEdit(); }
 // Terug naar het corvee-duo van die week (handmatige ruil ongedaan maken)
 function foodResetToDuo(idx){ const f=fixtures[idx]; if(!f)return; delete f.foodManual; f.food=duoAvailableForDate(f.date); afterTaskEdit(); }
@@ -2955,12 +3010,13 @@ function clubCell(i,key){
   (fixtures||[]).forEach(f=>{ if(f&&f.date===c.date) ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=clubPool(key).filter(n=>!bezet.has(n) && !isAbsent(n,c.date));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
-  return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select></div>`;
+  const slot=`<span style="cursor:pointer;font-size:11px" onclick="toggleClubLock(${i},'${key}')">${lockIcon(isLocked(c,key))}</span>`;
+  return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select>${slot}</div>`;
 }
 function clubTaskAdd(i,key,name){ if(!name)return; const c=clubDuties[i]; if(!c)return;
-  c[key]=c[key]||[]; if(!c[key].includes(name)) c[key].push(name); afterClubEdit(); }
+  c[key]=c[key]||[]; if(!c[key].includes(name)) c[key].push(name); setLock(c,key,true); afterClubEdit(); }
 function clubTaskRemove(i,key,name){ const c=clubDuties[i]; if(!c||!c[key])return;
-  c[key]=c[key].filter(x=>x!==name); afterClubEdit(); }
+  c[key]=c[key].filter(x=>x!==name); setLock(c,key,true); afterClubEdit(); }
 function afterClubEdit(){
   renderClubDuties(); if(typeof renderBalance==="function") renderBalance();
   if(typeof renderPerPlayer==="function") renderPerPlayer();
@@ -3361,7 +3417,7 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
   if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
   if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
-  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); }
+  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
   localStorage.setItem("scstiens_people",JSON.stringify({players:PLAYERS,staff:STAFF,duos:DUOS,tokens:MOOD_TOKENS}));
   localStorage.setItem("scstiens_analyses",JSON.stringify(analyses)); }catch(e){} }
@@ -3540,7 +3596,7 @@ renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlay
 renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
 cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
-seedSeasonTrainings(); cleanTrainingClashes(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
+seedSeasonTrainings(); cleanTrainingClashes(); applyRuilingen(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
 </body>
