@@ -220,7 +220,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-a</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-b</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -812,7 +812,7 @@ let PLAYERS = [
   {n:"Jetty De Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
   {n:"Sigrid", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
   {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
-  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; vlagt en rijdt wel"},
+  {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Ja, incidenteel", car:true, driveOptional:true, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; rijden alleen incidenteel (ouders)"},
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
   {n:"Iris Terpstra", age:"", city:"", job:"", pos:"RW", role:"att", form:"—", top:"Rechtsvoor", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
   {n:"Yannika", age:"", city:"", job:"", pos:"CM", role:"mid", form:"—", top:"Middenveld (komt uit VR2)", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
@@ -944,7 +944,13 @@ function delPerson(rol,i){
 }
 function setPerson(rol,i,key,val){
   const p=personArr(rol)[i]; if(!p) return;
-  if(key==="car"){ p.car=(val==="ja"); p.licence = val==="ja"?"Ja" : val==="rijbewijs"?"Rijbewijs, geen auto" : "Nee"; }
+  if(key==="car"){
+    // "soms" = heeft een auto, maar wordt niet automatisch ingeroosterd (wel handmatig te kiezen)
+    p.car = (val==="ja" || val==="soms");
+    p.driveOptional = (val==="soms") || undefined;
+    if(!p.driveOptional) delete p.driveOptional;
+    p.licence = val==="ja"?"Ja" : val==="soms"?"Ja, incidenteel" : val==="rijbewijs"?"Rijbewijs, geen auto" : "Nee";
+  }
   else p[key]=val;
   if(typeof persistLocal==="function") persistLocal();
   if(typeof scheduleSave==="function") scheduleSave();
@@ -1447,8 +1453,9 @@ function renderSquad(){
            <td><input type="text" value="${(p.job||'').replace(/"/g,'&quot;')}" onchange="setPerson('speelster',${i},'job',this.value)" style="width:150px;${IN}"></td>
            <td class="center" style="white-space:nowrap">${posKeuze(p,i)}</td>
            <td class="center">${linieKeuze(p,i)}</td>
-           <td class="center"><select onchange="setPerson('speelster',${i},'car',this.value)" style="${IN}">
-               <option value="ja" ${p.car?'selected':''}>✅ auto</option>
+           <td class="center"><select onchange="setPerson('speelster',${i},'car',this.value)" title="'soms' = kan rijden, maar wordt niet automatisch ingeroosterd" style="${IN}">
+               <option value="ja" ${(p.car&&!p.driveOptional)?'selected':''}>✅ auto</option>
+               <option value="soms" ${p.driveOptional?'selected':''}>🅿️ soms (niet inroosteren)</option>
                <option value="rijbewijs" ${(!p.car&&(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>🚙 geen auto</option>
                <option value="nee" ${(!p.car&&!(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>❌ geen rijbewijs</option></select></td>`}
       <td class="center"><button class="del" title="verwijderen" onclick="delPerson('${rol}',${i})">×</button></td></tr>`;
@@ -1539,7 +1546,7 @@ function generateSeasonTrainings(silent){
 }
 /* Doorgegeven ruilingen uit de team- en persoonlijke app (okt 2026). Eenmalig toegepast en
    meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
-const RUIL_SEED_VERSION=1;
+const RUIL_SEED_VERSION=2;
 const RUILINGEN=[
   // Grietine vlagde 19 sep voor Sigrid
   {date:"2026-09-19", taak:"flag",  uit:"Sigrid",           in:"Grietine Bergsma"},
@@ -1569,6 +1576,15 @@ function applyRuilingen(){
     if(r.uit) f[r.taak]=f[r.taak].filter(n=>n!==r.uit);
     if(r.in && !f[r.taak].includes(r.in)) f[r.taak].push(r.in);
     setLock(f,r.taak,true);                                      // vastzetten
+  });
+  // 3) Amber rijdt alleen incidenteel (ouders): niet meer automatisch inroosteren.
+  //    De vastgezette rit van 30 januari blijft; de overige rijbeurten vallen vrij.
+  const amber=PLAYERS.find(p=>p.n==="Amber Merkx");
+  if(amber){ amber.car=true; amber.driveOptional=true; amber.licence="Ja, incidenteel"; }
+  fixtures.forEach(f=>{
+    if(!f || !Array.isArray(f.drive)) return;
+    if(isLocked(f,"drive")) return;                       // 30 jan blijft staan
+    if(f.drive.includes("Amber Merkx")) f.drive=f.drive.filter(n=>n!=="Amber Merkx");
   });
   store.__ruilSeed=RUIL_SEED_VERSION;
   if(typeof persistLocal==="function") persistLocal();
@@ -1877,7 +1893,8 @@ function assignTasks(){
   const pts={}, sub={}, lastAny={};
   const SUBKEYS=["drive","wash","flag","food","fluit","coord"];
   PLAYERS.forEach(p=>{ pts[p.n]=0; sub[p.n]={}; SUBKEYS.forEach(k=>sub[p.n][k]=0); lastAny[p.n]=-99; });
-  const drivers=PLAYERS.filter(p=>p.car).map(p=>p.n);
+  // 'soms'-rijders (driveOptional) worden niet automatisch ingeroosterd — handmatig kiezen kan wel
+  const drivers=PLAYERS.filter(p=>p.car && !p.driveOptional).map(p=>p.n);
   const allPool=PLAYERS.map(p=>p.n);
   const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
   const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // Amber fluit niet
