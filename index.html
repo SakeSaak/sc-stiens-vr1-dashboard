@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-i</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-j</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -239,7 +239,6 @@
   <button data-tab="team">Team &amp; afspraken</button>
   <button data-tab="agenda">Agenda</button>
   <button data-tab="analyse">Wedstrijdanalyse</button>
-  <button data-tab="opstelling">Opstellingen</button>
   <button data-tab="metingen">Metingen</button>
   <button data-tab="ontwikkeling">Ontwikkeling</button>
   <button data-tab="mood">Gesteldheid</button>
@@ -286,7 +285,7 @@
       <b>Speelsters</b> doen mee met taken, metingen en FIFA-kaartjes; <b>staf</b> doet alleen mee met eten en kas.
       Rijbewijs/auto bepaalt wie kan rijden. Een naam wijzigen mag: alle gekoppelde taken, boetes en check-ins gaan automatisch mee.<br>
       <b>Namen staan overal als volledige naam</b> — precies zoals in het digitale wedstrijdformulier op voetbal.nl. Zo koppelen de
-      Veo-weekbestanden, de wedstrijdanalyses en de opstellingen automatisch aan de juiste speelster. Op de FIFA-kaartjes en in de
+      Veo-weekbestanden en de wedstrijdanalyses automatisch aan de juiste speelster. Op de FIFA-kaartjes en in de
       taakschema's wordt de naam kort weergegeven; de gegevens blijven aan de volledige naam hangen.
     </div>
     <div id="naamCheck"></div>
@@ -710,30 +709,6 @@
     <div id="anTrend" style="overflow:auto"></div>
   </section>
 
-  <!-- ============ OPSTELLINGEN / WEDSTRIJDSELECTIE ============ -->
-  <section id="opstelling">
-    <h2 class="sec">⚽ Opstellingen &amp; wedstrijdselectie</h2>
-    <div class="note">
-      Per wedstrijd wie in de <b>selectie</b> stond, met <b>rugnummer</b>, <b>aanvoerder</b> en <b>Player of the Match</b>.
-      De gespeelde wedstrijden zijn overgenomen uit het digitale wedstrijdformulier op <b>voetbal.nl</b>; rugnummers staan daar niet in,
-      die vul je hier zelf in (één keer als <b>vast nummer</b>, dan staat het bij elke wedstrijd goed).
-      Onderaan zie je per speelster hoe vaak ze in de selectie stond.
-    </div>
-    <div class="controls">
-      <label>Wedstrijd <select id="opSel" class="pub" onchange="opPick()" style="min-width:280px"></select></label>
-      <label>&nbsp;<button class="btn" onclick="opCopyPrev()" title="Neem de selectie van de vorige wedstrijd over">⧉ Vorige selectie overnemen</button></label>
-      <label>&nbsp;<button class="btn" onclick="opClear()">✕ Selectie leegmaken</button></label>
-    </div>
-    <div id="opBody" style="margin-top:8px"></div>
-
-    <h3 class="sec" style="font-size:16px;margin-top:24px">🔢 Vaste rugnummers</h3>
-    <p class="hint" style="margin-top:-6px">Eén keer invullen; elke nieuwe wedstrijdselectie neemt dit nummer over. Per wedstrijd kun je het hierboven afwijkend zetten.</p>
-    <div id="opNums" style="overflow:auto"></div>
-
-    <h3 class="sec" style="font-size:16px;margin-top:24px">📋 Selecties per speelster</h3>
-    <div id="opTotals" style="overflow:auto"></div>
-  </section>
-
   <!-- ============ AGENDA (publiek) ============ -->
   <section id="agenda">
     <h2 class="sec">📅 Agenda — alle activiteiten</h2>
@@ -1075,13 +1050,10 @@ function verplaatsNaam(oud,neu){
   if(!oud || !neu || oud===neu) return;
   if(store[oud]){ store[neu]=store[oud]; delete store[oud]; }
   const swap=a=>Array.isArray(a)?a.map(x=>x===oud?neu:x):a;
-  const taken=["drive","wash","flag","fluit","coord","food","squad"];
+  const taken=["drive","wash","flag","fluit","coord","food"];
   (fixtures||[]).forEach(f=>{ if(!f)return;
     taken.forEach(k=>{ if(f[k]!==undefined) f[k]=swap(f[k]); });
     if(f.locked && typeof f.locked==="object") Object.keys(f.locked).forEach(k=>{ f.locked[k]=swap(f.locked[k]); });
-    if(f.nums && Object.prototype.hasOwnProperty.call(f.nums,oud)){ f.nums[neu]=f.nums[oud]; delete f.nums[oud]; }
-    if(f.capt===oud) f.capt=neu;
-    if(f.potm===oud) f.potm=neu;
   });
   (clubDuties||[]).forEach(c=>{ if(!c)return; c.fluit=swap(c.fluit); c.coord=swap(c.coord);
     if(c.locked && typeof c.locked==="object") Object.keys(c.locked).forEach(k=>{ c.locked[k]=swap(c.locked[k]); }); });
@@ -1119,13 +1091,10 @@ function renamePerson(rol,i,neu){
 function namenInDataUniform(){
   try{
     const z=a=>Array.isArray(a)?a.map(standaardNaam).filter((n,i,b)=>b.indexOf(n)===i):a;
-    const velden=["drive","wash","flag","fluit","coord","food","squad"];
+    const velden=["drive","wash","flag","fluit","coord","food"];
     (fixtures||[]).forEach(f=>{ if(!f) return;
       velden.forEach(k=>{ if(f[k]!==undefined) f[k]=z(f[k]); });
       if(f.locked && typeof f.locked==="object") Object.keys(f.locked).forEach(k=>{ f.locked[k]=z(f.locked[k]); });
-      if(f.nums) sleutelsNaarOfficieel(f.nums);
-      if(f.capt) f.capt=standaardNaam(f.capt);
-      if(f.potm) f.potm=standaardNaam(f.potm);
     });
     (clubDuties||[]).forEach(c=>{ if(!c) return; c.fluit=z(c.fluit); c.coord=z(c.coord);
       if(c.locked && typeof c.locked==="object") Object.keys(c.locked).forEach(k=>{ c.locked[k]=z(c.locked[k]); }); });
@@ -1638,7 +1607,7 @@ function renderNaamCheck(){
   const kort=PLAYERS.filter(p=>p && p.n && String(p.n).trim().split(/\s+/).length<2).map(p=>p.n);
   el.innerHTML = kort.length
     ? `<p class="hint" style="color:var(--gold)">⚠ Nog geen volledige naam voor <b>${kort.join(", ")}</b> —
-        vul de achternaam hieronder aan, dan koppelen de opstellingen en de Veo-cijfers ook voor haar automatisch.
+        vul de achternaam hieronder aan, dan koppelen de Veo-cijfers en het wedstrijdformulier ook voor haar automatisch.
         Alle gekoppelde gegevens gaan bij het wijzigen mee.</p>`
     : `<p class="hint">✓ Alle namen staan volledig.</p>`;
 }
@@ -1649,8 +1618,9 @@ function renderSquad(){
   const rij=(p,rol,i)=>{
     const staf=(rol==="staf");
     return `<tr${staf?' style="background:rgba(242,140,0,.06)"':''}>
+      <td class="center">${staf?'<span class="mini">—</span>':`<input type="text" inputmode="numeric" value="${p.nr||''}" placeholder="—" title="vast rugnummer" onchange="setVastNr('${(p.n||'').replace(/'/g,"\\'")}',this.value)" style="width:44px;text-align:center;font-weight:700;${IN}">`}</td>
       <td><input type="text" value="${(p.n||'').replace(/"/g,'&quot;')}" onchange="renamePerson('${rol}',${i},this.value)"
-          style="width:150px;font-weight:700;${IN}"></td>
+          style="width:170px;font-weight:700;${IN}"></td>
       <td class="center"><select onchange="movePersonRole('${rol}',${i},this.value)" title="VR2-gasten krijgen wél een kaartje en metingen, maar doen niet mee aan de taakverdeling" style="${IN}">
           <option value="speelster" ${(!staf&&!p.gast)?'selected':''}>Speelster VR1</option>
           <option value="gast" ${(!staf&&p.gast)?'selected':''}>Speelster VR2</option>
@@ -1673,7 +1643,7 @@ function renderSquad(){
                <option value="nee" ${(!p.car&&!(p.licence||'').toLowerCase().includes('geen auto'))?'selected':''}>❌ geen rijbewijs</option></select></td>`}
       <td class="center"><button class="del" title="verwijderen" onclick="delPerson('${rol}',${i})">×</button></td></tr>`;
   };
-  t.innerHTML=`<tr><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig van – tot</th>
+  t.innerHTML=`<tr><th class="center" title="Vast rugnummer — wordt gebruikt bij de rugnummerherkenning van Veo">#</th><th>Naam</th><th class="center">Rol</th><th>📱 Telefoon</th><th>🗓️ Afwezig van – tot</th>
       <th class="center">Lft</th><th>Woonplaats</th><th>Studie/werk</th>
       <th class="center" title="Drie posities, net als in de vragenlijst. De eerste is de hoofdpositie.">Posities (1 · 2 · 3)</th>
       <th class="center" title="Volgt vanzelf de hoofdpositie; hier kun je het overschrijven.">Linie</th>
@@ -2056,19 +2026,10 @@ const PROGRAM_FIXTURES=[
 ];
 function loadProgram(){
   if(fixtures.length && !confirm("Dit vervangt het huidige wedstrijdrooster door het bekende voorbereidingsprogramma. Doorgaan?")) return;
-  /* Bewaar de opstellingen van wedstrijden die al gespeeld zijn: die horen bij de datum,
-     niet bij het rooster. */
-  const oudeOpstellingen={};
-  (fixtures||[]).forEach(f=>{ if(f&&f.date&&Array.isArray(f.squad)&&f.squad.length)
-    oudeOpstellingen[f.date]={squad:f.squad,nums:f.nums||{},capt:f.capt||"",potm:f.potm||"",score:f.score||""}; });
-  fixtures=PROGRAM_FIXTURES.map(f=>{
-    const n={date:f.date,time:f.time,opponent:f.opponent,home:f.home,drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]};
-    if(oudeOpstellingen[f.date]) Object.assign(n,oudeOpstellingen[f.date]);
-    return n; });
+  fixtures=PROGRAM_FIXTURES.map(f=>({date:f.date,time:f.time,opponent:f.opponent,home:f.home,
+    drive:[],wash:[],flag:[],fluit:[],coord:[],food:[]}));
   tasksAssigned=false;
-  if(typeof seedLineups==="function") seedLineups();
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders();
-  if(typeof renderOpstelling==="function") renderOpstelling();
   if(typeof fillKasMatch==="function"){ fillKasMatch(); renderTaakBoetes(); }
   if(typeof persistLocal==="function") persistLocal();
   if(typeof scheduleSave==="function") scheduleSave();
@@ -3719,60 +3680,10 @@ let isStaff=false;
 
 function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].phone; }); }
 /* =========================================================================
-   OPSTELLINGEN / WEDSTRIJDSELECTIE
-   Per wedstrijd bewaren we op de wedstrijdregel zelf:
-     f.squad = ["Sacha", ...]   wie in de selectie stond
-     f.nums  = {"Sacha":"4"}    rugnummer voor déze wedstrijd (leeg = vast nummer)
-     f.capt  = "Sigrid"         aanvoerder
-     f.potm  = "Amber Merkx"    Player of the Match
-   Het vaste rugnummer staat bij de speelster zelf (p.nr), zodat het maar één
-   keer ingevuld hoeft te worden.
+   RUGNUMMERS
+   Het vaste rugnummer staat bij de speelster zelf (p.nr) en is in te vullen in het
+   Selectieoverzicht. Het wordt gebruikt bij de Veo-rugnummerherkenning.
    ========================================================================= */
-
-/* Opstellingen uit het digitale wedstrijdformulier (voetbal.nl). Namen zoals ze
-   daar staan; standaardNaam() maakt er de roepnaam uit het dashboard van.
-   Rugnummers staan NIET in het wedstrijdformulier — die vult de staf hier zelf in. */
-const KNOWN_LINEUPS=[
-  {date:"2026-09-12", capt:"Sigrid ter Voort", potm:"", spelers:[
-    "Arwen Kuipers","Grietine Bergsma","Maja Runic","Renske Kamminga","Bente Palma",
-    "Sigrid ter Voort","Sacha Leijder Havenstroom","Iris Dijkmeijer","Nynke Kuiken",
-    "Iris Terpstra","Coby Keizer","Yannika de Vries"]},
-  {date:"2026-09-19", capt:"Sigrid ter Voort", potm:"", spelers:[
-    "Arwen Kuipers","Grietine Bergsma","Sacha Leijder Havenstroom","Sigrid ter Voort",
-    "Amber Merkx","Nynke Kuiken","Bente Palma","Esmee Terpstra","Renske Kamminga",
-    "Iris Dijkmeijer","Coby Keizer","Jetty de Ruiter","Maja Runic","Iris Terpstra"]},
-  {date:"2026-09-26", capt:"Sigrid ter Voort", potm:"Renske Kamminga", spelers:[
-    "Sacha Leijder Havenstroom","Grietine Bergsma","Arwen Kuipers","Yannika de Vries",
-    "Iris Dijkmeijer","Renske Kamminga","Bente Palma","Sigrid ter Voort",
-    "Gelske van Baaren","Amber Merkx","Coby Keizer","Linda Zuiderveen"]},
-  {date:"2026-10-03", capt:"Sigrid ter Voort", potm:"Amber Merkx", spelers:[
-    "Sacha Leijder Havenstroom","Grietine Bergsma","Maja Runic","Arwen Kuipers",
-    "Sigrid ter Voort","Esmee Terpstra","Iris Dijkmeijer","Renske Kamminga","Bente Palma",
-    "Coby Keizer","Amber Merkx","Marije Bokma","Nynke Kuiken","Gelske van Baaren"]},
-];
-const LINEUP_SEED_VERSION=1;
-/* Eenmalig de bekende opstellingen inlezen. Alleen bij wedstrijden die nog geen
-   selectie hebben, zodat handmatige wijzigingen nooit worden overschreven. */
-function seedLineups(){
-  try{
-    /* Zonder rooster is er niets om aan te hangen — dan ook de markering niet zetten,
-       anders slaat het inlezen na "Laad wedstrijdprogramma" over. */
-    if(!Array.isArray(fixtures) || !fixtures.length) return;
-    if(store.__lineupSeed===LINEUP_SEED_VERSION) return;
-    let gevonden=0;
-    KNOWN_LINEUPS.forEach(L=>{
-      const f=(fixtures||[]).find(x=>x && x.date===L.date);
-      if(!f) return;
-      gevonden++;
-      if(Array.isArray(f.squad) && f.squad.length) return;   // al ingevuld: afblijven
-      f.squad=L.spelers.map(standaardNaam);
-      f.nums=f.nums||{};
-      if(L.capt) f.capt=standaardNaam(L.capt);
-      if(L.potm) f.potm=standaardNaam(L.potm);
-    });
-    if(gevonden) store.__lineupSeed=LINEUP_SEED_VERSION;
-  }catch(e){ console.warn("seedLineups",e); }
-}
 /* Rugnummers uit de Veo-rugnummerherkenning (wedstrijd van 3 oktober). Eenmalig als
    vast nummer ingevuld; een nummer dat de staf zelf heeft gezet blijft staan. */
 const VEO_NUMMERS={ "Arwen Kuipers":"1", "Maja":"2", "Grietine Bergsma":"3", "Sacha":"4",
@@ -3825,164 +3736,27 @@ function seedMatchdataAanvulling(){
   }catch(e){ console.warn("seedMatchdataAanvulling",e); }
 }
 
-/* Iedereen die een kaartje heeft (ook de VR2-gasten) plus namen die alleen in een
-   opstelling voorkomen (nog niet in het Selectieoverzicht). */
-function lineupPool(){
-  const uit=PLAYERS.map(p=>p.n);
-  (fixtures||[]).forEach(f=>(f&&f.squad||[]).forEach(n=>{
-    if(!uit.some(x=>naamSleutel(x)===naamSleutel(n))) uit.push(n); }));
-  return uit;
-}
-function opFixIdx(){
-  const sel=document.getElementById("opSel");
-  const i=sel?+sel.value:-1;
-  return (i>=0 && fixtures[i])?i:-1;
-}
-let _opPicked=false;
-function opPick(){ _opPicked=true; renderOpstelling(); }
-function fixLabel(f,i){
-  const d=new Date(f.date+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"});
-  const tu=f.home===true?"thuis":f.home===false?"uit":"n.t.b.";
-  return d+" — "+((f.opponent||"").trim()||("Wedstrijd "+(i+1)))+" ("+tu+")";
-}
-function fillOpSel(){
-  const sel=document.getElementById("opSel"); if(!sel) return;
-  const vorige=sel.value;
-  const lijst=(fixtures||[]).map((f,i)=>({f,i})).filter(o=>o.f&&o.f.date);
-  sel.innerHTML=lijst.map(o=>`<option value="${o.i}">${fixLabel(o.f,o.i)}</option>`).join("");
-  if(!lijst.length){ return; }
-  if(_opPicked && lijst.some(o=>String(o.i)===vorige)){ sel.value=vorige; return; }
-  /* standaard: de laatst gespeelde wedstrijd (of de eerstvolgende als er nog niets is) */
-  const vandaag=todayStr();
-  const gespeeld=lijst.filter(o=>o.f.date<=vandaag);
-  sel.value=String((gespeeld.length?gespeeld[gespeeld.length-1]:lijst[0]).i);
-}
-function squadOf(i){ const f=fixtures[i]; if(!f) return []; if(!Array.isArray(f.squad)) f.squad=[]; return f.squad; }
-function inSquad(i,n){ return squadOf(i).some(x=>naamSleutel(x)===naamSleutel(n)); }
+/* Het vaste rugnummer van een speelster. */
 function vastNr(n){ const p=vindSpeelster(n); return (p&&p.nr)?String(p.nr):""; }
-function nrFor(i,n){ const f=fixtures[i]; const eigen=(f&&f.nums&&f.nums[n])||""; return eigen||vastNr(n); }
-function toggleSquad(i,n){
-  const f=fixtures[i]; if(!f) return;
-  const s=squadOf(i);
-  const pos=s.findIndex(x=>naamSleutel(x)===naamSleutel(n));
-  if(pos>=0){ s.splice(pos,1);
-    if(f.capt&&naamSleutel(f.capt)===naamSleutel(n)) f.capt="";
-    if(f.potm&&naamSleutel(f.potm)===naamSleutel(n)) f.potm="";
-  } else s.push(n);
-  opSaveRender();
-}
-function setOpNum(i,n,v){
-  const f=fixtures[i]; if(!f) return; f.nums=f.nums||{};
-  v=String(v||"").trim();
-  if(!v || v===vastNr(n)) delete f.nums[n]; else f.nums[n]=v;
-  opSaveRender();
-}
-function setOpField(i,k,v){ const f=fixtures[i]; if(!f) return; f[k]=v; opSaveRender(); }
 function setVastNr(n,v){
   const p=vindSpeelster(n); if(!p) return;
-  v=String(v||"").trim(); if(v) p.nr=v; else delete p.nr;
-  opSaveRender(); try{ renderSquad(); }catch(e){}
+  v=String(v||"").trim().replace(/[^0-9]/g,"");
+  if(v) p.nr=v; else delete p.nr;
+  persistLocal(); scheduleSave(); renderSquad();
 }
-function opSaveRender(){ persistLocal(); scheduleSave(); renderOpstelling(); }
-function opClear(){
-  const i=opFixIdx(); if(i<0) return;
-  if(!confirm("Selectie van deze wedstrijd leegmaken?")) return;
-  fixtures[i].squad=[]; fixtures[i].nums={}; fixtures[i].capt=""; fixtures[i].potm="";
-  opSaveRender();
-}
-function opCopyPrev(){
-  const i=opFixIdx(); if(i<0) return;
-  const eerder=(fixtures||[]).map((f,j)=>({f,j})).filter(o=>o.f&&o.f.date<fixtures[i].date&&Array.isArray(o.f.squad)&&o.f.squad.length);
-  if(!eerder.length){ flash("Geen eerdere selectie gevonden"); return; }
-  const bron=eerder[eerder.length-1];
-  fixtures[i].squad=bron.f.squad.slice();
-  fixtures[i].nums=Object.assign({},bron.f.nums||{});
-  if(!fixtures[i].capt) fixtures[i].capt=bron.f.capt||"";
-  opSaveRender(); flash("Selectie van "+fixLabel(bron.f,bron.j)+" overgenomen ✓");
-}
-/* Een naam die alleen in een opstelling staat als VR2-gast toevoegen: dan krijgt ze
-   een FIFA-kaartje, maar blijft ze buiten de taakschema's. */
-function addGastUitOpstelling(n){
-  if(vindSpeelster(n)){ renderOpstelling(); return; }
-  PLAYERS.push({n:n, age:"", city:"", job:"", pos:"—", role:"mid", form:"—", top:"Komt uit VR2",
-                licence:"", car:false, shirt:"—", goal:"—", holiday:"—", gast:true});
-  store[n]=store[n]||{stats:{},note:""};
-  try{ markeerGezien(n); }catch(e){}
-  try{ computePlayerStats(n); renderCards(); renderSquad(); }catch(e){}
-  opSaveRender(); flash(n+" toegevoegd als VR2-gast ✓");
-}
-function renderOpstelling(){
-  const body=document.getElementById("opBody"); if(!body) return;
-  fillOpSel();
-  const i=opFixIdx();
-  if(i<0){ body.innerHTML='<p class="hint">Nog geen wedstrijden in het rooster. Laad eerst het wedstrijdprogramma bij <b>Taakschema\'s</b>.</p>';
-    renderOpNums(); renderOpTotals(); return; }
-  const f=fixtures[i];
-  const KIN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px';
-  const pool=lineupPool();
-  const sel=pool.filter(n=>inSquad(i,n));
-  const rest=pool.filter(n=>!inSquad(i,n));
-  const optie=(n,huidig)=>`<option value="${n}" ${naamSleutel(n)===naamSleutel(huidig||"")?"selected":""}>${n}</option>`;
-  const kaart=n=>{
-    const p=vindSpeelster(n);
-    const onbekend=!p;
-    const gast=p&&p.gast;
-    return `<tr>
-      <td style="white-space:nowrap"><b>${n}</b>
-        ${gast?'<span class="mini" style="color:var(--gold)"> VR2</span>':''}
-        ${onbekend?`<div class="mini">⚠ nog geen kaartje — <button class="btn" style="padding:2px 6px" onclick="addGastUitOpstelling('${n.replace(/'/g,"\\'")}')">voeg toe als VR2-gast</button></div>`:''}</td>
-      <td class="center"><input type="text" inputmode="numeric" value="${nrFor(i,n)}" placeholder="—" title="rugnummer deze wedstrijd"
-            onchange="setOpNum(${i},'${n.replace(/'/g,"\\'")}',this.value)" style="width:56px;text-align:center;${KIN}"></td>
-      <td class="center">${f.capt&&naamSleutel(f.capt)===naamSleutel(n)?'©':''}${f.potm&&naamSleutel(f.potm)===naamSleutel(n)?' ⭐':''}</td>
-      <td class="center"><button class="del" title="uit de selectie halen" onclick="toggleSquad(${i},'${n.replace(/'/g,"\\'")}')">×</button></td>
-    </tr>`;
-  };
-  body.innerHTML=`
-    <div class="controls" style="margin-bottom:6px">
-      <label>Aanvoerder <select onchange="setOpField(${i},'capt',this.value)" style="${KIN}">
-        <option value="">—</option>${sel.map(n=>optie(n,f.capt)).join("")}</select></label>
-      <label>⭐ Player of the Match <select onchange="setOpField(${i},'potm',this.value)" style="${KIN}">
-        <option value="">—</option>${sel.map(n=>optie(n,f.potm)).join("")}</select></label>
-      <label>Uitslag <input type="text" value="${f.score||''}" placeholder="bv. 3-2" onchange="setOpField(${i},'score',this.value)" style="width:80px;${KIN}"></label>
-    </div>
-    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
-      <div style="flex:1 1 320px;min-width:300px">
-        <h3 class="sec" style="font-size:15px">In de selectie <span class="mini">(${sel.length})</span></h3>
-        ${sel.length?`<table><tr><th>Speelster</th><th class="center">Nr.</th><th class="center"></th><th></th></tr>${sel.map(kaart).join("")}</table>`
-                    :'<p class="hint">Nog niemand gekozen — vink hiernaast de speelsters aan.</p>'}
-      </div>
-      <div style="flex:1 1 260px;min-width:240px">
-        <h3 class="sec" style="font-size:15px">Niet in de selectie</h3>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${rest.map(n=>`<button class="btn" style="padding:4px 9px" onclick="toggleSquad(${i},'${n.replace(/'/g,"\\'")}')">+ ${n}</button>`).join("")||'<span class="hint">Iedereen staat in de selectie.</span>'}
-        </div>
-      </div>
-    </div>`;
-  renderOpNums(); renderOpTotals();
-}
-function renderOpNums(){
-  const w=document.getElementById("opNums"); if(!w) return;
-  const KIN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12px';
-  w.innerHTML=`<table><tr><th>Speelster</th><th class="center">Vast rugnummer</th><th>Positie</th></tr>`+
-    PLAYERS.map(p=>`<tr><td>${p.n}${p.gast?' <span class="mini" style="color:var(--gold)">VR2</span>':''}</td>
-      <td class="center"><input type="text" inputmode="numeric" value="${p.nr||''}" placeholder="—"
-        onchange="setVastNr('${p.n.replace(/'/g,"\\'")}',this.value)" style="width:56px;text-align:center;${KIN}"></td>
-      <td>${p.pos||"—"}</td></tr>`).join("")+`</table>`;
-}
-function renderOpTotals(){
-  const w=document.getElementById("opTotals"); if(!w) return;
-  const gespeeld=(fixtures||[]).filter(f=>f&&Array.isArray(f.squad)&&f.squad.length);
-  if(!gespeeld.length){ w.innerHTML='<p class="hint">Zodra er opstellingen staan, zie je hier per speelster het aantal selecties.</p>'; return; }
-  const rows=lineupPool().map(n=>{
-    const k=naamSleutel(n);
-    const sel=gespeeld.filter(f=>(f.squad||[]).some(x=>naamSleutel(x)===k)).length;
-    const cap=gespeeld.filter(f=>f.capt&&naamSleutel(f.capt)===k).length;
-    const pm=gespeeld.filter(f=>f.potm&&naamSleutel(f.potm)===k).length;
-    return {n,sel,cap,pm};
-  }).sort((a,b)=>b.sel-a.sel||a.n.localeCompare(b.n));
-  w.innerHTML=`<p class="hint" style="margin-top:-6px">${gespeeld.length} wedstrijd(en) met een opstelling.</p>
-    <table><tr><th>Speelster</th><th class="center">Selecties</th><th class="center">©</th><th class="center">⭐ POTM</th></tr>`+
-    rows.map(r=>`<tr><td>${r.n}</td><td class="center">${r.sel}</td><td class="center">${r.cap||''}</td><td class="center">${r.pm||''}</td></tr>`).join("")+`</table>`;
+
+/* Eenmalig opruimen: de proefopzet van het tabblad Opstellingen liet velden achter op de
+   wedstrijdregels. Die horen er niet meer te staan. */
+const OPSTELLING_OPRUIM_VERSIE=1;
+function ruimOpstellingenOp(){
+  try{
+    if(store.__opClean===OPSTELLING_OPRUIM_VERSIE) return;
+    (fixtures||[]).forEach(f=>{ if(!f) return;
+      ["squad","nums","capt","potm","score"].forEach(k=>{ if(k in f) delete f[k]; });
+      if(f.locked && typeof f.locked==="object" && "squad" in f.locked) delete f.locked.squad; });
+    delete store.__lineupSeed;
+    store.__opClean=OPSTELLING_OPRUIM_VERSIE;
+  }catch(e){ console.warn("ruimOpstellingenOp",e); }
 }
 
 function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses,
@@ -4008,7 +3782,7 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(typeof migreerNamen==="function") migreerNamen();
   if(typeof namenInDataUniform==="function") namenInDataUniform();
   if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
-  if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof seedLineups==="function") seedLineups();
+  if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
@@ -4033,7 +3807,7 @@ function applyStaffGate(){
   if(typeof renderAgenda==="function") renderAgenda();   // bewerkvelden tonen/verbergen na in- of uitloggen
 }
 function renderAll(){
-  if(typeof seedLineups==="function") seedLineups();
+  if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling();
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);
@@ -4042,7 +3816,6 @@ function renderAll(){
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
   fillAnalyseSel(); renderAnalyse(); renderAnTrend();
-  if(typeof renderOpstelling==="function") renderOpstelling();
   applyStaffGate();
 }
 async function cloudLoad(){
