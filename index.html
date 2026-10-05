@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-g</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-h</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -884,6 +884,28 @@ function vindSpeelster(n){
   const k=naamSleutel(n), sk=naamSleutel(standaardNaam(n));
   return PLAYERS.find(p=>{ const pk=naamSleutel(p.n);
     return pk===k || pk===sk || naamSleutel(standaardNaam(p.n))===sk; }) || null;
+}
+
+/* De naam zoals die in het Selectieoverzicht staat (of de naam zelf als zij er niet in staat). */
+function echteNaam(n){ const p=vindSpeelster(n); return p?p.n:n; }
+
+/* Losser zoeken, alléén voor het inlezen van bestanden van buiten (Veo, voetbal.nl):
+   "Marije" mag "Marije Bokma" vinden en "Sacha Havenstroom" mag "Sacha" vinden.
+   De voornaam moet gelijk zijn en de kortste naam moet helemaal in de langste zitten.
+   Bij twijfel (twee keer Esmee) geeft dit niets terug — dan blijft de naam onbekend en
+   zie je dat terug in de melding na het inlezen. */
+function vindSpeelsterLos(n){
+  const bekend=vindSpeelster(n); if(bekend) return bekend;
+  const k=naamSleutel(n); if(!k) return null;
+  const woorden=k.split(" ");
+  const treffers=PLAYERS.filter(p=>{
+    const pw=naamSleutel(p.n).split(" ");
+    if(pw[0]!==woorden[0]) return false;
+    const kort=woorden.length<=pw.length?woorden:pw;
+    const lang=woorden.length<=pw.length?pw:woorden;
+    return kort.every(w=>lang.includes(w));
+  });
+  return treffers.length===1 ? treffers[0] : null;
 }
 
 /* Welke standaardnamen al een keer langs zijn geweest. Deze lijst hoort bij de gedeelde
@@ -1617,7 +1639,7 @@ function generateSeasonTrainings(silent){
 }
 /* Doorgegeven ruilingen uit de team- en persoonlijke app (okt 2026). Eenmalig toegepast en
    meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
-const RUIL_SEED_VERSION=5;
+const RUIL_SEED_VERSION=6;
 // Speelsters uit VR2 die meedoen: wel een FIFA-kaartje en metingen, geen taken.
 const VR2_GASTEN=["Iris Terpstra","Yannika"];
 const RUILINGEN=[
@@ -1637,14 +1659,15 @@ function _applyRuilingen(){
   if(!store || typeof store!=="object") return;
   if(store.__ruilSeed>=RUIL_SEED_VERSION) return;
   if(!Array.isArray(fixtures) || !fixtures.length) return;      // wacht tot het programma geladen is
-  // 0) "Iris Dijkmeijer" stond per ongeluk als aparte naam in het taakschema; in het
-  //    dashboard heet zij "Iris". Zet dat recht, inclusief de vastzettingen.
+  // 0) Namen in het taakschema gelijktrekken met het Selectieoverzicht. Door een rename
+  //    (Iris -> Iris Dijkmeijer) of een ruiling kon er een spelling in staan die bij geen
+  //    enkele speelster hoort; die taak telde dan niet mee in de lastverdeling.
   const TAKEN=["drive","wash","flag","food","fluit","coord"];
   const herstelNaam=(o)=>{ if(!o) return;
-    TAKEN.forEach(k=>{ if(Array.isArray(o[k])) o[k]=o[k].map(n=>n==="Iris Dijkmeijer"?"Iris":n)
-      .filter((n,i,a)=>a.indexOf(n)===i);
-      if(o.locked && Array.isArray(o.locked[k])) o.locked[k]=o.locked[k].map(n=>n==="Iris Dijkmeijer"?"Iris":n)
-        .filter((n,i,a)=>a.indexOf(n)===i); }); };
+    const zet=a=>a.map(n=>{ const p=vindSpeelster(n); return p?p.n:n; })
+                   .filter((n,i,b)=>b.indexOf(n)===i);
+    TAKEN.forEach(k=>{ if(Array.isArray(o[k])) o[k]=zet(o[k]);
+      if(o.locked && Array.isArray(o.locked[k])) o.locked[k]=zet(o.locked[k]); }); };
   fixtures.forEach(herstelNaam); (clubDuties||[]).forEach(herstelNaam);
   // 1) Bente is 28 okt t/m 3 dec afwezig (doorgegeven op 28 sep)
   const ps=(typeof getAwayPeriods==="function")?getAwayPeriods("Bente"):null;
@@ -1652,13 +1675,15 @@ function _applyRuilingen(){
     ps.push({from:"2026-10-28",to:"2026-12-03",reden:"doorgegeven via app"});
     if(typeof syncAwayText==="function") syncAwayText("Bente");
   }
-  // 2) de ruilingen zelf
+  // 2) de ruilingen zelf — namen altijd via het Selectieoverzicht, zodat een rename
+  //    (Iris -> Iris Dijkmeijer) de afspraak niet onzichtbaar maakt.
   RUILINGEN.forEach(r=>{
     const f=fixtures.find(x=>x && x.date===r.date); if(!f) return;
+    const uit=r.uit?echteNaam(r.uit):null, inn=r.in?echteNaam(r.in):null;
     f[r.taak]=Array.isArray(f[r.taak])?f[r.taak]:[];
-    if(r.uit) f[r.taak]=f[r.taak].filter(n=>n!==r.uit);
-    if(r.in && !f[r.taak].includes(r.in)) f[r.taak].push(r.in);
-    if(r.in) setNameLock(f,r.taak,r.in,true);                    // vastzetten op naam
+    if(uit) f[r.taak]=f[r.taak].filter(n=>n!==uit);
+    if(inn && !f[r.taak].includes(inn)) f[r.taak].push(inn);
+    if(inn) setNameLock(f,r.taak,inn,true);                      // vastzetten op naam
   });
   // 3) Amber rijdt alleen incidenteel (ouders): niet meer automatisch inroosteren.
   //    De vastgezette rit van 30 januari blijft; de overige rijbeurten vallen vrij.
@@ -1682,11 +1707,12 @@ function _applyRuilingen(){
   ];
   VAST.forEach(v=>{
     const f=fixtures.find(x=>x && x.date===v.date); if(!f) return;
+    const wie=v.wie.map(echteNaam);
     f[v.taak]=Array.isArray(f[v.taak])?f[v.taak]:[];
-    if(v.vervang) f[v.taak]=v.wie.slice();                   // afspraak vervangt de hele toewijzing
-    else v.wie.forEach(n=>{ if(!f[v.taak].includes(n)) f[v.taak].push(n); });
+    if(v.vervang) f[v.taak]=wie.slice();                      // afspraak vervangt de hele toewijzing
+    else wie.forEach(n=>{ if(!f[v.taak].includes(n)) f[v.taak].push(n); });
     if(v.taak==="food") f.foodManual=true;
-    v.wie.forEach(n=>setNameLock(f,v.taak,n,true));
+    wie.forEach(n=>setNameLock(f,v.taak,n,true));
   });
   // 5) VR2-speelsters terugzetten als gast (kaartje + metingen, geen taken)
   VR2_GASTEN.forEach(naam=>{
@@ -2657,9 +2683,12 @@ function matchdataUit(rijen){
     const ruw=String(r["Speelster"]||r["speelster"]||"").trim();
     const voluit=String(r["Volledige naam"]||r["volledige naam"]||"").trim();
     if(!ruw && !voluit) return;
-    /* Eerst op de korte naam, anders op de volledige naam. Zo blijft het bestand kloppen
-       als iemand in het Selectieoverzicht is hernoemd (Iris -> Iris Dijkmeijer). */
-    const speelster=vindSpeelster(ruw) || (voluit? vindSpeelster(voluit) : null);
+    /* Eerst op de korte naam, anders op de volledige naam, en daarna nog los op voornaam.
+       Zo blijft het bestand kloppen als iemand in het Selectieoverzicht is hernoemd
+       (Iris -> Iris Dijkmeijer) of daar met achternaam staat terwijl Veo alleen de
+       voornaam kent ("Marije" -> "Marije Bokma"). */
+    const speelster=vindSpeelster(ruw) || (voluit? vindSpeelster(voluit) : null)
+                    || vindSpeelsterLos(ruw) || (voluit? vindSpeelsterLos(voluit) : null);
     if(!speelster){ onbekend.push(ruw||voluit); return; }
     const naam=speelster.n;
     const st={};
@@ -3623,6 +3652,50 @@ function seedLineups(){
     if(gevonden) store.__lineupSeed=LINEUP_SEED_VERSION;
   }catch(e){ console.warn("seedLineups",e); }
 }
+/* Rugnummers uit de Veo-rugnummerherkenning (wedstrijd van 3 oktober). Eenmalig als
+   vast nummer ingevuld; een nummer dat de staf zelf heeft gezet blijft staan. */
+const VEO_NUMMERS={ "Arwen Kuipers":"1", "Maja":"2", "Grietine Bergsma":"3", "Sacha":"4",
+  "Sigrid":"6", "Bente":"7", "Renske":"10", "Iris":"11", "Esmee Terpstra":"13",
+  "Marije Bokma":"14", "Amber Merkx":"15", "Nynke":"17", "Coby Keizer":"18" };
+const NUMMER_SEED_VERSION=1;
+function seedRugnummers(){
+  try{
+    if(store.__nrSeed===NUMMER_SEED_VERSION) return;
+    Object.keys(VEO_NUMMERS).forEach(naam=>{
+      const p=vindSpeelster(naam); if(!p || p.nr) return;
+      p.nr=VEO_NUMMERS[naam];
+    });
+    store.__nrSeed=NUMMER_SEED_VERSION;
+  }catch(e){ console.warn("seedRugnummers",e); }
+}
+
+/* Marije stond in het Veo-weekbestand alleen als "Marije" en werd daardoor bij het
+   inlezen niet aan "Marije Bokma" gekoppeld: haar kaartje bleef leeg. De cijfers uit dat
+   bestand hier eenmalig aanvullen, zodat het kaartje klopt zonder opnieuw te uploaden.
+   Zodra het weekbestand opnieuw wordt ingelezen, komt alles gewoon uit dat bestand. */
+const MATCHDATA_AANVULLING={
+  "Marije Bokma": {wedstrijden:1, minuten:31, status:"voorlopig",
+                   stats:{PAC:72, SHO:67, PAS:66, DRI:67, DEF:68, PHY:68}},
+};
+const MD_SEED_VERSION=1;
+function seedMatchdataAanvulling(){
+  try{
+    if(store.__mdSeed===MD_SEED_VERSION) return;
+    if(typeof MATCHDATA!=="object" || !MATCHDATA) return;
+    /* alleen aanvullen als er al wedstrijddata is ingelezen; anders zou één los kaartje
+       cijfers krijgen terwijl de rest nog op de metingen staat. */
+    if(!Object.keys(MATCHDATA).some(k=>!k.startsWith("__"))) return;
+    Object.keys(MATCHDATA_AANVULLING).forEach(naam=>{
+      const p=vindSpeelster(naam); if(!p) return;
+      if(MATCHDATA[p.n]) return;                       // al ingelezen: afblijven
+      MATCHDATA[p.n]=JSON.parse(JSON.stringify(MATCHDATA_AANVULLING[naam]));
+      try{ computePlayerStats(p.n); }catch(e){}
+    });
+    store.__mdSeed=MD_SEED_VERSION;
+    try{ saveMatchdata(); }catch(e){}
+  }catch(e){ console.warn("seedMatchdataAanvulling",e); }
+}
+
 /* Iedereen die een kaartje heeft (ook de VR2-gasten) plus namen die alleen in een
    opstelling voorkomen (nog niet in het Selectieoverzicht). */
 function lineupPool(){
@@ -3800,7 +3873,9 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
   if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
   if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
-  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof seedLineups==="function") seedLineups(); }
+  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof seedLineups==="function") seedLineups();
+  if(typeof seedRugnummers==="function") seedRugnummers();
+  if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
   localStorage.setItem("scstiens_people",JSON.stringify({players:PLAYERS,staff:STAFF,duos:DUOS,tokens:MOOD_TOKENS}));
   localStorage.setItem("scstiens_analyses",JSON.stringify(analyses)); }catch(e){} }
@@ -3823,13 +3898,15 @@ function applyStaffGate(){
   if(typeof renderAgenda==="function") renderAgenda();   // bewerkvelden tonen/verbergen na in- of uitloggen
 }
 function renderAll(){
+  if(typeof seedLineups==="function") seedLineups();
+  if(typeof seedRugnummers==="function") seedRugnummers();
+  if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling();
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);
     if(typeof getAwayPeriods==="function") getAwayPeriods(p.n);  try{renderMatchdata();}catch(e){} });  // schoon blessures, ruim lege check-ins op, zet afwezigheid om naar periodes
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
   fillAnalyseSel(); renderAnalyse(); renderAnTrend();
-  if(typeof seedLineups==="function") seedLineups();
   if(typeof renderOpstelling==="function") renderOpstelling();
   applyStaffGate();
 }
