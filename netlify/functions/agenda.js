@@ -23,8 +23,8 @@ const DUOS=[
   ["Sacha Leijder Havenstroom","Esmee Terpstra"],
   ["Renske Kamminga","Nynke Kuiken"],
   ["Sigrid ter Voort","Amber Merkx"],
-  ["Esmee Diekstra","Mare"],
-  ["Iris Dijkmeijer","Merle","Grietine Bergsma"],
+  ["Esmee Diekstra","Mare Dotinga"],
+  ["Iris Dijkmeijer","Merle Vis","Grietine Bergsma"],
   ["Bente Palma","Coby Keizer"],
   ["Jetty de Ruiter","Arwen Kuipers"],
 ];

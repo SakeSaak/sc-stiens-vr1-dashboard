@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-j</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-k</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -808,7 +808,7 @@
 <script>
 /* ---------------- SPELERSDATA ---------------- */
 let PLAYERS = [
-  {n:"Mare", age:25, city:"Stiens", job:"Docent wiskunde", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, centraal achterin, linksback", licence:"Ja", car:true, shirt:"S", goal:"Kampioen worden & het super leuk hebben", holiday:"11–18 juni & 27 juni–3 aug"},
+  {n:"Mare Dotinga", age:25, city:"Stiens", job:"Docent wiskunde", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, centraal achterin, linksback", licence:"Ja", car:true, shirt:"S", goal:"Kampioen worden & het super leuk hebben", holiday:"11–18 juni & 27 juni–3 aug"},
   {n:"Esmee Terpstra", age:20, city:"Stiens", job:"Verpleegkunde (hbo)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor of back", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"10 juli–10 aug"},
   {n:"Renske Kamminga", age:23, city:"Heerenveen", job:"Recruiter (Worketeers)", pos:"CM", role:"mid", form:"4-4-2 / 4-3-3", top:"CM, CAM of aanval", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"Nog niet bekend"},
   {n:"Maja Runic", age:22, city:"Sneek", job:"HRM", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, linksback of centraal", licence:"Ja", car:true, shirt:"M", goal:"Bovenin meedraaien & meer plezier", holiday:"13–27 juli (+ Sneekweek)"},
@@ -816,7 +816,7 @@ let PLAYERS = [
   {n:"Coby Keizer", age:25, city:"Oude Bildtzijl", job:"Sportkunde (Windesheim)", pos:"CB", role:"def", form:"1-4-3-3", top:"Achterin", licence:"Ja", car:true, shirt:"—", goal:"Bovenin meedraaien / promotie", holiday:"Niet weg"},
   {n:"Grietine Bergsma", age:24, city:"Vrouwenparochie", job:"Verpleegkundige + HBO-V", pos:"LB", role:"def", form:"1-4-3-3", top:"Links- of rechtsback", licence:"Ja", car:true, shirt:"S", goal:"1e of 2e (kampioen)", holiday:"26 okt–5 nov"},
   {n:"Iris Dijkmeijer", age:25, city:"Hallum", job:"Fysiotherapeut", pos:"CAM", role:"mid", form:"1-4-3-3", top:"11, 7, 8 of 10", licence:"Ja", car:true, shirt:"S", goal:"Top 3 minimaal", holiday:"Waarschijnlijk juli"},
-  {n:"Merle", age:19, city:"Burdaard", job:"Zelfstandig kok", pos:"CAM", role:"mid", form:"1-4-3-3", top:"10, 8 of spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"6–10 aug · daarna stage buitenland"},
+  {n:"Merle Vis", age:19, city:"Burdaard", job:"Zelfstandig kok", pos:"CAM", role:"mid", form:"1-4-3-3", top:"10, 8 of spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"6–10 aug · daarna stage buitenland"},
   {n:"Sacha Leijder Havenstroom", age:26, city:"Leeuwarden", job:"Gymdocent (MHS)", pos:"CB", role:"def", form:"1-4-3-3", top:"Centraal verdediger, 6 of spits", licence:"Ja", car:true, shirt:"L", goal:"KAMPIOEN!", holiday:"7 juli–5 aug"},
   {n:"Arwen Kuipers", age:21, city:"Harlingen", job:"Integrale veiligheidskunde", pos:"GK", role:"gk", form:"1-4-3-3", top:"Keeper", licence:"Ja", car:true, shirt:"S", goal:"Kampioen / top 5", holiday:"Evt. 1e twee weken aug"},
   {n:"Esmee Diekstra", age:21, city:"Stiens", job:"W&S adviseur", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsachter, vleugel", licence:"Rijbewijs, geen auto", car:false, shirt:"M", goal:"Top 5 sowieso", holiday:"7–25 juli"},
@@ -848,7 +848,7 @@ const NAAM_VARIANT = {
   "iris":"Iris Dijkmeijer", "yannika":"Yannika de Vries", "marije":"Marije Bokma",
   "gelske":"Gelske van Baaren", "jetty":"Jetty de Ruiter", "arwen":"Arwen Kuipers",
   "grietine":"Grietine Bergsma", "coby":"Coby Keizer", "amber":"Amber Merkx",
-  "alyssa":"Alyssa Visser",
+  "alyssa":"Alyssa Visser", "mare":"Mare Dotinga", "merle":"Merle Vis",
   // spellingen die in de praktijk voorkomen
   "yanika":"Yannika de Vries", "yannica":"Yannika de Vries", "janika":"Yannika de Vries",
   "iris t":"Iris Terpstra", "iris terpsta":"Iris Terpstra",
@@ -1115,7 +1115,7 @@ function namenInDataUniform(){
 
 /* Eenmalig: iedereen in het Selectieoverzicht naar de officiële volledige naam.
    Gebeurt stil op de achtergrond en verhuist alle gekoppelde gegevens mee. */
-const NAAM_SEED_VERSION=1;
+const NAAM_SEED_VERSION=2;
 function migreerNamen(){
   try{
     if(!store || typeof store!=="object") return;
@@ -1848,14 +1848,14 @@ function seedSeasonTrainings(){
 }
 // Vaste duo's (seizoenspresentatie) voor trainingen, lunch-/was- en corveeschema.
 let DUOS=[
-  ["Maja","Alyssa Visser"],
-  ["Sacha","Esmee Terpstra"],
-  ["Renske","Nynke"],
-  ["Sigrid","Amber Merkx"],
-  ["Esmee Diekstra","Mare"],
-  ["Iris","Merle","Grietine Bergsma"],
-  ["Bente","Coby Keizer"],
-  ["Jetty De Ruiter","Arwen Kuipers"],
+  ["Maja Runic","Alyssa Visser"],
+  ["Sacha Leijder Havenstroom","Esmee Terpstra"],
+  ["Renske Kamminga","Nynke Kuiken"],
+  ["Sigrid ter Voort","Amber Merkx"],
+  ["Esmee Diekstra","Mare Dotinga"],
+  ["Iris Dijkmeijer","Merle Vis","Grietine Bergsma"],
+  ["Bente Palma","Coby Keizer"],
+  ["Jetty de Ruiter","Arwen Kuipers"],
 ];
 const CORVEE_START="2026-08-10";  // startweek corvee (Menno): deze week = duo hieronder
 const CORVEE_OFFSET=2;            // 0=Maja&Alyssa; 2 = startweek valt op Renske & Nynke (positie 3 in de lijst)
