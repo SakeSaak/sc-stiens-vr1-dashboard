@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-h</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-i</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -284,8 +284,12 @@
       Dit is de <b>centrale ledenlijst</b> van het team. Wie je hier toevoegt of verwijdert, verschijnt automatisch overal:
       in de taakschema's, de boetepot &amp; kas, het eetschema en de herinneringen.
       <b>Speelsters</b> doen mee met taken, metingen en FIFA-kaartjes; <b>staf</b> doet alleen mee met eten en kas.
-      Rijbewijs/auto bepaalt wie kan rijden. Een naam wijzigen mag: alle gekoppelde taken, boetes en check-ins gaan automatisch mee.
+      Rijbewijs/auto bepaalt wie kan rijden. Een naam wijzigen mag: alle gekoppelde taken, boetes en check-ins gaan automatisch mee.<br>
+      <b>Namen staan overal als volledige naam</b> — precies zoals in het digitale wedstrijdformulier op voetbal.nl. Zo koppelen de
+      Veo-weekbestanden, de wedstrijdanalyses en de opstellingen automatisch aan de juiste speelster. Op de FIFA-kaartjes en in de
+      taakschema's wordt de naam kort weergegeven; de gegevens blijven aan de volledige naam hangen.
     </div>
+    <div id="naamCheck"></div>
     <div class="toolbar">
       <button class="btn primary" onclick="addPerson('speelster')">➕ Speelster VR1</button>
       <button class="btn" onclick="addPerson('gast')">➕ Speelster VR2</button>
@@ -831,23 +835,23 @@
 let PLAYERS = [
   {n:"Mare", age:25, city:"Stiens", job:"Docent wiskunde", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, centraal achterin, linksback", licence:"Ja", car:true, shirt:"S", goal:"Kampioen worden & het super leuk hebben", holiday:"11–18 juni & 27 juni–3 aug"},
   {n:"Esmee Terpstra", age:20, city:"Stiens", job:"Verpleegkunde (hbo)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor of back", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"10 juli–10 aug"},
-  {n:"Renske", age:23, city:"Heerenveen", job:"Recruiter (Worketeers)", pos:"CM", role:"mid", form:"4-4-2 / 4-3-3", top:"CM, CAM of aanval", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"Nog niet bekend"},
-  {n:"Maja", age:22, city:"Sneek", job:"HRM", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, linksback of centraal", licence:"Ja", car:true, shirt:"M", goal:"Bovenin meedraaien & meer plezier", holiday:"13–27 juli (+ Sneekweek)"},
-  {n:"Nynke", age:23, city:"Leeuwarden", job:"Intercedent (Olympia)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsbuiten, linksbuiten, spits", licence:"Ja", car:true, shirt:"M", goal:"Top 3", holiday:"Onbekend · weg wknd 7/8/9 aug"},
+  {n:"Renske Kamminga", age:23, city:"Heerenveen", job:"Recruiter (Worketeers)", pos:"CM", role:"mid", form:"4-4-2 / 4-3-3", top:"CM, CAM of aanval", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"Nog niet bekend"},
+  {n:"Maja Runic", age:22, city:"Sneek", job:"HRM", pos:"RB", role:"def", form:"1-4-3-3", top:"Rechtsback, linksback of centraal", licence:"Ja", car:true, shirt:"M", goal:"Bovenin meedraaien & meer plezier", holiday:"13–27 juli (+ Sneekweek)"},
+  {n:"Nynke Kuiken", age:23, city:"Leeuwarden", job:"Intercedent (Olympia)", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsbuiten, linksbuiten, spits", licence:"Ja", car:true, shirt:"M", goal:"Top 3", holiday:"Onbekend · weg wknd 7/8/9 aug"},
   {n:"Coby Keizer", age:25, city:"Oude Bildtzijl", job:"Sportkunde (Windesheim)", pos:"CB", role:"def", form:"1-4-3-3", top:"Achterin", licence:"Ja", car:true, shirt:"—", goal:"Bovenin meedraaien / promotie", holiday:"Niet weg"},
   {n:"Grietine Bergsma", age:24, city:"Vrouwenparochie", job:"Verpleegkundige + HBO-V", pos:"LB", role:"def", form:"1-4-3-3", top:"Links- of rechtsback", licence:"Ja", car:true, shirt:"S", goal:"1e of 2e (kampioen)", holiday:"26 okt–5 nov"},
-  {n:"Iris", age:25, city:"Hallum", job:"Fysiotherapeut", pos:"CAM", role:"mid", form:"1-4-3-3", top:"11, 7, 8 of 10", licence:"Ja", car:true, shirt:"S", goal:"Top 3 minimaal", holiday:"Waarschijnlijk juli"},
+  {n:"Iris Dijkmeijer", age:25, city:"Hallum", job:"Fysiotherapeut", pos:"CAM", role:"mid", form:"1-4-3-3", top:"11, 7, 8 of 10", licence:"Ja", car:true, shirt:"S", goal:"Top 3 minimaal", holiday:"Waarschijnlijk juli"},
   {n:"Merle", age:19, city:"Burdaard", job:"Zelfstandig kok", pos:"CAM", role:"mid", form:"1-4-3-3", top:"10, 8 of spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"6–10 aug · daarna stage buitenland"},
-  {n:"Sacha", age:26, city:"Leeuwarden", job:"Gymdocent (MHS)", pos:"CB", role:"def", form:"1-4-3-3", top:"Centraal verdediger, 6 of spits", licence:"Ja", car:true, shirt:"L", goal:"KAMPIOEN!", holiday:"7 juli–5 aug"},
+  {n:"Sacha Leijder Havenstroom", age:26, city:"Leeuwarden", job:"Gymdocent (MHS)", pos:"CB", role:"def", form:"1-4-3-3", top:"Centraal verdediger, 6 of spits", licence:"Ja", car:true, shirt:"L", goal:"KAMPIOEN!", holiday:"7 juli–5 aug"},
   {n:"Arwen Kuipers", age:21, city:"Harlingen", job:"Integrale veiligheidskunde", pos:"GK", role:"gk", form:"1-4-3-3", top:"Keeper", licence:"Ja", car:true, shirt:"S", goal:"Kampioen / top 5", holiday:"Evt. 1e twee weken aug"},
   {n:"Esmee Diekstra", age:21, city:"Stiens", job:"W&S adviseur", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsachter, vleugel", licence:"Rijbewijs, geen auto", car:false, shirt:"M", goal:"Top 5 sowieso", holiday:"7–25 juli"},
-  {n:"Jetty De Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
-  {n:"Sigrid", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
-  {n:"Bente", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
+  {n:"Jetty de Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
+  {n:"Sigrid ter Voort", age:27, city:"Leeuwarden", job:"Productieleider theater/film", pos:"CB", role:"def", form:"1-5-3-2 / 4-3-3", top:"CV, CAM, CDM", licence:"Ja", car:true, shirt:"L", goal:"Kampioen of top 5", holiday:"Vanaf aug beschikbaar"},
+  {n:"Bente Palma", age:21, city:"Stiens", job:"Verpleegkunde", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsback, rechtsvoor", licence:"Ja", car:true, shirt:"M", goal:"Top 5", holiday:"19–26 juli · reis in nov"},
   {n:"Amber Merkx", age:20, city:"Stiens", job:"Communicatie", pos:"RW", role:"att", form:"1-4-3-3", top:"Rechtsvoor, linksvoor, RM/spits", licence:"Ja, incidenteel", car:true, driveOptional:true, shirt:"S", goal:"Top 3", holiday:"22–29 juli · 7–10 aug", noRef:true, noteExtra:"Wil niet fluiten; rijden alleen incidenteel (ouders)"},
   {n:"Alyssa Visser", age:20, city:"Stiens", job:"Hogere Hotelschool NHL/Stenden", pos:"CB", role:"def", form:"—", top:"Centrale verdediger, DM, MM", licence:"Ja", car:true, shirt:"S", goal:"—", holiday:"—"},
   {n:"Iris Terpstra", age:"", city:"", job:"", pos:"RW", role:"att", form:"—", top:"Rechtsvoor", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
-  {n:"Yannika", age:"", city:"", job:"", pos:"CM", role:"mid", form:"—", top:"Middenveld (komt uit VR2)", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
+  {n:"Yannika de Vries", age:"", city:"", job:"", pos:"CM", role:"mid", form:"—", top:"Middenveld (komt uit VR2)", licence:"", car:false, shirt:"—", goal:"—", holiday:"—"},
 ];
 /* De ledenlijst hierboven is de standaard. Zodra er een bewaarde lijst is (lokaal of uit
    de cloud) verving die de standaard helemaal, waardoor nieuwe namen nooit doorkwamen.
@@ -858,15 +862,25 @@ const PLAYERS_STANDAARD = PLAYERS.map(p=>Object.assign({},p));
 /* Namen vergelijken zonder hoofdletters, accenten en leestekens, plus een paar
    spellingen die in de praktijk voorkomen. Zo levert een handmatig toegevoegde
    "Yanika" geen tweede kaartje op naast "Yannika". */
-const NAAM_VARIANT = {"yanika":"Yannika", "yannica":"Yannika", "janika":"Yannika",
-                      "iris t":"Iris Terpstra", "iris terpsta":"Iris Terpstra",
-                      /* volledige namen zoals ze in het digitale wedstrijdformulier (voetbal.nl)
-                         staan; in het dashboard gebruiken we de roepnaam. */
-                      "sacha leijder havenstroom":"Sacha", "sacha leijder":"Sacha",
-                      "maja runic":"Maja", "sigrid ter voort":"Sigrid",
-                      "renske kamminga":"Renske", "bente palma":"Bente",
-                      "nynke kuiken":"Nynke", "iris dijkmeijer":"Iris",
-                      "yannika de vries":"Yannika"};
+/* De officiële naam is overal de volledige naam, precies zoals in het digitale
+   wedstrijdformulier op voetbal.nl. Hieronder staat per bekende spelling waar die
+   naartoe wijst, zodat oudere bestanden (Veo-weekbestand, wedstrijdanalyses, het
+   spelersoverzicht) blijven werken zonder dat ze opnieuw geëxporteerd hoeven te worden. */
+const NAAM_VARIANT = {
+  // roepnamen zoals ze eerder in het dashboard en in de teamvragenlijst stonden
+  "sacha":"Sacha Leijder Havenstroom", "maja":"Maja Runic", "sigrid":"Sigrid ter Voort",
+  "renske":"Renske Kamminga", "bente":"Bente Palma", "nynke":"Nynke Kuiken",
+  "iris":"Iris Dijkmeijer", "yannika":"Yannika de Vries", "marije":"Marije Bokma",
+  "gelske":"Gelske van Baaren", "jetty":"Jetty de Ruiter", "arwen":"Arwen Kuipers",
+  "grietine":"Grietine Bergsma", "coby":"Coby Keizer", "amber":"Amber Merkx",
+  "alyssa":"Alyssa Visser",
+  // spellingen die in de praktijk voorkomen
+  "yanika":"Yannika de Vries", "yannica":"Yannika de Vries", "janika":"Yannika de Vries",
+  "iris t":"Iris Terpstra", "iris terpsta":"Iris Terpstra",
+  "sacha leijder":"Sacha Leijder Havenstroom", "sacha havenstroom":"Sacha Leijder Havenstroom",
+  "jetty de ruiter":"Jetty de Ruiter",
+  // staf — ook uniform, want zij staan in de boetepot en het eetschema
+  "menno":"Menno Tjoelker", "martijn":"Martijn van der Noord", "sake":"Sake Saakstra"};
 function naamSleutel(s){
   return String(s==null?"":s).normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
@@ -888,6 +902,29 @@ function vindSpeelster(n){
 
 /* De naam zoals die in het Selectieoverzicht staat (of de naam zelf als zij er niet in staat). */
 function echteNaam(n){ const p=vindSpeelster(n); return p?p.n:n; }
+
+/* Een tabel die op naam is gesleuteld omzetten naar de officiële namen. Zo hoeven de
+   vaste tabellen in dit bestand (posities, ontwikkelpunten, vakanties, check-in-links)
+   niet allemaal met de hand te worden bijgewerkt als een naam verandert. */
+function sleutelsNaarOfficieel(obj){
+  if(!obj || typeof obj!=="object") return obj;
+  Object.keys(obj).forEach(k=>{
+    const n=standaardNaam(k);
+    if(n!==k && !Object.prototype.hasOwnProperty.call(obj,n)){ obj[n]=obj[k]; delete obj[k]; }
+  });
+  return obj;
+}
+
+/* Korte weergavenaam: de voornaam, en alleen als die dubbel voorkomt ook de achternaam.
+   De gegevens blijven altijd op de officiële volledige naam staan; dit is puur weergave
+   voor de FIFA-kaartjes en de taakschema's, waar een lange naam niet past. */
+function kortNaam(n){
+  const vol=String(n==null?"":n).trim(); if(!vol) return "";
+  const delen=vol.split(/\s+/); if(delen.length<2) return vol;
+  const voor=delen[0], vk=naamSleutel(voor);
+  const dubbel=PLAYERS.filter(p=>naamSleutel(String(p.n).split(/\s+/)[0])===vk).length>1;
+  return dubbel ? voor+" "+delen[delen.length-1] : voor;
+}
 
 /* Losser zoeken, alléén voor het inlezen van bestanden van buiten (Veo, voetbal.nl):
    "Marije" mag "Marije Bokma" vinden en "Sacha Havenstroom" mag "Sacha" vinden.
@@ -1031,6 +1068,38 @@ function setPerson(rol,i,key,val){
   if(key==="pos"){ const l=linieUitPos(val); if(l && p.role!==l) p.role=l; }
   if(key==="pos"||key==="posrole") renderCards();
 }
+/* Alle gegevens die aan een naam hangen verhuizen naar de nieuwe naam: metingen,
+   check-ins, doelen, taken, vastzettingen, opstellingen, rugnummers, boetes, eten,
+   duo's, check-in-links en de wedstrijddata uit Veo. */
+function verplaatsNaam(oud,neu){
+  if(!oud || !neu || oud===neu) return;
+  if(store[oud]){ store[neu]=store[oud]; delete store[oud]; }
+  const swap=a=>Array.isArray(a)?a.map(x=>x===oud?neu:x):a;
+  const taken=["drive","wash","flag","fluit","coord","food","squad"];
+  (fixtures||[]).forEach(f=>{ if(!f)return;
+    taken.forEach(k=>{ if(f[k]!==undefined) f[k]=swap(f[k]); });
+    if(f.locked && typeof f.locked==="object") Object.keys(f.locked).forEach(k=>{ f.locked[k]=swap(f.locked[k]); });
+    if(f.nums && Object.prototype.hasOwnProperty.call(f.nums,oud)){ f.nums[neu]=f.nums[oud]; delete f.nums[oud]; }
+    if(f.capt===oud) f.capt=neu;
+    if(f.potm===oud) f.potm=neu;
+  });
+  (clubDuties||[]).forEach(c=>{ if(!c)return; c.fluit=swap(c.fluit); c.coord=swap(c.coord);
+    if(c.locked && typeof c.locked==="object") Object.keys(c.locked).forEach(k=>{ c.locked[k]=swap(c.locked[k]); }); });
+  DUOS=DUOS.map(d=>swap(d));
+  const K=kas();
+  (K.fines||[]).forEach(f=>{ if(f.player===oud) f.player=neu; });
+  (K.food||[]).forEach(f=>{ if(f.cook===oud) f.cook=neu; f.shareWith=swap(f.shareWith);
+    if(f.paid && Object.prototype.hasOwnProperty.call(f.paid,oud)){ f.paid[neu]=f.paid[oud]; delete f.paid[oud]; } });
+  if(typeof MOOD_TOKENS==="object" && MOOD_TOKENS[oud]){ MOOD_TOKENS[neu]=MOOD_TOKENS[oud]; delete MOOD_TOKENS[oud]; }
+  if(typeof markeerGezien==="function") markeerGezien(oud);   // niet opnieuw aanmaken onder de oude naam
+  /* De wedstrijddata hangt ook aan de naam: die moet mee, anders raakt zij haar
+     wedstrijdcijfers kwijt en vallen haar kaartcijfers terug op alleen de metingen. */
+  if(typeof MATCHDATA==="object" && MATCHDATA && MATCHDATA[oud]){
+    MATCHDATA[neu]=MATCHDATA[oud]; delete MATCHDATA[oud];
+    try{ saveMatchdata(); }catch(e){}
+  }
+  try{ computePlayerStats(neu); }catch(e){}
+}
 // Naam wijzigen: verplaatst álle gekoppelde gegevens mee (taken, boetes, eten, duo's, check-ins).
 function renamePerson(rol,i,neu){
   const arr=personArr(rol); const p=arr[i]; if(!p) return;
@@ -1038,26 +1107,65 @@ function renamePerson(rol,i,neu){
   if(!neu || neu===oud){ renderSquad(); return; }
   if(kasPeople().some(n=>n!==oud && n.toLowerCase()===neu.toLowerCase())){ alert("Die naam bestaat al."); renderSquad(); return; }
   p.n=neu;
-  if(store[oud]){ store[neu]=store[oud]; delete store[oud]; }
-  const swap=a=>Array.isArray(a)?a.map(x=>x===oud?neu:x):a;
-  (fixtures||[]).forEach(f=>{ if(!f)return; ["drive","wash","flag","fluit","coord","food"].forEach(k=>{ f[k]=swap(f[k]); }); });
-  (clubDuties||[]).forEach(c=>{ if(!c)return; c.fluit=swap(c.fluit); c.coord=swap(c.coord); });
-  DUOS=DUOS.map(d=>swap(d));
-  const K=kas();
-  (K.fines||[]).forEach(f=>{ if(f.player===oud) f.player=neu; });
-  (K.food||[]).forEach(f=>{ if(f.cook===oud) f.cook=neu; f.shareWith=swap(f.shareWith);
-    if(f.paid && Object.prototype.hasOwnProperty.call(f.paid,oud)){ f.paid[neu]=f.paid[oud]; delete f.paid[oud]; } });
-  if(typeof MOOD_TOKENS==="object" && MOOD_TOKENS[oud]){ MOOD_TOKENS[neu]=MOOD_TOKENS[oud]; delete MOOD_TOKENS[oud]; }
-  /* De wedstrijddata hangt ook aan de naam: die moet mee, anders raakt zij haar
-     wedstrijdcijfers kwijt en vallen haar kaartcijfers terug op alleen de metingen. */
-  if(typeof markeerGezien==="function") markeerGezien(oud);   // niet opnieuw aanmaken onder de oude naam
-  if(typeof MATCHDATA==="object" && MATCHDATA && MATCHDATA[oud]){
-    MATCHDATA[neu]=MATCHDATA[oud]; delete MATCHDATA[oud];
-    try{ saveMatchdata(); }catch(e){}
-    try{ computePlayerStats(neu); }catch(e){}
-  }
+  verplaatsNaam(oud,neu);
   afterPeopleChange();
   flash(oud+" heet nu "+neu+" ✓");
+}
+
+/* Vangnet: namen in de gegevens die later worden ingeladen (rooster, verenigingstaken,
+   boetepot, opstellingen) gelijktrekken met de officiële naam. Draait altijd — ook als de
+   eenmalige migratie al is gedaan — zodat een oud bestand of een oude back-up niet alsnog
+   een roepnaam binnenbrengt die bij geen enkele speelster hoort. */
+function namenInDataUniform(){
+  try{
+    const z=a=>Array.isArray(a)?a.map(standaardNaam).filter((n,i,b)=>b.indexOf(n)===i):a;
+    const velden=["drive","wash","flag","fluit","coord","food","squad"];
+    (fixtures||[]).forEach(f=>{ if(!f) return;
+      velden.forEach(k=>{ if(f[k]!==undefined) f[k]=z(f[k]); });
+      if(f.locked && typeof f.locked==="object") Object.keys(f.locked).forEach(k=>{ f.locked[k]=z(f.locked[k]); });
+      if(f.nums) sleutelsNaarOfficieel(f.nums);
+      if(f.capt) f.capt=standaardNaam(f.capt);
+      if(f.potm) f.potm=standaardNaam(f.potm);
+    });
+    (clubDuties||[]).forEach(c=>{ if(!c) return; c.fluit=z(c.fluit); c.coord=z(c.coord);
+      if(c.locked && typeof c.locked==="object") Object.keys(c.locked).forEach(k=>{ c.locked[k]=z(c.locked[k]); }); });
+    DUOS=(DUOS||[]).map(d=>Array.isArray(d)?d.map(standaardNaam):d);
+    const K=kas();
+    (K.fines||[]).forEach(f=>{ if(f && f.player) f.player=standaardNaam(f.player); });
+    (K.food||[]).forEach(f=>{ if(!f) return; if(f.cook) f.cook=standaardNaam(f.cook);
+      f.shareWith=z(f.shareWith); if(f.paid) sleutelsNaarOfficieel(f.paid); });
+    sleutelsNaarOfficieel(store);
+    if(typeof MOOD_TOKENS==="object"){ sleutelsNaarOfficieel(MOOD_TOKENS);
+      /* een check-in-link die onder een oude roepnaam is blijven staan terwijl de
+         officiële naam er al is: die oude sleutel mag weg. */
+      Object.keys(MOOD_TOKENS).forEach(k=>{ const off=standaardNaam(k);
+        if(off!==k && MOOD_TOKENS[off]!==undefined) delete MOOD_TOKENS[k]; }); }
+    if(typeof MATCHDATA==="object" && MATCHDATA) sleutelsNaarOfficieel(MATCHDATA);
+  }catch(e){ console.warn("namenInDataUniform",e); }
+}
+
+/* Eenmalig: iedereen in het Selectieoverzicht naar de officiële volledige naam.
+   Gebeurt stil op de achtergrond en verhuist alle gekoppelde gegevens mee. */
+const NAAM_SEED_VERSION=1;
+function migreerNamen(){
+  try{
+    if(!store || typeof store!=="object") return;
+    if(store.__naamSeed===NAAM_SEED_VERSION) return;
+    let veranderd=0;
+    const alle=(PLAYERS||[]).concat(STAFF||[]);
+    alle.forEach(p=>{
+      if(!p || !p.n) return;
+      const off=standaardNaam(p.n);
+      if(!off || off===p.n) return;
+      /* niet samenvoegen met iemand die al onder de officiële naam staat */
+      if(alle.some(q=>q!==p && q.n===off)) return;
+      const oud=p.n; p.n=off; verplaatsNaam(oud,off); veranderd++;
+    });
+    /* de vaste tabellen in dit bestand meteen mee omzetten */
+    DUOS=(DUOS||[]).map(d=>Array.isArray(d)?d.map(echteNaam):d);
+    store.__naamSeed=NAAM_SEED_VERSION;
+    if(veranderd) console.info("namen uniform gemaakt:",veranderd);
+  }catch(e){ console.warn("migreerNamen",e); }
 }
 function movePersonRole(vanRol,i,naarRol){
   const huidig = (vanRol==="staf") ? "staf" : (personArr(vanRol)[i]||{}).gast ? "gast" : "speelster";
@@ -1432,7 +1540,7 @@ function renderCards(){
           ${posList(p).length>1?`<div class="pos2">${posList(p).slice(1).join(' · ')}</div>`:''}</div>
         <div class="avatar">${initials(p.n)}</div>
       </div>
-      <div class="fname">${p.n}</div>
+      <div class="fname" title="${p.n}">${kortNaam(p.n)}</div>
       <div class="fmeta">${p.age} jr · ${p.city}</div>
       ${injuryBadgeHTML(p.n)}
       <div class="divider"></div>
@@ -1523,7 +1631,19 @@ function linieKeuze(p,i){
   return '<select onchange="setLinie('+i+',this.value)" style="'+S+'">'+opties+'</select>';
 }
 
+/* Welke namen nog niet volledig zijn (alleen een voornaam). Die vallen bij een import uit
+   voetbal.nl of Veo niet te koppelen, dus die wil je als staf zien en aanvullen. */
+function renderNaamCheck(){
+  const el=document.getElementById("naamCheck"); if(!el) return;
+  const kort=PLAYERS.filter(p=>p && p.n && String(p.n).trim().split(/\s+/).length<2).map(p=>p.n);
+  el.innerHTML = kort.length
+    ? `<p class="hint" style="color:var(--gold)">⚠ Nog geen volledige naam voor <b>${kort.join(", ")}</b> —
+        vul de achternaam hieronder aan, dan koppelen de opstellingen en de Veo-cijfers ook voor haar automatisch.
+        Alle gekoppelde gegevens gaan bij het wijzigen mee.</p>`
+    : `<p class="hint">✓ Alle namen staan volledig.</p>`;
+}
 function renderSquad(){
+  renderNaamCheck();
   const t=document.getElementById("squadTable"); if(!t)return;
   const IN='background:var(--bg2);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font-size:12px';
   const rij=(p,rol,i)=>{
@@ -1641,7 +1761,7 @@ function generateSeasonTrainings(silent){
    meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
 const RUIL_SEED_VERSION=6;
 // Speelsters uit VR2 die meedoen: wel een FIFA-kaartje en metingen, geen taken.
-const VR2_GASTEN=["Iris Terpstra","Yannika"];
+const VR2_GASTEN=["Iris Terpstra","Yannika de Vries"].map(standaardNaam);
 const RUILINGEN=[
   // Grietine vlagde 19 sep voor Sigrid
   {date:"2026-09-19", taak:"flag",  uit:"Sigrid",           in:"Grietine Bergsma"},
@@ -1670,10 +1790,11 @@ function _applyRuilingen(){
       if(o.locked && Array.isArray(o.locked[k])) o.locked[k]=zet(o.locked[k]); }); };
   fixtures.forEach(herstelNaam); (clubDuties||[]).forEach(herstelNaam);
   // 1) Bente is 28 okt t/m 3 dec afwezig (doorgegeven op 28 sep)
-  const ps=(typeof getAwayPeriods==="function")?getAwayPeriods("Bente"):null;
+  const bentes=echteNaam("Bente");
+  const ps=(typeof getAwayPeriods==="function")?getAwayPeriods(bentes):null;
   if(ps && !ps.some(p=>p&&p.from==="2026-10-28")){
     ps.push({from:"2026-10-28",to:"2026-12-03",reden:"doorgegeven via app"});
-    if(typeof syncAwayText==="function") syncAwayText("Bente");
+    if(typeof syncAwayText==="function") syncAwayText(bentes);
   }
   // 2) de ruilingen zelf — namen altijd via het Selectieoverzicht, zodat een rename
   //    (Iris -> Iris Dijkmeijer) de afspraak niet onzichtbaar maakt.
@@ -1716,7 +1837,7 @@ function _applyRuilingen(){
   });
   // 5) VR2-speelsters terugzetten als gast (kaartje + metingen, geen taken)
   VR2_GASTEN.forEach(naam=>{
-    let p=PLAYERS.find(x=>x.n===naam);
+    let p=vindSpeelster(naam);
     if(!p){ p={n:naam, age:"", city:"", job:"", pos:"—", role:"mid", form:"—", top:"",
                licence:"Nee", car:false, shirt:"—", goal:"", holiday:""}; PLAYERS.push(p); }
     p.gast=true;
@@ -1851,19 +1972,19 @@ function renderAgenda(){
   const filt=((document.getElementById("agFilter")||{}).value)||"up";
   const today=todayStr(); const items=[];
   (trainings||[]).forEach((t,i)=>{ if(t&&t.date){ const duo=duoAvailableForDate(t.date);
-    items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:"🧰 materiaal: "+duo.join(" & "),src:"train",i}); } });
+    items.push({date:t.date,time:t.time||"",icon:"🏃",cat:"Training",title:t.title||"Training",det:"🧰 materiaal: "+duo.map(kortNaam).join(" & "),src:"train",i}); } });
   (fixtures||[]).forEach((f,i)=>{ if(!f||!f.date)return;
     const tu=f.home===true?"Thuis":f.home===false?"Uit":"n.t.b.";
     const opp=(f.opponent||"").trim()||("Wedstrijd "+(i+1)); const parts=[];
-    if(f.home===false && f.drive&&f.drive.length) parts.push("🚗 "+f.drive.join(", "));
-    if(f.wash&&f.wash.length) parts.push("🧺 "+f.wash.join(", "));
-    if(f.flag&&f.flag.length) parts.push("🚩 "+f.flag.join(", "));
-    if(f.home===true && f.food&&f.food.length) parts.push("🍝 "+f.food.join(" & "));
+    if(f.home===false && f.drive&&f.drive.length) parts.push("🚗 "+f.drive.map(kortNaam).join(", "));
+    if(f.wash&&f.wash.length) parts.push("🧺 "+f.wash.map(kortNaam).join(", "));
+    if(f.flag&&f.flag.length) parts.push("🚩 "+f.flag.map(kortNaam).join(", "));
+    if(f.home===true && f.food&&f.food.length) parts.push("🍝 "+f.food.map(kortNaam).join(" & "));
     items.push({date:f.date,time:f.time||"",icon:"⚽",cat:"Wedstrijd ("+tu+")",title:opp,det:parts.join(" · "),src:"fix",i});
   });
   (clubDuties||[]).forEach((c,i)=>{ if(!c||!c.date)return; const parts=[]; const ty=(typeof clubType==="function")?clubType(c):"both";
-    if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.join(", ")+(c.fluitTeam?" ("+c.fluitTeam+")":""));
-    if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.join(", "));
+    if(c.fluit&&c.fluit.length)parts.push("fluiten: "+c.fluit.map(kortNaam).join(", ")+(c.fluitTeam?" ("+c.fluitTeam+")":""));
+    if(c.coord&&c.coord.length)parts.push("coörd.: "+c.coord.map(kortNaam).join(", "));
     if(c.end)parts.push("tot "+c.end);
     const titel = ty==="coord"?"Wedstrijdcoördinaat" : ty==="fluit"?"Fluiten jeugd" : "Fluiten / coördinatie";
     items.push({date:c.date,time:c.time||"",icon:"🔔",cat:"Verenigingstaak",title:titel,det:parts.join(" · "),src:"club",i});
@@ -2177,13 +2298,13 @@ function eligiblePool(task){ const S=taskPlayers(); return task==="drive" ? S.fi
 function taskCell(idx,task){
   const f=fixtures[idx]; const list=f[task]||[];
   const chips=list.map(n=>{ const nE=n.replace(/'/g,"\\'"); const lk=isNameLocked(f,task,n);
-    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''}>${n}`+
+    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''} title="${n}">${kortNaam(n)}`+
       `<span style="cursor:pointer;font-size:10px" title="${lk?'vastgezet':'vastzetten'}" onclick="toggleNameLock(${idx},'${task}','${nE}')">${lockIcon(lk)}</span>`+
       `<span class="x" title="verwijderen" onclick="taskRemove(${idx},'${task}','${nE}')">✕</span></span>`; }).join("");
   const bezet=new Set(); ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n)));
   (clubDuties||[]).forEach(c=>{ if(c&&c.date===f.date) ["fluit","coord"].forEach(k=>(c[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=eligiblePool(task).filter(n=>!bezet.has(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
-  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
+  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${kortNaam(n)}</option>`).join("");
   const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
   return `<div class="taskcell">${chips}${add}</div>`;
 }
@@ -3201,13 +3322,13 @@ function clubCell(i,key){
   const c=clubDuties[i]; if(!c) return "";
   const list=c[key]||[];
   const chips=list.map(n=>{ const nE=n.replace(/'/g,"\\'"); const lk=isNameLocked(c,key,n);
-    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''}>${n}`+
+    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''} title="${n}">${kortNaam(n)}`+
       `<span style="cursor:pointer;font-size:10px" title="${lk?'vastgezet':'vastzetten'}" onclick="toggleClubNameLock(${i},'${key}','${nE}')">${lockIcon(lk)}</span>`+
       `<span class="x" title="verwijderen" onclick="clubTaskRemove(${i},'${key}','${nE}')">✕</span></span>`; }).join("");
   const bezet=new Set([...(c.fluit||[]),...(c.coord||[])]);
   (fixtures||[]).forEach(f=>{ if(f&&f.date===c.date) ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=clubPool(key).filter(n=>!bezet.has(n) && !isAbsent(n,c.date));
-  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
+  const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${kortNaam(n)}</option>`).join("");
   return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select></div>`;
 }
 function clubTaskAdd(i,key,name){ if(!name)return; const c=clubDuties[i]; if(!c)return;
@@ -3677,6 +3798,14 @@ const MATCHDATA_AANVULLING={
   "Marije Bokma": {wedstrijden:1, minuten:31, status:"voorlopig",
                    stats:{PAC:72, SHO:67, PAS:66, DRI:67, DEF:68, PHY:68}},
 };
+/* Alle vaste tabellen in dit bestand die op naam zijn gesleuteld in één keer naar de
+   officiële namen. Zo hoeft er bij een naamswijziging maar op één plek iets te veranderen
+   (NAAM_VARIANT) en blijven posities, ontwikkelpunten, vakanties, check-in-links en
+   rugnummers aan de juiste speelster hangen. */
+[POS3, DEVGOALS, DEFAULT_AWAY, MOOD_TOKENS, VEO_NUMMERS, MATCHDATA_AANVULLING]
+  .forEach(t=>{ try{ sleutelsNaarOfficieel(t); }catch(e){} });
+DUOS=DUOS.map(d=>Array.isArray(d)?d.map(standaardNaam):d);
+
 const MD_SEED_VERSION=1;
 function seedMatchdataAanvulling(){
   try{
@@ -3869,11 +3998,17 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(st && st.matchdata && typeof st.matchdata==="object" && typeof MATCHDATA!=="undefined"){
     MATCHDATA=st.matchdata; try{ saveMatchdata(); }catch(e){} }
   if(st && Array.isArray(st.players) && st.players.length) PLAYERS=st.players;
-  if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
   if(st && Array.isArray(st.staff)) STAFF=st.staff;
   if(st && Array.isArray(st.duos) && st.duos.length) DUOS=st.duos;
   if(st && st.tokens && typeof st.tokens==="object") Object.assign(MOOD_TOKENS, st.tokens);
-  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures; if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties; if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof seedLineups==="function") seedLineups();
+  if(st && Array.isArray(st.fixtures)) fixtures=st.fixtures;
+  if(st && Array.isArray(st.clubDuties)) clubDuties=st.clubDuties;
+  /* Namen uniform maken vóórdat er iets wordt aangevuld of gerenderd: anders zou een
+     speelster onder haar roepnaam én haar officiële naam naast elkaar komen te staan. */
+  if(typeof migreerNamen==="function") migreerNamen();
+  if(typeof namenInDataUniform==="function") namenInDataUniform();
+  if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
+  if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof seedLineups==="function") seedLineups();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
@@ -4039,6 +4174,7 @@ try{ const lp=JSON.parse(localStorage.getItem("scstiens_people"));
           if(Array.isArray(lp.staff)) STAFF=lp.staff;
           if(Array.isArray(lp.duos)&&lp.duos.length) DUOS=lp.duos;
           if(lp.tokens&&typeof lp.tokens==="object") Object.assign(MOOD_TOKENS,lp.tokens); } }catch(e){}
+migreerNamen();            // namen uniform (officiële volledige naam) vóór alles wat erop rekent
 vulAanMetStandaard();
 seedAway();
 const _md=document.getElementById("measDate"); if(_md && !_md.value) _md.value=todayStr();
@@ -4051,6 +4187,7 @@ try{ const lc=JSON.parse(localStorage.getItem("scstiens_club")); if(Array.isArra
 try{ const lt=JSON.parse(localStorage.getItem("scstiens_train")); if(Array.isArray(lt)) trainings=lt; }catch(e){}
 try{ const le=JSON.parse(localStorage.getItem("scstiens_events")); if(Array.isArray(le)) events=le; }catch(e){}
 try{ const la=JSON.parse(localStorage.getItem("scstiens_analyses")); if(Array.isArray(la)) analyses=la; }catch(e){}
+namenInDataUniform();                          // namen in het ingeladen rooster gelijktrekken
 if(!fixtures.length) buildFixtures();          // alleen bij een compleet lege start
 else if(typeof recomputeSched==="function") recomputeSched();   // balans uit de bewaarde verdeling
 const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood.value=todayStr();

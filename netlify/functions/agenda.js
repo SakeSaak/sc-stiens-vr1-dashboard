@@ -14,19 +14,28 @@ function dtLocal(dateStr,timeStr,addMin){
   return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00";
 }
 function dtDate(dateStr){ return dateStr.replace(/-/g,""); }
-function names(a){ return (a&&a.length)?a.join(", "):""; }
+function names(a){ return (a&&a.length)?a.map(kortNaam).join(", "):""; }
 
 // Vaste duo's (seizoenspresentatie) + corvee-rotatie — moet gelijk zijn aan index.html.
+// Officiële (volledige) namen, gelijk aan index.html. De agenda toont ze kort.
 const DUOS=[
-  ["Maja","Alyssa Visser"],
-  ["Sacha","Esmee Terpstra"],
-  ["Renske","Nynke"],
-  ["Sigrid","Amber Merkx"],
+  ["Maja Runic","Alyssa Visser"],
+  ["Sacha Leijder Havenstroom","Esmee Terpstra"],
+  ["Renske Kamminga","Nynke Kuiken"],
+  ["Sigrid ter Voort","Amber Merkx"],
   ["Esmee Diekstra","Mare"],
-  ["Iris","Merle","Grietine Bergsma"],
-  ["Bente","Coby Keizer"],
-  ["Jetty De Ruiter","Arwen Kuipers"],
+  ["Iris Dijkmeijer","Merle","Grietine Bergsma"],
+  ["Bente Palma","Coby Keizer"],
+  ["Jetty de Ruiter","Arwen Kuipers"],
 ];
+/* Korte weergavenaam: de voornaam, en de achternaam erbij als die voornaam dubbel
+   voorkomt (Esmee Terpstra / Esmee Diekstra, Iris Dijkmeijer / Iris Terpstra). */
+const DUBBELE_VOORNAMEN=["esmee","iris"];
+function kortNaam(n){
+  const vol=String(n==null?"":n).trim(); if(!vol) return "";
+  const d=vol.split(/\s+/); if(d.length<2) return vol;
+  return DUBBELE_VOORNAMEN.includes(d[0].toLowerCase()) ? d[0]+" "+d[d.length-1] : d[0];
+}
 const CORVEE_START="2026-08-10";  // startweek corvee (Menno): deze week = Renske & Nynke
 const CORVEE_OFFSET=2;
 function mondayOf(d){ const x=new Date(d); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); x.setHours(0,0,0,0); return x; }
@@ -91,7 +100,7 @@ exports.handler = async () => {
     if(f.home===false && f.drive && f.drive.length) d.push("Rijden: "+names(f.drive));
     if(f.wash && f.wash.length) d.push("Wassen: "+names(f.wash));
     if(f.flag && f.flag.length) d.push("Vlaggen: "+names(f.flag));
-    if(f.home===true && f.food && f.food.length) d.push("Eten: "+f.food.join(" & "));
+    if(f.home===true && f.food && f.food.length) d.push("Eten: "+f.food.map(kortNaam).join(" & "));
     ev("m"+i+"-"+f.date+"@scstiens", "⚽ VR1 ("+tu+") — "+opp, f.date, f.time||"", 120, d.join("\n"));
   });
 
@@ -99,7 +108,7 @@ exports.handler = async () => {
     let dur=90;
     if(t.time && t.end){ const a=t.time.split(":").map(Number), b=t.end.split(":").map(Number); const m=(b[0]*60+b[1])-(a[0]*60+a[1]); if(m>0)dur=m; }
     const duo=duoAvailable(store,t.date);
-    ev("t"+i+"-"+t.date+"@scstiens", "🏃 "+((t.title||"Training")), t.date, t.time||"", dur, "Corvee/materiaal: "+duo.join(" & "));
+    ev("t"+i+"-"+t.date+"@scstiens", "🏃 "+((t.title||"Training")), t.date, t.time||"", dur, "Corvee/materiaal: "+duo.map(kortNaam).join(" & "));
   });
 
   events.forEach((e,i)=>{ if(!e || !e.date) return;
