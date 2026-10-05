@@ -220,7 +220,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-d</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-e</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -280,8 +280,9 @@
       Rijbewijs/auto bepaalt wie kan rijden. Een naam wijzigen mag: alle gekoppelde taken, boetes en check-ins gaan automatisch mee.
     </div>
     <div class="toolbar">
-      <button class="btn primary" onclick="addPerson('speelster')">➕ Speelster toevoegen</button>
-      <button class="btn" onclick="addPerson('staf')">➕ Staflid toevoegen</button>
+      <button class="btn primary" onclick="addPerson('speelster')">➕ Speelster VR1</button>
+      <button class="btn" onclick="addPerson('gast')">➕ Speelster VR2</button>
+      <button class="btn" onclick="addPerson('staf')">➕ Staflid</button>
       <button class="btn" onclick="saveStats()">💾 Opslaan</button>
     </div>
     <div style="overflow:auto">
@@ -909,9 +910,13 @@ let STAFF = [
   {n:"Martijn van der Noord", role:"Assistent-trainer"},
   {n:"Sake Saakstra",       role:"Teammanager"},
 ];
-/* Iedereen die kan meebetalen aan eten/boetes: speelsters + staf. */
+/* Iedereen die kan meebetalen aan eten/boetes: speelsters (incl. VR2-gasten) + staf. */
 function kasPeople(){ return PLAYERS.map(p=>p.n).concat(STAFF.map(s=>s.n)); }
 function isStaffMember(n){ return STAFF.some(s=>s.n===n); }
+/* Speelsters die meedoen aan de taakverdeling: VR2-gasten tellen hier niet mee.
+   Zij krijgen wél een FIFA-kaartje, metingen en ontwikkeldoelen. */
+function taskPlayers(){ return PLAYERS.filter(p=>!p.gast); }
+function isGast(n){ const p=PLAYERS.find(x=>x.n===n); return !!(p && p.gast); }
 
 /* ---------- Personen beheren vanuit het Selectieoverzicht ---------- */
 function personArr(rol){ return rol==="staf"?STAFF:PLAYERS; }
@@ -921,13 +926,14 @@ function afterPeopleChange(){
   if(typeof renderAll==="function") renderAll(); else renderSquad();
 }
 function addPerson(rol){
-  const naam=(prompt(rol==="staf"?"Naam van het nieuwe staflid:":"Naam van de nieuwe speelster:")||"").trim();
+  const naam=(prompt(rol==="staf"?"Naam van het nieuwe staflid:":rol==="gast"?"Naam van de VR2-speelster:":"Naam van de nieuwe speelster:")||"").trim();
   if(!naam) return;
   if(kasPeople().some(n=>n.toLowerCase()===naam.toLowerCase())){ alert("Die naam bestaat al."); return; }
   if(rol==="staf") STAFF.push({n:naam, role:"Staf"});
   else {
     PLAYERS.push({n:naam, age:"", city:"", job:"", pos:"—", role:"mid", form:"—", top:"",
-                  licence:"Nee", car:false, shirt:"—", goal:"", holiday:""});
+                  licence:"Nee", car:false, shirt:"—", goal:"", holiday:"",
+                  gast: rol==="gast" ? true : undefined});
     if(typeof MOOD_TOKENS==="object" && !MOOD_TOKENS[naam]){        // eigen check-in-link aanmaken
       MOOD_TOKENS[naam]=[...crypto.getRandomValues(new Uint8Array(5))].map(b=>b.toString(16).padStart(2,"0")).join("");
     }
@@ -994,12 +1000,20 @@ function renamePerson(rol,i,neu){
   flash(oud+" heet nu "+neu+" ✓");
 }
 function movePersonRole(vanRol,i,naarRol){
-  if(vanRol===naarRol) return;
+  const huidig = (vanRol==="staf") ? "staf" : (personArr(vanRol)[i]||{}).gast ? "gast" : "speelster";
+  if(huidig===naarRol) return;
+  // binnen de speelsterslijst alleen de vlag omzetten — gegevens blijven staan
+  if(vanRol!=="staf" && naarRol!=="staf"){
+    const p=PLAYERS[i]; if(!p) return;
+    if(naarRol==="gast") p.gast=true; else delete p.gast;
+    afterPeopleChange(); return;
+  }
   const van=personArr(vanRol), p=van[i]; if(!p) return;
   van.splice(i,1);
   if(naarRol==="staf") STAFF.push({n:p.n, role:p.role||"Staf"});
   else PLAYERS.push({n:p.n, age:p.age||"", city:p.city||"", job:p.job||"", pos:p.pos||"—", role:"mid",
-                     form:"—", top:"", licence:p.licence||"Nee", car:!!p.car, shirt:p.shirt||"—", goal:"", holiday:""});
+                     form:"—", top:"", licence:p.licence||"Nee", car:!!p.car, shirt:p.shirt||"—", goal:"", holiday:"",
+                     gast: naarRol==="gast" ? true : undefined});
   afterPeopleChange();
 }
 
@@ -1332,7 +1346,7 @@ function renderCards(){
     const el=document.createElement("div");
     el.className="fcard "+p.role; el.dataset.n=p.n;
     el.innerHTML=`
-      <span class="line">${ROLE_LABEL[p.role]||p.pos}</span>
+      <span class="line">${ROLE_LABEL[p.role]||p.pos}${p.gast?' · VR2':''}</span>
       <span class="crest">${CREST(34,'c'+idx)}</span>
       <div class="top">
         <div class="rating"><div class="ovr" data-ovr>${ovr(p.n)}</div>
@@ -1439,8 +1453,9 @@ function renderSquad(){
     return `<tr${staf?' style="background:rgba(242,140,0,.06)"':''}>
       <td><input type="text" value="${(p.n||'').replace(/"/g,'&quot;')}" onchange="renamePerson('${rol}',${i},this.value)"
           style="width:150px;font-weight:700;${IN}"></td>
-      <td class="center"><select onchange="movePersonRole('${rol}',${i},this.value)" style="${IN}">
-          <option value="speelster" ${!staf?'selected':''}>Speelster</option>
+      <td class="center"><select onchange="movePersonRole('${rol}',${i},this.value)" title="VR2-gasten krijgen wél een kaartje en metingen, maar doen niet mee aan de taakverdeling" style="${IN}">
+          <option value="speelster" ${(!staf&&!p.gast)?'selected':''}>Speelster VR1</option>
+          <option value="gast" ${(!staf&&p.gast)?'selected':''}>Speelster VR2</option>
           <option value="staf" ${staf?'selected':''}>Staf</option></select></td>
       <td><input type="text" value="${getPhone(p.n).replace(/"/g,'&quot;')}" placeholder="06… of +31…" oninput="setPhone('${p.n.replace(/'/g,"\\'")}',this.value)" onchange="scheduleSave()"
           style="width:120px;${IN}"></td>
@@ -1546,7 +1561,9 @@ function generateSeasonTrainings(silent){
 }
 /* Doorgegeven ruilingen uit de team- en persoonlijke app (okt 2026). Eenmalig toegepast en
    meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
-const RUIL_SEED_VERSION=3;
+const RUIL_SEED_VERSION=4;
+// Speelsters uit VR2 die meedoen: wel een FIFA-kaartje en metingen, geen taken.
+const VR2_GASTEN=["Iris Terpstra","Yannika"];
 const RUILINGEN=[
   // Grietine vlagde 19 sep voor Sigrid
   {date:"2026-09-19", taak:"flag",  uit:"Sigrid",           in:"Grietine Bergsma"},
@@ -1605,6 +1622,16 @@ function _applyRuilingen(){
     else v.wie.forEach(n=>{ if(!f[v.taak].includes(n)) f[v.taak].push(n); });
     if(v.taak==="food") f.foodManual=true;
     v.wie.forEach(n=>setNameLock(f,v.taak,n,true));
+  });
+  // 5) VR2-speelsters terugzetten als gast (kaartje + metingen, geen taken)
+  VR2_GASTEN.forEach(naam=>{
+    let p=PLAYERS.find(x=>x.n===naam);
+    if(!p){ p={n:naam, age:"", city:"", job:"", pos:"—", role:"mid", form:"—", top:"",
+               licence:"Nee", car:false, shirt:"—", goal:"", holiday:""}; PLAYERS.push(p); }
+    p.gast=true;
+    if(typeof MOOD_TOKENS==="object" && !MOOD_TOKENS[naam]){
+      MOOD_TOKENS[naam]=[...crypto.getRandomValues(new Uint8Array(5))].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
   });
   store.__ruilSeed=RUIL_SEED_VERSION;
   if(typeof persistLocal==="function") persistLocal();
@@ -1912,18 +1939,19 @@ function assignTasks(){
   const minFood=+((document.getElementById("cfgMinFood")||{}).value||0);
   const pts={}, sub={}, lastAny={};
   const SUBKEYS=["drive","wash","flag","food","fluit","coord"];
-  PLAYERS.forEach(p=>{ pts[p.n]=0; sub[p.n]={}; SUBKEYS.forEach(k=>sub[p.n][k]=0); lastAny[p.n]=-99; });
+  taskPlayers().forEach(p=>{ pts[p.n]=0; sub[p.n]={}; SUBKEYS.forEach(k=>sub[p.n][k]=0); lastAny[p.n]=-99; });
   // 'soms'-rijders (driveOptional) worden niet automatisch ingeroosterd — handmatig kiezen kan wel
-  const drivers=PLAYERS.filter(p=>p.car && !p.driveOptional).map(p=>p.n);
-  const allPool=PLAYERS.map(p=>p.n);
-  const flagPool=PLAYERS.filter(p=>!p.noFlag).map(p=>p.n);
-  const fluitPool=PLAYERS.filter(p=>!p.noRef).map(p=>p.n);     // Amber fluit niet
+  const SEL=taskPlayers();                                      // VR2-gasten doen niet mee aan taken
+  const drivers=SEL.filter(p=>p.car && !p.driveOptional).map(p=>p.n);
+  const allPool=SEL.map(p=>p.n);
+  const flagPool=SEL.filter(p=>!p.noFlag).map(p=>p.n);
+  const fluitPool=SEL.filter(p=>!p.noRef).map(p=>p.n);          // Amber fluit niet
   const carSet=new Set(drivers);
   // Beschikbaarheid: pas bij een LANGE afwezigheid (meer dan een kwart van het seizoen) rekenen we
   // naar verhouding. Een vakantie of een paar weken weg verandert niets aan het aantal taken.
   const avail=availCounts();
   const maxAvail=Math.max(...Object.values(avail),1);
-  const effAvail={}; PLAYERS.forEach(p=>{ const a=avail[p.n]||0;
+  const effAvail={}; taskPlayers().forEach(p=>{ const a=avail[p.n]||0;
     effAvail[p.n] = (a >= maxAvail*LANG_AFWEZIG_GRENS) ? maxAvail : a; });
   const belasting=x=>{ const a=effAvail[x]||0; return a>0 ? (pts[x]/a) : Infinity; };
   // Kies 1 speelster: (1) afwezigen weg, (2) minimum inhalen, (3) laagste belasting naar verhouding,
@@ -1987,7 +2015,7 @@ function assignTasks(){
     }
   });
   // sched bewaart alleen de wedstrijdtaken; verenigingstaken worden bij het tonen opgeteld.
-  const ptsMatch={}; PLAYERS.forEach(p=>{ const s=sub[p.n]; ptsMatch[p.n]=s.drive+s.wash+s.flag+s.food; });
+  const ptsMatch={}; taskPlayers().forEach(p=>{ const s=sub[p.n]; if(s) ptsMatch[p.n]=s.drive+s.wash+s.flag+s.food; });
   sched={pts:ptsMatch,sub}; tasksAssigned=true;
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderPeriode(); renderReminders(); renderAgenda();
   if(typeof renderClubDuties==="function") renderClubDuties();
@@ -2044,7 +2072,7 @@ function setFixtureHome(idx,val){ const f=fixtures[idx]; if(!f)return;
   renderSchedTable(); renderReminders(); if(typeof scheduleSave==="function") scheduleSave();
 }
 // ---- Handmatig bewerken van taaktoewijzingen (bv. ruilverzoeken) ----
-function eligiblePool(task){ return task==="drive" ? PLAYERS.filter(p=>p.car).map(p=>p.n) : PLAYERS.map(p=>p.n); }
+function eligiblePool(task){ const S=taskPlayers(); return task==="drive" ? S.filter(p=>p.car).map(p=>p.n) : S.map(p=>p.n); }
 function taskCell(idx,task){
   const f=fixtures[idx]; const list=f[task]||[];
   const chips=list.map(n=>{ const nE=n.replace(/'/g,"\\'"); const lk=isNameLocked(f,task,n);
@@ -2098,7 +2126,7 @@ function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f
   afterTaskEdit(); }
 // Terug naar het corvee-duo van die week (handmatige ruil ongedaan maken)
 function foodResetToDuo(idx){ const f=fixtures[idx]; if(!f)return; delete f.foodManual; f.food=duoAvailableForDate(f.date); afterTaskEdit(); }
-function recomputeSched(){ const pts={},sub={}; PLAYERS.forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
+function recomputeSched(){ const pts={},sub={}; taskPlayers().forEach(p=>{pts[p.n]=0; sub[p.n]={drive:0,wash:0,flag:0,food:0};});
   fixtures.forEach(f=>{ ["drive","wash","flag","food"].forEach(k=>{ (f[k]||[]).forEach(n=>{ if(sub[n]){pts[n]++; sub[n][k]++;} }); }); }); sched={pts,sub}; }
 function afterTaskEdit(){ tasksAssigned=true; recomputeSched();
   renderSchedTable(); renderBalance(); renderPerPlayer(); renderReminders(); if(typeof renderAgenda==="function") renderAgenda();
@@ -2413,16 +2441,16 @@ const LANG_AFWEZIG_GRENS=0.75;
 // Hoeveel gebeurtenissen is iemand beschikbaar? Wie een half seizoen weg is (bv. stage),
 // hoeft ook maar de helft van de taken te doen — daarom rekenen we met taken per beschikbare beurt.
 function availCounts(){
-  const a={}; PLAYERS.forEach(p=>a[p.n]=0);
+  const a={}; taskPlayers().forEach(p=>a[p.n]=0);
   const items=[];
   (fixtures||[]).forEach(f=>{ if(f&&f.date&&(f.home===true||f.home===false)) items.push(f.date); });
   (clubDuties||[]).forEach(c=>{ if(c&&c.date) items.push(c.date); });
-  PLAYERS.forEach(p=>{ items.forEach(d=>{ if(!isAbsent(p.n,d)) a[p.n]++; }); });
+  taskPlayers().forEach(p=>{ items.forEach(d=>{ if(!isAbsent(p.n,d)) a[p.n]++; }); });
   return a;
 }
 // Verenigingstaken (fluiten & coördinaat) tellen ook als werk: 1 taak = 1 punt.
 function clubCounts(){
-  const c={}; PLAYERS.forEach(p=>c[p.n]={fluit:0,coord:0,tot:0});
+  const c={}; taskPlayers().forEach(p=>c[p.n]={fluit:0,coord:0,tot:0});
   (clubDuties||[]).forEach(d=>{ if(!d)return;
     (d.fluit||[]).forEach(n=>{ if(c[n]){c[n].fluit++; c[n].tot++;} });
     (d.coord||[]).forEach(n=>{ if(c[n]){c[n].coord++; c[n].tot++;} }); });
@@ -2434,7 +2462,7 @@ function renderBalance(){
   const maxAv=Math.max(...Object.values(av),1);
   const totals={}; PLAYERS.forEach(p=>{ totals[p.n]=(sched.pts[p.n]||0)+(cc[p.n]?cc[p.n].tot:0); });
   const max=Math.max(...Object.values(totals),1);
-  b.innerHTML=PLAYERS.map(p=>{
+  b.innerHTML=taskPlayers().map(p=>{
     const tot=totals[p.n], club=cc[p.n]?cc[p.n].tot:0, a=av[p.n]||0;
     const deel=a < maxAv*LANG_AFWEZIG_GRENS;  // alleen bij lange afwezigheid tonen
     return `<div class="bar-row"><div>${p.n}${p.car?'':' <span class="mini">(geen auto)</span>'}${deel?` <span class="mini" title="beschikbaar bij ${a} van ${maxAv} gebeurtenissen">(${a}/${maxAv} aanwezig)</span>`:''}</div>
@@ -2449,7 +2477,7 @@ function renderPerPlayer(){
     <th class="center">🟡 Vlaggen</th><th class="center">🟢 Eten</th>
     <th class="center" style="border-left:2px solid var(--line)">🔔 Fluiten</th><th class="center">📋 Coörd.</th>
     <th class="center" style="border-left:2px solid var(--gold)">Totaal</th></tr>`+
-    PLAYERS.map(p=>{ const s=sched.sub[p.n]||{drive:0,wash:0,flag:0,food:0}; const c=cc[p.n]||{fluit:0,coord:0,tot:0};
+    taskPlayers().map(p=>{ const s=sched.sub[p.n]||{drive:0,wash:0,flag:0,food:0}; const c=cc[p.n]||{fluit:0,coord:0,tot:0};
       return `<tr>
       <td><b>${p.n}</b></td><td class="center">${s.drive}</td><td class="center">${s.wash}</td>
       <td class="center">${s.flag}</td><td class="center">${s.food}</td>
@@ -3064,7 +3092,7 @@ function remindClub(n,code,ci){ const d=clubDuties[ci]; if(!d)return;
   openWAmsg(n, "Hoi "+n+"! Kleine herinnering: op "+ds+" heb je een verenigingstaak bij SC Stiens — "+task+". Alvast bedankt!");
 }
 // Verenigingstaken handmatig aanpassen (zelfde werkwijze als bij de wedstrijdtaken).
-function clubPool(key){ return key==="fluit" ? PLAYERS.filter(p=>!p.noRef).map(p=>p.n) : PLAYERS.map(p=>p.n); }
+function clubPool(key){ const S=taskPlayers(); return key==="fluit" ? S.filter(p=>!p.noRef).map(p=>p.n) : S.map(p=>p.n); }
 function clubCell(i,key){
   const c=clubDuties[i]; if(!c) return "";
   const list=c[key]||[];
