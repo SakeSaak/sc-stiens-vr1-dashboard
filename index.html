@@ -220,7 +220,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-b</span></p>
+      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-c</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1546,7 +1546,7 @@ function generateSeasonTrainings(silent){
 }
 /* Doorgegeven ruilingen uit de team- en persoonlijke app (okt 2026). Eenmalig toegepast en
    meteen vastgezet, zodat ze bij een herverdeling niet verdwijnen. */
-const RUIL_SEED_VERSION=2;
+const RUIL_SEED_VERSION=3;
 const RUILINGEN=[
   // Grietine vlagde 19 sep voor Sigrid
   {date:"2026-09-19", taak:"flag",  uit:"Sigrid",           in:"Grietine Bergsma"},
@@ -1585,6 +1585,25 @@ function applyRuilingen(){
     if(!f || !Array.isArray(f.drive)) return;
     if(isLocked(f,"drive")) return;                       // 30 jan blijft staan
     if(f.drive.includes("Amber Merkx")) f.drive=f.drive.filter(n=>n!=="Amber Merkx");
+  });
+  // 4) Alle onderlinge afspraken per persoon vastzetten, zodat ze een herverdeling overleven.
+  const VAST=[
+    {date:"2026-09-26", taak:"drive", wie:["Sacha"]},                        // Sacha reed voor Alyssa
+    {date:"2026-10-03", taak:"food",  wie:["Alyssa Visser"]},                // Alyssa kookte terug
+    {date:"2026-09-19", taak:"flag",  wie:["Grietine Bergsma"]},
+    {date:"2026-11-14", taak:"drive", wie:["Sigrid"]},
+    {date:"2027-01-30", taak:"drive", wie:["Amber Merkx","Arwen Kuipers"]},
+    {date:"2026-10-10", taak:"drive", wie:["Iris Dijkmeijer"]},
+    {date:"2027-03-20", taak:"drive", wie:["Nynke"], vervang:true},          // Nynke rijdt voor Iris
+    {date:"2026-11-07", taak:"food",  wie:["Coby Keizer","Grietine Bergsma"], vervang:true},  // Bente afwezig
+  ];
+  VAST.forEach(v=>{
+    const f=fixtures.find(x=>x && x.date===v.date); if(!f) return;
+    f[v.taak]=Array.isArray(f[v.taak])?f[v.taak]:[];
+    if(v.vervang) f[v.taak]=v.wie.slice();                   // afspraak vervangt de hele toewijzing
+    else v.wie.forEach(n=>{ if(!f[v.taak].includes(n)) f[v.taak].push(n); });
+    if(v.taak==="food") f.foodManual=true;
+    v.wie.forEach(n=>setNameLock(f,v.taak,n,true));
   });
   store.__ruilSeed=RUIL_SEED_VERSION;
   if(typeof persistLocal==="function") persistLocal();
@@ -1938,16 +1957,21 @@ function assignTasks(){
       reserveer(f,["drive","wash","flag","food"],used);
       // Heeft iemand die dag al een verenigingstaak (fluiten/coördinaat)? Dan niet nóg een taak.
       (clubDuties||[]).forEach(c=>{ if(c&&c.date===f.date) reserveer(c,["fluit","coord"],used); });
-      if(!keep(f.wash,"wash",idx,used)){ f.wash=[]; for(let k=0;k<nWash;k++){const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(w)f.wash.push(w);} }
-      if(!keep(f.flag,"flag",idx,used)){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); f.flag=fl?[fl]:[]; }
+      // bestaande namen meetellen en daarna aanvullen tot het gewenste aantal
+      keep(f.wash,"wash",idx,used);
+      while((f.wash||[]).length<nWash){ const w=pickOne(allPool,used,"wash",idx,{min:minWash,date:D}); if(!w)break; f.wash.push(w); }
+      keep(f.flag,"flag",idx,used);
+      while((f.flag||[]).length<1){ const fl=pickOne(flagPool,used,"flag",idx,{date:D}); if(!fl)break; f.flag.push(fl); }
       f.fluit=[]; f.coord=[];                       // verenigingstaken hebben hun eigen datumlijst
       if(f.home){
         f.drive=[];
-        if(!f.foodManual) f.food=duoAvailableForDate(f.date);   // lunch = corvee-duo van die week
+        // lunch = corvee-duo van die week, tenzij er een vaste afspraak of handmatige ruil ligt
+        if(!f.foodManual && !isLocked(f,"food")) f.food=duoAvailableForDate(f.date);
         f.food.forEach(n=>{ if(sub[n]){ pts[n]++; sub[n].food++; lastAny[n]=idx; used.add(n); } });
       } else {
         f.food=[];
-        if(!keep(f.drive,"drive",idx,used)){ f.drive=[]; for(let k=0;k<nDrivers;k++){const d=pickOne(drivers,used,"drive",idx,{date:D}); if(d)f.drive.push(d);} }
+        keep(f.drive,"drive",idx,used);
+        while((f.drive||[]).length<nDrivers){ const dr=pickOne(drivers,used,"drive",idx,{date:D}); if(!dr)break; f.drive.push(dr); }
       }
     } else {
       const c=it.o; const ty=(typeof clubType==="function")?clubType(c):"both";
@@ -1983,11 +2007,12 @@ function rebalanceFrom(){
   if(!confirm("Vanaf "+d+" worden "+todo.length+" wedstrijd(en) en "+todoClub.length+" verenigingstaak/-taken opnieuw verdeeld.\n\n"+
               "Alles vóór die datum blijft ongewijzigd en telt mee, zodat wie tot nu toe minder deed nu vaker aan de beurt komt.\n\nDoorgaan?")) return;
   fixtures.forEach(f=>{ if(!f||f.date<cutoff) return;
-    ["drive","wash","flag"].forEach(k=>{ if(!isLocked(f,k)) f[k]=[]; });   // vastgezette taken blijven
-    if(!f.foodManual && !isLocked(f,"food")) f.food=[];
+    ["drive","wash","flag"].forEach(k=>keepLockedOnly(f,k));   // alleen vastgezette namen blijven
+    if(isLocked(f,"food")) keepLockedOnly(f,"food");
+    else if(!f.foodManual) f.food=[];
   });
   (clubDuties||[]).forEach(c=>{ if(!c||c.date<cutoff) return;
-    ["fluit","coord"].forEach(k=>{ if(!isLocked(c,k)) c[k]=[]; }); });
+    ["fluit","coord"].forEach(k=>keepLockedOnly(c,k)); });
   assignTasks();
   flash("Opnieuw verdeeld vanaf "+d+" ✓");
 }
@@ -1995,9 +2020,9 @@ function rebalanceFrom(){
 function reassignAll(){
   if(!confirm("Let op: dit wist de HELE huidige taakverdeling en maakt een nieuwe. Doe dit alleen aan het begin van het seizoen — niet als er al taken zijn uitgevoerd, want dan gaat het overzicht van wie wat deed verloren. Doorgaan?")) return;
   fixtures.forEach(f=>{ f.fluit=[]; f.coord=[];
-    ["drive","wash","flag","food"].forEach(k=>{ if(!isLocked(f,k)) f[k]=[]; });   // vastgezette ruilingen blijven
+    ["drive","wash","flag","food"].forEach(k=>keepLockedOnly(f,k));   // vastgezette ruilingen blijven
     if(!isLocked(f,"food")) delete f.foodManual; });
-  (clubDuties||[]).forEach(c=>{ ["fluit","coord"].forEach(k=>{ if(!isLocked(c,k)) c[k]=[]; }); });
+  (clubDuties||[]).forEach(c=>{ ["fluit","coord"].forEach(k=>keepLockedOnly(c,k)); });
   assignTasks();
   flash("Volledige verdeling opnieuw gemaakt");
 }
@@ -2021,34 +2046,54 @@ function setFixtureHome(idx,val){ const f=fixtures[idx]; if(!f)return;
 function eligiblePool(task){ return task==="drive" ? PLAYERS.filter(p=>p.car).map(p=>p.n) : PLAYERS.map(p=>p.n); }
 function taskCell(idx,task){
   const f=fixtures[idx]; const list=f[task]||[];
-  const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="taskRemove(${idx},'${task}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
+  const chips=list.map(n=>{ const nE=n.replace(/'/g,"\\'"); const lk=isNameLocked(f,task,n);
+    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''}>${n}`+
+      `<span style="cursor:pointer;font-size:10px" title="${lk?'vastgezet':'vastzetten'}" onclick="toggleNameLock(${idx},'${task}','${nE}')">${lockIcon(lk)}</span>`+
+      `<span class="x" title="verwijderen" onclick="taskRemove(${idx},'${task}','${nE}')">✕</span></span>`; }).join("");
   const bezet=new Set(); ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n)));
   (clubDuties||[]).forEach(c=>{ if(c&&c.date===f.date) ["fluit","coord"].forEach(k=>(c[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=eligiblePool(task).filter(n=>!bezet.has(n) && !(typeof isAbsent==="function" && isAbsent(n,f.date)));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
   const add=`<select class="taskadd" onchange="taskAdd(${idx},'${task}',this.value)"><option value="">+ toevoegen</option>${opts}</select>`;
-  const slot=`<span style="cursor:pointer;font-size:11px" onclick="toggleLock(${idx},'${task}')">${lockIcon(isLocked(f,task))}</span>`;
-  return `<div class="taskcell">${chips}${add}${slot}</div>`;
+  return `<div class="taskcell">${chips}${add}</div>`;
 }
-/* ---- Slot op een taak: een handmatige ruil blijft staan, ook bij herverdelen ---- */
-function isLocked(o,key){ return !!(o && Array.isArray(o.locked) && o.locked.includes(key)); }
-function setLock(o,key,on){ if(!o) return; o.locked=Array.isArray(o.locked)?o.locked:[];
-  if(on){ if(!o.locked.includes(key)) o.locked.push(key); }
-  else o.locked=o.locked.filter(k=>k!==key);
-  if(!o.locked.length) delete o.locked; }
-function toggleLock(idx,key){ const f=fixtures[idx]; if(!f)return; setLock(f,key,!isLocked(f,key)); afterTaskEdit(); }
-function toggleClubLock(i,key){ const c=clubDuties[i]; if(!c)return; setLock(c,key,!isLocked(c,key)); afterClubEdit(); }
+/* ---- Slot PER PERSOON: een onderlinge ruil blijft staan, de rest mag herverdeeld worden ----
+   o.locked = { drive:["Nynke"], food:["Coby Keizer"] } — alleen die namen zijn beschermd.   */
+function normLocks(o){
+  if(!o) return {};
+  if(Array.isArray(o.locked)){                       // oude vorm (lijst van taken) omzetten
+    const obj={}; o.locked.forEach(k=>{ obj[k]=(o[k]||[]).slice(); }); o.locked=obj;
+  }
+  if(!o.locked || typeof o.locked!=="object") o.locked={};
+  return o.locked;
+}
+function lockedNames(o,key){ const L=normLocks(o); return Array.isArray(L[key])?L[key]:[]; }
+function isNameLocked(o,key,naam){ return lockedNames(o,key).includes(naam); }
+function isLocked(o,key){ return lockedNames(o,key).length>0; }
+function setNameLock(o,key,naam,on){
+  const L=normLocks(o); L[key]=Array.isArray(L[key])?L[key]:[];
+  if(on){ if(!L[key].includes(naam)) L[key].push(naam); }
+  else L[key]=L[key].filter(n=>n!==naam);
+  if(!L[key].length) delete L[key];
+  if(!Object.keys(L).length) delete o.locked;
+}
+// Alleen de vastgezette namen behouden; de rest valt vrij voor een nieuwe verdeling.
+function keepLockedOnly(o,key){ const L=lockedNames(o,key); o[key]=(o[key]||[]).filter(n=>L.includes(n)); }
+function toggleNameLock(idx,key,naam){ const f=fixtures[idx]; if(!f)return;
+  setNameLock(f,key,naam,!isNameLocked(f,key,naam)); afterTaskEdit(); }
+function toggleClubNameLock(i,key,naam){ const c=clubDuties[i]; if(!c)return;
+  setNameLock(c,key,naam,!isNameLocked(c,key,naam)); afterClubEdit(); }
 function lockIcon(locked){ return locked
   ? '<span title="Vastgezet — blijft staan bij herverdelen" style="color:var(--gold)">🔒</span>'
-  : '<span title="Niet vastgezet — kan bij herverdelen wijzigen" style="opacity:.35">🔓</span>'; }
+  : '<span title="Niet vastgezet — klik om vast te zetten" style="opacity:.3">🔓</span>'; }
 
 function taskAdd(idx,task,name){ if(!name)return; const f=fixtures[idx]; f[task]=f[task]||[]; if(!f[task].includes(name)) f[task].push(name);
   if(task==="food") f.foodManual=true;   // handmatige ruil: niet overschrijven door het corvee-duo
-  setLock(f,task,true);                  // handmatig aangepast = automatisch vastgezet
+  setNameLock(f,task,name,true);         // wie je zelf toevoegt, staat vast
   afterTaskEdit(); }
 function taskRemove(idx,task,name){ const f=fixtures[idx]; if(!f[task])return; f[task]=f[task].filter(x=>x!==name);
   if(task==="food") f.foodManual=true;
-  setLock(f,task,true);
+  setNameLock(f,task,name,false);
   afterTaskEdit(); }
 // Terug naar het corvee-duo van die week (handmatige ruil ongedaan maken)
 function foodResetToDuo(idx){ const f=fixtures[idx]; if(!f)return; delete f.foodManual; f.food=duoAvailableForDate(f.date); afterTaskEdit(); }
@@ -3022,18 +3067,20 @@ function clubPool(key){ return key==="fluit" ? PLAYERS.filter(p=>!p.noRef).map(p
 function clubCell(i,key){
   const c=clubDuties[i]; if(!c) return "";
   const list=c[key]||[];
-  const chips=list.map(n=>`<span class="taskchip">${n}<span class="x" title="verwijderen" onclick="clubTaskRemove(${i},'${key}','${n.replace(/'/g,"\\'")}')">✕</span></span>`).join("");
+  const chips=list.map(n=>{ const nE=n.replace(/'/g,"\\'"); const lk=isNameLocked(c,key,n);
+    return `<span class="taskchip"${lk?' style="border-color:var(--gold)"':''}>${n}`+
+      `<span style="cursor:pointer;font-size:10px" title="${lk?'vastgezet':'vastzetten'}" onclick="toggleClubNameLock(${i},'${key}','${nE}')">${lockIcon(lk)}</span>`+
+      `<span class="x" title="verwijderen" onclick="clubTaskRemove(${i},'${key}','${nE}')">✕</span></span>`; }).join("");
   const bezet=new Set([...(c.fluit||[]),...(c.coord||[])]);
   (fixtures||[]).forEach(f=>{ if(f&&f.date===c.date) ["drive","wash","flag","food"].forEach(k=>(f[k]||[]).forEach(n=>bezet.add(n))); });
   const pool=clubPool(key).filter(n=>!bezet.has(n) && !isAbsent(n,c.date));
   const opts=pool.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join("");
-  const slot=`<span style="cursor:pointer;font-size:11px" onclick="toggleClubLock(${i},'${key}')">${lockIcon(isLocked(c,key))}</span>`;
-  return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select>${slot}</div>`;
+  return `<div class="taskcell">${chips}<select class="taskadd" onchange="clubTaskAdd(${i},'${key}',this.value)"><option value="">+ toevoegen</option>${opts}</select></div>`;
 }
 function clubTaskAdd(i,key,name){ if(!name)return; const c=clubDuties[i]; if(!c)return;
-  c[key]=c[key]||[]; if(!c[key].includes(name)) c[key].push(name); setLock(c,key,true); afterClubEdit(); }
+  c[key]=c[key]||[]; if(!c[key].includes(name)) c[key].push(name); setNameLock(c,key,name,true); afterClubEdit(); }
 function clubTaskRemove(i,key,name){ const c=clubDuties[i]; if(!c||!c[key])return;
-  c[key]=c[key].filter(x=>x!==name); setLock(c,key,true); afterClubEdit(); }
+  c[key]=c[key].filter(x=>x!==name); setNameLock(c,key,name,false); afterClubEdit(); }
 function afterClubEdit(){
   renderClubDuties(); if(typeof renderBalance==="function") renderBalance();
   if(typeof renderPerPlayer==="function") renderPerPlayer();
