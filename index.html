@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.23</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.23-b</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -583,8 +583,9 @@
       zodra ze bekend zijn; ze worden verdeeld met dezelfde knop <b>Verdeel taken</b> hierboven, zodat ze meetellen in het totaal.
       <b>Speelsters zonder auto/rijbewijs krijgen voorrang</b> (zij rijden immers niet) en Amber doet geen fluiten (wel coördinatie). Afwezigheid telt mee.
       <br>Het <b>wedstrijdcoördinaat-schema van de vereniging</b> is bekend: VR1 is aan de beurt op <b>3 okt, 13 feb en 29 mei</b> (08:00–12:00).
-      Klik op <b>Laad coördinaatschema VR1</b> om die datums toe te voegen. Het <b>fluitschema</b> volgt nog — met <b>Soort</b> geef je per datum aan
-      of het om fluiten, coördinaat of beide gaat.
+      Klik op <b>Laad coördinaatschema VR1</b> om die datums toe te voegen. Het <b>fluitschema najaar</b> is ook bekend: VR1 levert een
+      jeugdscheidsrechter voor <b>MO15-1</b> op <b>19 september, 3 oktober en 14 november</b> — klik op <b>Laad fluitschema</b>.
+      Met <b>Soort</b> geef je per datum aan of het om fluiten, coördinaat of beide gaat; de <b>tijd</b> van de jeugdwedstrijd kun je er zelf bij zetten.
     </div>
     <div class="controls">
       <label>Datum toevoegen <input type="date" id="clubDate"></label>
@@ -594,7 +595,7 @@
         <option value="coord">alleen coördinaat</option></select></label>
       <label>&nbsp;<button class="btn" onclick="addClubDate()">➕ Toevoegen</button></label>
       <label>&nbsp;<button class="btn" onclick="loadCoordSchedule()" title="3 okt, 13 feb en 29 mei — de beurten van VR1">📋 Laad coördinaatschema</button></label>
-      <label>&nbsp;<button class="btn" onclick="loadFluitSchedule()" title="19 sep en 3 okt — MO15/1">🔔 Laad fluitschema</button></label>
+      <label>&nbsp;<button class="btn" onclick="loadFluitSchedule()" title="19 sep, 3 okt en 14 nov — MO15-1">🔔 Laad fluitschema</button></label>
       <label>&nbsp;<button class="btn primary" onclick="assignTasks()" title="Verdeelt alle taken samen, zodat het totaal eerlijk blijft">⚖️ Verdeel taken</button></label>
     </div>
     <div id="clubTable" style="overflow:auto"></div>
@@ -3239,9 +3240,14 @@ function setClubType(i,v){ if(clubDuties[i]){ clubDuties[i].type=v;
   if(v==="coord") clubDuties[i].fluit=[]; if(v==="fluit") clubDuties[i].coord=[];
   renderClubDuties(); if(typeof renderAgenda==="function") renderAgenda(); scheduleSave(); } }
 // Fluitschema van de vereniging (najaar 2026) — de beurten van VR1, met het team dat gefloten wordt.
+/* Fluitschema van de vereniging — de beurten van VR1 (schema "levering scheidsrechters
+   najaar 2026"). VR1 levert drie keer een jeugdscheidsrechter voor MO15-1. De aanvangstijd
+   van de jeugdwedstrijd is een aanname (gelijk aan de eerdere beurten); pas hem aan zodra
+   die bekend is — dat kan per datum bij Soort/Tijd hieronder. */
 const FLUIT_VR1=[
-  {date:"2026-09-19", team:"MO15/1", time:"09:00"},
-  {date:"2026-10-03", team:"MO15/1", time:"09:00"},
+  {date:"2026-09-19", team:"MO15-1", time:"09:00"},
+  {date:"2026-10-03", team:"MO15-1", time:"09:00"},
+  {date:"2026-11-14", team:"MO15-1", time:"09:00"},
 ];
 function loadFluitSchedule(){
   let added=0;
@@ -3835,6 +3841,33 @@ function seedSelectieWijziging(){
   }catch(e){ console.warn("seedSelectieWijziging",e); }
 }
 
+/* Eenmalig: de fluitbeurten uit het schema "levering scheidsrechters najaar 2026" erin
+   zetten en meteen eerlijk laten meelopen in de taakverdeling. Wie al is ingedeeld blijft
+   staan; de nieuwe beurt wordt gevuld door wie nog aan de beurt is. */
+const FLUIT_SEED_VERSION=1;
+function seedFluitSchema(){
+  try{
+    if(!store || typeof store!=="object") return;
+    if(store.__fluitSeed===FLUIT_SEED_VERSION) return;
+    if(typeof FLUIT_VR1==="undefined" || !Array.isArray(clubDuties)) return;
+    let nieuw=0;
+    FLUIT_VR1.forEach(f=>{
+      const best=clubDuties.find(x=>x && x.date===f.date);
+      if(best){
+        best.type = (clubType(best)==="coord") ? "both" : (clubType(best)==="both" ? "both" : "fluit");
+        best.fluitTeam=f.team;
+        if(!best.time) best.time=f.time;
+      } else {
+        clubDuties.push({date:f.date,type:"fluit",fluitTeam:f.team,time:f.time,fluit:[],coord:[]});
+        nieuw++;
+      }
+    });
+    clubDuties.sort((a,b)=>a.date<b.date?-1:1);
+    store.__fluitSeed=FLUIT_SEED_VERSION;
+    if(nieuw && typeof assignTasks==="function") assignTasks();
+  }catch(e){ console.warn("seedFluitSchema",e); }
+}
+
 /* Eenmalig opruimen: de proefopzet van het tabblad Opstellingen liet velden achter op de
    wedstrijdregels. Die horen er niet meer te staan. */
 const OPSTELLING_OPRUIM_VERSIE=1;
@@ -3874,6 +3907,7 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
   if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
   if(typeof seedSelectieWijziging==="function") seedSelectieWijziging();
+  if(typeof seedFluitSchema==="function") seedFluitSchema();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
@@ -3900,6 +3934,7 @@ function applyStaffGate(){
 function renderAll(){
   if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
   if(typeof seedSelectieWijziging==="function") seedSelectieWijziging();
+  if(typeof seedFluitSchema==="function") seedFluitSchema();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling();
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);
