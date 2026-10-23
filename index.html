@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 17 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.05-k</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.22</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -270,7 +270,7 @@
         <input type="checkbox" id="kaartOnder" onchange="zetKaartOnder(this.checked)" style="accent-color:var(--gold)"> 🤕 onderaan
       </label>
     </div>
-    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR worden <b>automatisch berekend uit de metingen</b> en zijn hier
+    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR worden <b>automatisch berekend uit de metingen</b>; de OVR is <b>per positie gewogen</b> zoals in EA Sports FC (een spits telt vooral SHO, PAC en DRI, een centrale verdediger vooral DEF en PHY) en zijn hier
       niet handmatig aan te passen — vul de tests in op het tabblad <b>Metingen</b>. Tot er metingen zijn, staan ze op <b>–</b>. In het
       onderste vak van elke kaart kun je wel losse video-notities kwijt (bv. observaties, xG). Klik daarna op <b>Opslaan</b>.</p>
     <div class="cards" id="cardGrid"></div>
@@ -817,7 +817,6 @@ let PLAYERS = [
   {n:"Grietine Bergsma", age:24, city:"Vrouwenparochie", job:"Verpleegkundige + HBO-V", pos:"LB", role:"def", form:"1-4-3-3", top:"Links- of rechtsback", licence:"Ja", car:true, shirt:"S", goal:"1e of 2e (kampioen)", holiday:"26 okt–5 nov"},
   {n:"Iris Dijkmeijer", age:25, city:"Hallum", job:"Fysiotherapeut", pos:"CAM", role:"mid", form:"1-4-3-3", top:"11, 7, 8 of 10", licence:"Ja", car:true, shirt:"S", goal:"Top 3 minimaal", holiday:"Waarschijnlijk juli"},
   {n:"Merle Vis", age:19, city:"Burdaard", job:"Zelfstandig kok", pos:"CAM", role:"mid", form:"1-4-3-3", top:"10, 8 of spits", licence:"Ja", car:true, shirt:"S", goal:"Top 3", holiday:"6–10 aug · daarna stage buitenland"},
-  {n:"Sacha Leijder Havenstroom", age:26, city:"Leeuwarden", job:"Gymdocent (MHS)", pos:"CB", role:"def", form:"1-4-3-3", top:"Centraal verdediger, 6 of spits", licence:"Ja", car:true, shirt:"L", goal:"KAMPIOEN!", holiday:"7 juli–5 aug"},
   {n:"Arwen Kuipers", age:21, city:"Harlingen", job:"Integrale veiligheidskunde", pos:"GK", role:"gk", form:"1-4-3-3", top:"Keeper", licence:"Ja", car:true, shirt:"S", goal:"Kampioen / top 5", holiday:"Evt. 1e twee weken aug"},
   {n:"Esmee Diekstra", age:21, city:"Stiens", job:"W&S adviseur", pos:"LB", role:"def", form:"1-4-3-3", top:"Links-/rechtsachter, vleugel", licence:"Rijbewijs, geen auto", car:false, shirt:"M", goal:"Top 5 sowieso", holiday:"7–25 juli"},
   {n:"Jetty de Ruiter", age:29, city:"Marrum", job:"Haanreclamewerk", pos:"ST", role:"att", form:"1-4-3-3", top:"Spits, 10 of midmid", licence:"Ja", car:true, shirt:"—", goal:"Meedraaien in top 3", holiday:"Niet in zomer · Engeland sep"},
@@ -1165,7 +1164,6 @@ const POS3 = {
   "Grietine Bergsma":["LB","RB","CB"],
   "Iris":["RW","CM","CAM"],
   "Merle":["CAM","CM","ST"],
-  "Sacha":["CB","CDM","ST"],
   "Arwen Kuipers":["GK"],
   "Esmee Diekstra":["LB","RB","LW"],
   "Jetty De Ruiter":["ST","CAM","CM"],
@@ -1255,7 +1253,6 @@ const DEVGOALS = {
   "Grietine Bergsma":{dev:"Hoge ballen aannemen en bal daarna benutten",proc:"Spel lezen, rustiger aan de bal, fitter, baltempo omhoog",link:"DEF"},
   "Iris":{dev:"1-tegen-1, afronden, aannames, voorzetten onder druk",proc:"Meer coachen, simpeler spel, wedstrijden winnen",link:"SHO"},
   "Merle":{dev:"Verdedigen en 1-tegen-1 situaties",proc:"Beter verdedigen (1-1), zo fit mogelijk",link:"DEF"},
-  "Sacha":{dev:"Nauwkeurige passing en strakke lange bal",proc:"Basis: passing, schot op goal, coachen",link:"PAS"},
   "Arwen Kuipers":{dev:"Coaching, hoge ballen, uittrappen & meevoetballen",proc:"Beter ingespeeld, focus vasthouden",link:"UIT"},
   "Esmee Diekstra":{dev:"Rust aan de bal, overzicht, zelfvertrouwen",proc:"Overzicht houden, rust aan de bal",link:"PAS"},
   "Jetty De Ruiter":{dev:"Handelingssnelheid en sterk aan de bal",proc:"Plezier terugvinden, positief blijven",link:"DRI"},
@@ -1400,7 +1397,6 @@ const DEFAULT_AWAY={
   "Esmee Terpstra":"2026-07-10..2026-08-10",
   "Maja":"2026-07-13..2026-07-27",
   "Nynke":"2026-08-07..2026-08-09",
-  "Sacha":"2026-07-07..2026-08-05",
   "Esmee Diekstra":"2026-07-07..2026-07-25",
   "Bente":"2026-07-19..2026-07-26",
   "Amber Merkx":"2026-07-22..2026-07-29, 2026-08-06..2026-08-10",
@@ -1428,11 +1424,38 @@ function saveStats(){
     flash("Opgeslagen ✓");
   }
 }
+/* OVR per positie gewogen, zoals EA Sports FC dat doet: een spits wordt niet op verdedigen
+   afgerekend en een centrale verdediger niet op afronden. Gewichten tellen per positie op tot 1.
+   De keepster houdt het gemiddelde van haar eigen zes waarden. */
+const OVR_GEWICHTEN = {
+  ST : {SHO:.30, PAC:.20, DRI:.20, PHY:.15, PAS:.10, DEF:.05},
+  VL : {PAC:.25, DRI:.25, SHO:.20, PAS:.15, PHY:.10, DEF:.05},   // RW, LW, RM, LM
+  CAM: {PAS:.25, DRI:.25, SHO:.20, PAC:.10, PHY:.10, DEF:.10},
+  CM : {PAS:.25, DRI:.20, DEF:.20, PHY:.15, SHO:.10, PAC:.10},
+  CDM: {DEF:.30, PAS:.25, PHY:.20, DRI:.10, PAC:.10, SHO:.05},
+  FB : {DEF:.30, PAC:.20, PHY:.20, PAS:.15, DRI:.10, SHO:.05},   // RB, LB, RWB, LWB
+  CB : {DEF:.40, PHY:.25, PAS:.15, PAC:.15, DRI:.05, SHO:.00}
+};
+function ovrGroep(n){
+  const p=PLAYERS.find(x=>x.n===n)||{}; const pos=String(p.pos||"").toUpperCase();
+  if(pos==="ST"||pos==="CF") return "ST";
+  if(["RW","LW","RM","LM"].includes(pos)) return "VL";
+  if(pos==="CAM") return "CAM";
+  if(pos==="CM") return "CM";
+  if(pos==="CDM"||pos==="DM") return "CDM";
+  if(["RB","LB","RWB","LWB"].includes(pos)) return "FB";
+  if(pos==="CB") return "CB";
+  return p.role==="def" ? "FB" : p.role==="att" ? "VL" : "CM";
+}
 function ovr(n){
   const s=(store[n]&&store[n].stats)||{};
   const vals=keysFor(n).map(k=>parseInt(s[k])).filter(v=>!isNaN(v));
   if(vals.length<6) return "–";
-  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+  if(isKeeper(n)) return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+  const w=OVR_GEWICHTEN[ovrGroep(n)];
+  let som=0;
+  STAT_KEYS.forEach(k=>{ som += (w[k]||0) * parseInt(s[k]); });
+  return Math.round(som);
 }
 function initials(name){return name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();}
 /* ---- volgorde van de kaartjes ---- */
@@ -1787,7 +1810,7 @@ function _applyRuilingen(){
   });
   // 4) Alle onderlinge afspraken per persoon vastzetten, zodat ze een herverdeling overleven.
   const VAST=[
-    {date:"2026-09-26", taak:"drive", wie:["Sacha"]},                        // Sacha reed voor Alyssa
+    {date:"2026-09-26", taak:"drive", wie:["Sacha Leijder Havenstroom"]},                        // Sacha reed voor Alyssa
     {date:"2026-10-03", taak:"food",  wie:["Alyssa Visser"]},                // Alyssa kookte terug
     {date:"2026-09-19", taak:"flag",  wie:["Grietine Bergsma"]},
     {date:"2026-11-14", taak:"drive", wie:["Sigrid"]},
@@ -1849,11 +1872,11 @@ function seedSeasonTrainings(){
 // Vaste duo's (seizoenspresentatie) voor trainingen, lunch-/was- en corveeschema.
 let DUOS=[
   ["Maja Runic","Alyssa Visser"],
-  ["Sacha Leijder Havenstroom","Esmee Terpstra"],
+  ["Esmee Terpstra","Merle Vis"],
   ["Renske Kamminga","Nynke Kuiken"],
   ["Sigrid ter Voort","Amber Merkx"],
   ["Esmee Diekstra","Mare Dotinga"],
-  ["Iris Dijkmeijer","Merle Vis","Grietine Bergsma"],
+  ["Iris Dijkmeijer","Grietine Bergsma"],
   ["Bente Palma","Coby Keizer"],
   ["Jetty de Ruiter","Arwen Kuipers"],
 ];
@@ -3149,7 +3172,6 @@ const MOOD_TOKENS={
   "Grietine Bergsma":"2c2dc9cb37",
   "Iris":"82c3ff87d7",
   "Merle":"1d559fbf61",
-  "Sacha":"b997c9a0a1",
   "Arwen Kuipers":"67b54f35fa",
   "Esmee Diekstra":"26e2647248",
   "Jetty De Ruiter":"c352c082ea",
@@ -3686,7 +3708,7 @@ function clearPhones(){ kasPeople().forEach(n=>{ if(store[n]) delete store[n].ph
    ========================================================================= */
 /* Rugnummers uit de Veo-rugnummerherkenning (wedstrijd van 3 oktober). Eenmalig als
    vast nummer ingevuld; een nummer dat de staf zelf heeft gezet blijft staan. */
-const VEO_NUMMERS={ "Arwen Kuipers":"1", "Maja":"2", "Grietine Bergsma":"3", "Sacha":"4",
+const VEO_NUMMERS={ "Arwen Kuipers":"1", "Maja":"2", "Grietine Bergsma":"3",
   "Sigrid":"6", "Bente":"7", "Renske":"10", "Iris":"11", "Esmee Terpstra":"13",
   "Marije Bokma":"14", "Amber Merkx":"15", "Nynke":"17", "Coby Keizer":"18" };
 const NUMMER_SEED_VERSION=1;
@@ -3745,6 +3767,74 @@ function setVastNr(n,v){
   persistLocal(); scheduleSave(); renderSquad();
 }
 
+/* ---- Wijzigingen in de selectie (23 oktober 2026) ----
+   Sacha stopt met voetballen. Zij gaat uit de ledenlijst; alleen het vlaggen van
+   31 oktober blijft op haar naam staan (vastgezet, zodat niemand anders ervoor wordt
+   ingeroosterd). Haar overige taken van later dit seizoen komen vrij.
+   Merle is terug van haar stage en doet vanaf nu weer mee. Omdat zij een groot deel van
+   de eerste seizoenshelft heeft gemist, krijgt zij naar verhouding minder taken — dat
+   rekent de verdeling zelf uit op basis van haar afwezigheidsperiode.
+   Daarna wordt alles vanaf 1 november opnieuw en eerlijk verdeeld; vastgezette onderlinge
+   afspraken blijven staan. */
+const SELECTIE_WIJZIGING_VERSIE=1;
+const GESTOPT="Sacha Leijder Havenstroom";
+const GESTOPT_BEHOUDT=[{date:"2026-10-31", taak:"flag"}];   // dit doet zij nog wél
+const HERVERDEEL_VANAF="2026-11-01";
+function seedSelectieWijziging(){
+  try{
+    if(!store || typeof store!=="object") return;
+    if(store.__selWijz===SELECTIE_WIJZIGING_VERSIE) return;
+    if(!Array.isArray(fixtures) || !fixtures.length) return;    // wacht op het rooster
+
+    // 1) Merle is terug: haar afwezigheid eindigt op 22 oktober.
+    const merle=echteNaam("Merle Vis");
+    const mp=(typeof getAwayPeriods==="function")?getAwayPeriods(merle):null;
+    if(mp){ mp.forEach(x=>{ if(x && x.from==="2026-08-11" && x.to>"2026-10-22") x.to="2026-10-22"; });
+      if(typeof syncAwayText==="function") syncAwayText(merle); }
+
+    // 2) De taak die Sacha nog wél doet vastzetten, zodat die een herverdeling overleeft.
+    GESTOPT_BEHOUDT.forEach(b=>{
+      const f=fixtures.find(x=>x && x.date===b.date); if(!f) return;
+      f[b.taak]=Array.isArray(f[b.taak])?f[b.taak]:[];
+      if(!f[b.taak].includes(GESTOPT)) f[b.taak].push(GESTOPT);
+      setNameLock(f,b.taak,GESTOPT,true);
+    });
+
+    // 3) Al haar overige taken vanaf vandaag komen vrij (het verleden blijft staan als historie).
+    const vanaf=todayStr();
+    const houden=new Set(GESTOPT_BEHOUDT.map(b=>b.date+"|"+b.taak));
+    const weg=(o,k)=>{ if(!Array.isArray(o[k])) return;
+      if(houden.has(o.date+"|"+k)) return;
+      if(o[k].includes(GESTOPT)){ o[k]=o[k].filter(n=>n!==GESTOPT); setNameLock(o,k,GESTOPT,false); } };
+    fixtures.forEach(f=>{ if(!f||f.date<vanaf) return; ["drive","wash","flag","food"].forEach(k=>weg(f,k)); });
+    (clubDuties||[]).forEach(c=>{ if(!c||c.date<vanaf) return; ["fluit","coord"].forEach(k=>weg(c,k)); });
+
+    // 4) Uit de ledenlijst, de duo's en de keuzelijsten. Haar boetes blijven in de kas staan.
+    const idx=PLAYERS.findIndex(p=>p && p.n===GESTOPT);
+    if(idx>=0) PLAYERS.splice(idx,1);
+    if(typeof markeerGezien==="function") markeerGezien(GESTOPT);   // nooit opnieuw aanmaken
+    DUOS=(DUOS||[]).map(d=>Array.isArray(d)?d.filter(n=>n!==GESTOPT):d)
+                   .filter(d=>Array.isArray(d)&&d.length);
+    /* Haar corveeduo houdt één speelster over. Merle schuift uit het drietal naar dat duo,
+       zodat er acht duo's van twee blijven en de corveerotatie hetzelfde ritme houdt. */
+    const eenling=DUOS.find(d=>d.length===1);
+    if(eenling && !eenling.includes(merle)){
+      const drietal=DUOS.find(d=>d.length>2 && d.includes(merle));
+      if(drietal){ drietal.splice(drietal.indexOf(merle),1); eenling.push(merle); }
+    }
+
+    // 5) Opnieuw verdelen vanaf 1 november, met Merle erbij en zonder Sacha.
+    fixtures.forEach(f=>{ if(!f||f.date<HERVERDEEL_VANAF) return;
+      ["drive","wash","flag"].forEach(k=>keepLockedOnly(f,k));
+      if(isLocked(f,"food")) keepLockedOnly(f,"food"); else if(!f.foodManual) f.food=[];
+    });
+    (clubDuties||[]).forEach(c=>{ if(!c||c.date<HERVERDEEL_VANAF) return;
+      ["fluit","coord"].forEach(k=>keepLockedOnly(c,k)); });
+    store.__selWijz=SELECTIE_WIJZIGING_VERSIE;
+    if(typeof assignTasks==="function") assignTasks();
+  }catch(e){ console.warn("seedSelectieWijziging",e); }
+}
+
 /* Eenmalig opruimen: de proefopzet van het tabblad Opstellingen liet velden achter op de
    wedstrijdregels. Die horen er niet meer te staan. */
 const OPSTELLING_OPRUIM_VERSIE=1;
@@ -3783,6 +3873,7 @@ function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearP
   if(typeof namenInDataUniform==="function") namenInDataUniform();
   if(vulAanMetStandaard()){ PLAYERS.forEach(p=>{ try{ computePlayerStats(p.n); }catch(e){} }); }
   if(st && Array.isArray(st.trainings)) trainings=st.trainings; if(st && Array.isArray(st.events)) events=st.events; if(st && Array.isArray(st.analyses)) analyses=st.analyses; seedAway(); if(typeof seedSeasonTrainings==="function") seedSeasonTrainings(); if(typeof cleanTrainingClashes==="function") cleanTrainingClashes(); if(typeof applyRuilingen==="function") applyRuilingen(); if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
+  if(typeof seedSelectieWijziging==="function") seedSelectieWijziging();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling(); }
 function persistLocal(){ try{ localStorage.setItem("scstiens_stats",JSON.stringify(store)); localStorage.setItem("scstiens_fixtures",JSON.stringify(fixtures)); localStorage.setItem("scstiens_club",JSON.stringify(clubDuties)); localStorage.setItem("scstiens_train",JSON.stringify(trainings)); localStorage.setItem("scstiens_events",JSON.stringify(events));
@@ -3808,6 +3899,7 @@ function applyStaffGate(){
 }
 function renderAll(){
   if(typeof ruimOpstellingenOp==="function") ruimOpstellingenOp();
+  if(typeof seedSelectieWijziging==="function") seedSelectieWijziging();
   if(typeof seedRugnummers==="function") seedRugnummers();
   if(typeof seedMatchdataAanvulling==="function") seedMatchdataAanvulling();
   PLAYERS.forEach(p=>{ if(typeof normalizeInjuries==="function")normalizeInjuries(p.n); if(typeof pruneWell==="function")pruneWell(p.n); if(typeof pruneSessions==="function")pruneSessions(p.n);

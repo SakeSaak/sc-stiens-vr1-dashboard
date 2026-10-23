@@ -20,11 +20,11 @@ function names(a){ return (a&&a.length)?a.map(kortNaam).join(", "):""; }
 // Officiële (volledige) namen, gelijk aan index.html. De agenda toont ze kort.
 const DUOS=[
   ["Maja Runic","Alyssa Visser"],
-  ["Sacha Leijder Havenstroom","Esmee Terpstra"],
+  ["Esmee Terpstra","Merle Vis"],
   ["Renske Kamminga","Nynke Kuiken"],
   ["Sigrid ter Voort","Amber Merkx"],
   ["Esmee Diekstra","Mare Dotinga"],
-  ["Iris Dijkmeijer","Merle Vis","Grietine Bergsma"],
+  ["Iris Dijkmeijer","Grietine Bergsma"],
   ["Bente Palma","Coby Keizer"],
   ["Jetty de Ruiter","Arwen Kuipers"],
 ];
