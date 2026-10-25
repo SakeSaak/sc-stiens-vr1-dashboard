@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25e</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25f</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -2564,6 +2564,8 @@ function anGroepTabel(a){
 /* Doelpunten van Stiens dit seizoen (ook wedstrijden zonder Veo). Gaat mee naar de cloud via collectState. */
 let DOELPUNTEN=[
  {d:"2026-08-17",w:"Burgum VR1 – Stiens",u:"0-1",soort:"oefen",s:"Amber Merkx",m:"86'",t:""},
+ {d:"2026-08-22",w:"Stiens – Harkemase Boys VR1",u:"2-1",soort:"oefen",s:"Iris Dijkmeijer",m:"",t:"volgens de staf (uit het hoofd)"},
+ {d:"2026-08-22",w:"Stiens – Harkemase Boys VR1",u:"2-1",soort:"oefen",s:"onbekend",m:"",t:"maker nog niet bekend"},
  {d:"2026-09-19",w:"Stiens – Knickerbockers VR2",u:"2-0",soort:"competitie",s:"Nynke Kuiken",m:"38'",t:"na corner Renske"},
  {d:"2026-09-19",w:"Stiens – Knickerbockers VR2",u:"2-0",soort:"competitie",s:"eigen doelpunt",m:"52'",t:"na vrije trap Sigrid"},
  {d:"2026-09-26",w:"FC MVA Noord VR1 – Stiens",u:"0-1",soort:"competitie",s:"Amber Merkx",m:"",t:""},
@@ -2576,13 +2578,14 @@ let DOELPUNTEN=[
 function renderGoals(){
   const w=document.getElementById("anGoals"); if(!w) return;
   const L=(DOELPUNTEN||[]).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
-  const per={}; L.forEach(g=>{ if(g.s==="eigen doelpunt") return; const p=per[g.s]||(per[g.s]={tot:0,comp:0,beker:0,oefen:0}); p.tot++; p[g.soort]=(p[g.soort]||0)+1; });
+  const per={}; L.forEach(g=>{ if(g.s==="eigen doelpunt"||g.s==="onbekend") return; const p=per[g.s]||(per[g.s]={tot:0,comp:0,beker:0,oefen:0}); p.tot++; p[g.soort]=(p[g.soort]||0)+1; });
   const rank=Object.entries(per).sort((a,b)=>b[1].tot-a[1].tot||b[1].comp-a[1].comp||a[0].localeCompare(b[0]));
-  const eg=L.filter(g=>g.s==="eigen doelpunt").length;
+  const eg=L.filter(g=>g.s==="eigen doelpunt").length, onb=L.filter(g=>g.s==="onbekend").length;
   let h=`<p class="hint">Alle doelpunten van Stiens dit seizoen, ook uit wedstrijden zonder Veo-beelden (bron: wedstrijdbestanden, verslagen van de staf en Slotoffensief). In de beker scoorden we nog niet.</p>
    <table><tr><th>#</th><th>Speelster</th><th class="center">Totaal</th><th class="center">Competitie</th><th class="center">Beker</th><th class="center">Oefen</th></tr>`+
    rank.map(([n,p],i)=>`<tr><td>${i===0||rank[i-1][1].tot!==p.tot?i+1:""}</td><td><b>${n}</b></td><td class="center"><b>${p.tot}</b></td><td class="center">${p.competitie||0}</td><td class="center">${p.beker||0}</td><td class="center">${p.oefen||0}</td></tr>`).join("")+
-   (eg?`<tr><td></td><td class="mini">eigen doelpunt tegenstander</td><td class="center mini">${eg}</td><td colspan="3"></td></tr>`:"")+`</table>
+   (eg?`<tr><td></td><td class="mini">eigen doelpunt tegenstander</td><td class="center mini">${eg}</td><td colspan="3"></td></tr>`:"")+
+   (onb?`<tr><td></td><td class="mini">maker onbekend</td><td class="center mini">${onb}</td><td colspan="3"></td></tr>`:"")+`</table>
    <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--gold);font-size:13px">Per wedstrijd</summary>
    <div style="overflow:auto;margin-top:8px"><table><tr><th>Datum</th><th>Wedstrijd</th><th class="center">Uitslag</th><th>Doelpunt</th><th class="center">Min.</th><th>Toelichting</th></tr>`+
    L.map(g=>`<tr><td class="mini">${new Date(g.d+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td><td>${g.w}${g.soort!=="competitie"?` <span class="mini">(${g.soort})</span>`:""}</td><td class="center">${g.u}</td><td>${g.s}</td><td class="center mini">${g.m||"–"}</td><td class="mini">${g.t||""}</td></tr>`).join("")+
