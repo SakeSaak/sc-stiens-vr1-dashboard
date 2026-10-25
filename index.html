@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.23-b</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1427,7 +1427,7 @@ function saveStats(){
 }
 /* OVR per positie gewogen, zoals EA Sports FC dat doet: een spits wordt niet op verdedigen
    afgerekend en een centrale verdediger niet op afronden. Gewichten tellen per positie op tot 1.
-   De keepster houdt het gemiddelde van haar eigen zes waarden. */
+   De keepster wordt gewogen zoals EA FC: RED 68%, BER 22%, DUE 6%, OPB 2%, DIS 1%, UIT 1%. */
 const OVR_GEWICHTEN = {
   ST : {SHO:.30, PAC:.20, DRI:.20, PHY:.15, PAS:.10, DEF:.05},
   VL : {PAC:.25, DRI:.25, SHO:.20, PAS:.15, PHY:.10, DEF:.05},   // RW, LW, RM, LM
@@ -1452,7 +1452,13 @@ function ovr(n){
   const s=(store[n]&&store[n].stats)||{};
   const vals=keysFor(n).map(k=>parseInt(s[k])).filter(v=>!isNaN(v));
   if(vals.length<6) return "–";
-  if(isKeeper(n)) return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+  if(isKeeper(n)){
+    /* Keepster ook per positie gewogen zoals EA FC: tegenhouden telt het zwaarst (zie Toelichting in het kaartjesbestand). */
+    // EA FC: duiken 24 + vangen 22 + reflexen 22, positie 22, reactie 6, trappen 4
+    const gw={RED:.68,BER:.22,DUE:.06,OPB:.02,DIS:.01,UIT:.01}; let som=0, w=0;
+    GK_STAT_KEYS.forEach(k=>{ const v=parseInt(s[k]); if(!isNaN(v) && gw[k]!=null){ som+=gw[k]*v; w+=gw[k]; } });
+    return w ? Math.round(som/w) : "–";
+  }
   const w=OVR_GEWICHTEN[ovrGroep(n)];
   let som=0;
   STAT_KEYS.forEach(k=>{ som += (w[k]||0) * parseInt(s[k]); });
@@ -2408,9 +2414,22 @@ function importAnalyse(ev){
         // Bij welke wedstrijd hoort dit? Zoek op tegenstandernaam in het programma.
         const key=opp.toLowerCase().split(/\s+/)[0];
         let fx=(fixtures||[]).map((f,i)=>({f,i})).filter(x=>x.f&&x.f.opponent&&x.f.opponent.toLowerCase().includes(key));
+        // Datum uit het bestand (tabblad Dashboard, regel 2: "24 oktober 2026 · thuis ...") zodat
+        // een tweede wedstrijd tegen dezelfde tegenstander niet de eerste overschrijft.
+        let datumBestand=null;
+        try{
+          const dashNaam=wb.SheetNames.find(s=>/^dashboard$/i.test(s));
+          if(dashNaam){
+            const regels=XLSX.utils.sheet_to_json(wb.Sheets[dashNaam],{header:1,defval:""}).slice(0,3).map(r=>String(r[0]||"")).join(" ");
+            const MND={januari:1,februari:2,maart:3,april:4,mei:5,juni:6,juli:7,augustus:8,september:9,oktober:10,november:11,december:12};
+            const m=regels.toLowerCase().match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+(\d{4})/);
+            if(m) datumBestand=m[3]+"-"+String(MND[m[2]]).padStart(2,"0")+"-"+String(m[1]).padStart(2,"0");
+          }
+        }catch(e){}
+        if(datumBestand){ const opDatum=fx.filter(x=>x.f.date===datumBestand); if(opDatum.length) fx=opDatum; }
         const match=fx.length?fx[0].f:null;
         const g=tot.find(x=>/doelpunten/i.test(x.stat))||{};
-        const an={ id:uid(), date:(match&&match.date)||todayStr(), opp:opp,
+        const an={ id:uid(), date:datumBestand||(match&&match.date)||todayStr(), opp:opp,
                    home:match?match.home:null, us:+g.us||0, them:+g.them||0,
                    file:file.name, tot:tot, half:half };
         const bestaand=analyses.findIndex(a=>a.date===an.date && a.opp===an.opp);
