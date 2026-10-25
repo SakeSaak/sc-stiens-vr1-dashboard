@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25b</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25c</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -1459,6 +1459,10 @@ function ovr(n){
     GK_STAT_KEYS.forEach(k=>{ const v=parseInt(s[k]); if(!isNaN(v) && gw[k]!=null){ som+=gw[k]*v; w+=gw[k]; } });
     return w ? Math.round(som/w) : "–";
   }
+  /* Veldspeelsters: EA rekent de OVR uit de onderliggende onderdelen (per positie gewogen), niet uit de zes kaartstats.
+     Die OVR staat in het kaartjesbestand (kolom OVR); alleen als die ontbreekt rekent het dashboard hem zelf uit. */
+  const mdo=MATCHDATA[n];
+  if(mdo && mdo.ovr!=null) return mdo.ovr;
   const w=OVR_GEWICHTEN[ovrGroep(n)];
   let som=0;
   STAT_KEYS.forEach(k=>{ som += (w[k]||0) * parseInt(s[k]); });
@@ -2785,9 +2789,9 @@ function gecombineerd(n, stat){
   const wed = md && md.stats ? md.stats[stat] : null;
   const nWed = md ? (+md.wedstrijden||0) : 0;
   const nTest = meetSessies(n, stat);
-  if(wed==null || !nWed) return (test==null? null : test);
-  if(test==null || !nTest) return Math.round(wed);
-  return Math.round((test*nTest + wed*nWed)/(nTest+nWed));
+  /* Besluit staf 25 okt 2026: de kaart komt uit de wedstrijddata. Tests tellen alleen als er geen wedstrijddata is. */
+  if(wed!=null && nWed) return Math.round(wed);
+  return (test==null? null : test);
 }
 
 /* herkomst van een stat, voor het overzicht in Metingen */
@@ -2818,8 +2822,9 @@ function matchdataUit(rijen){
     const naam=speelster.n;
     const st={};
     ALLE_STAT_KEYS.forEach(k=>{ const v=r[k]; if(v!=null && v!=="" && !isNaN(+v)) st[k]=Math.round(+v); });
+    const ovrBestand = (r["OVR"]!=null && r["OVR"]!=="" && !isNaN(+r["OVR"])) ? Math.round(+r["OVR"]) : null;
     nieuw[naam]={ stats:st, wedstrijden:+r["Wedstrijden"]||0, minuten:+r["Minuten"]||0,
-                  status:String(r["Status"]||"").trim() };
+                  status:String(r["Status"]||"").trim(), ovr:ovrBestand };
     gevonden++;
   });
   return {nieuw, gevonden, onbekend};
