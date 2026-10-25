@@ -50,6 +50,14 @@
   section.active{display:block;animation:fade .25s ease}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   h2.sec{font-size:18px;margin:6px 0 4px;color:var(--gold)}
+  .statuitleg{margin:0 0 16px}
+  .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+  .statblok{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .statblok h4{margin:0 0 6px;color:var(--gold);font-size:14px}
+  .statblok table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.45}
+  .statblok td{padding:4px 6px;vertical-align:top;border-top:1px solid var(--line);color:var(--txt)}
+  .statblok tr:first-child td{border-top:none}
+  .statblok td:first-child{width:44px;color:var(--yellow)}
   .hint{color:var(--muted);font-size:13px;margin:0 0 16px;line-height:1.5}
 
   /* ---- FIFA CARDS (SC Stiens thema: zwart/oranje/geel) ---- */
@@ -226,7 +234,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25f</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25g</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -270,9 +278,28 @@
         <input type="checkbox" id="kaartOnder" onchange="zetKaartOnder(this.checked)" style="accent-color:var(--gold)"> 🤕 onderaan
       </label>
     </div>
-    <p class="hint">De 6 FIFA-stats (PAC, SHO, PAS, DRI, DEF, PHY) en de OVR worden <b>automatisch berekend uit de metingen</b>; de OVR is <b>per positie gewogen</b> zoals in EA Sports FC (een spits telt vooral SHO, PAC en DRI, een centrale verdediger vooral DEF en PHY) en zijn hier
-      niet handmatig aan te passen — vul de tests in op het tabblad <b>Metingen</b>. Tot er metingen zijn, staan ze op <b>–</b>. In het
-      onderste vak van elke kaart kun je wel losse video-notities kwijt (bv. observaties, xG). Klik daarna op <b>Opslaan</b>.</p>
+    <div class="statuitleg">
+      <p class="hint" style="margin-bottom:10px">Elke kaart werkt zoals in <b>EA Sports FC</b> (vroeger FIFA): zes hoofdcijfers op de voorkant, en de <b>OVR</b> (overall) is daar een gemiddelde van dat per positie anders weegt. Een spits wordt vooral beoordeeld op SHO, PAC en DRI, een centrale verdediger op DEF en PHY. De cijfers komen uit onze <b>wedstrijddata</b> (Veo, met de Opta-definities), vergeleken met alle speelsters van beide teams; <b>72</b> is ongeveer het gemiddelde, hoe hoger hoe beter. Je kunt ze hier niet met de hand aanpassen.</p>
+      <div class="statgrid">
+        <div class="statblok"><h4>Veldspeelsters</h4><table>
+          <tr><td><b>PAC</b></td><td><b>Pace – snelheid.</b> Hoe snel ze optrekt en hoe hard ze kan sprinten.</td></tr>
+          <tr><td><b>SHO</b></td><td><b>Shooting – schieten.</b> Hoe vaak en hoe gevaarlijk ze schiet (schoten, xG, doelpunten), ook van afstand, en of ze vrijloopt in de laatste derde.</td></tr>
+          <tr><td><b>PAS</b></td><td><b>Passing – passen.</b> Hoeveel van haar passes aankomen, hoe vaak ze de bal vooruit krijgt (lange pass en overzicht) en haar voorzetten.</td></tr>
+          <tr><td><b>DRI</b></td><td><b>Dribbling – dribbelen en balbehandeling.</b> Of ze de bal houdt onder druk en of haar dribbels lukken.</td></tr>
+          <tr><td><b>DEF</b></td><td><b>Defending – verdedigen.</b> Tackles gewonnen en ballen onderschept.</td></tr>
+          <tr><td><b>PHY</b></td><td><b>Physical – fysiek.</b> Duels winnen (kracht), duels aangaan (agressie) en hoeveel meters ze per minuut maakt (uithoudingsvermogen).</td></tr>
+        </table></div>
+        <div class="statblok"><h4>Keepster</h4><table>
+          <tr><td><b>DIV</b></td><td><b>Diving – duiken.</b> Ballen ver van het lichaam tegenhouden: reddingen op schoten waarbij ze ver van de schotlijn stond.</td></tr>
+          <tr><td><b>HAN</b></td><td><b>Handling – vangen.</b> De bal na een redding vasthouden, zodat er geen rebound of tweede kans komt.</td></tr>
+          <tr><td><b>KIC</b></td><td><b>Kicking – trappen.</b> Lange ballen (30 m of meer) die bij een medespeelster aankomen.</td></tr>
+          <tr><td><b>REF</b></td><td><b>Reflexes – reflexen.</b> Reddingen op schoten van dichtbij (binnen 12 m).</td></tr>
+          <tr><td><b>SPD</b></td><td><b>Speed – snelheid.</b> Topsnelheid; staat op de kaart maar telt niet mee in de OVR.</td></tr>
+          <tr><td><b>POS</b></td><td><b>Positioning – positie kiezen.</b> Goed tussen bal en doel staan op het moment van het schot.</td></tr>
+        </table></div>
+      </div>
+      <p class="hint" style="margin-top:10px">Een cijfer is pas betrouwbaar na een paar wedstrijden; tot er data is staat er <b>–</b>. In het onderste vak van elke kaart kun je wel losse video-notities kwijt (bv. observaties). Klik daarna op <b>Opslaan</b>.</p>
+    </div>
     <div class="cards" id="cardGrid"></div>
   </section>
 
