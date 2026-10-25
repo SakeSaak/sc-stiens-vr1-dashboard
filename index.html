@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25d</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25e</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -706,6 +706,8 @@
       <button class="btn" onclick="delAnalyse()">✕ Verwijder deze analyse</button>
     </div>
     <div id="anBody"></div>
+    <h3 class="sec" style="font-size:16px;margin-top:24px">⚽ Doelpuntenmakers 2026/2027</h3>
+    <div id="anGoals" style="overflow:auto"></div>
     <h3 class="sec" style="font-size:16px;margin-top:24px">📈 Ontwikkeling over het seizoen</h3>
     <div id="anTrend" style="overflow:auto"></div>
   </section>
@@ -2442,7 +2444,7 @@ function importAnalyse(ev){
         added++;
       }catch(err){ console.warn(err); alert("Kon "+file.name+" niet lezen: "+err.message); }
       if(++done===files.length){
-        cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+        cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend(); renderGoals();
         if(typeof persistLocal==="function") persistLocal();
         if(typeof scheduleSave==="function") scheduleSave();
         if(added) flash(added+" analyse(s) geïmporteerd ✓");
@@ -2476,7 +2478,7 @@ function fillAnalyseSel(reset){
 function curAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:0; return analyses[i]||null; }
 function delAnalyse(){ const s=document.getElementById("anSel"); const i=s?+s.value:-1; const a=analyses[i]; if(!a){ alert("Geen analyse geselecteerd."); return; }
   if(!confirm("Analyse van "+a.opp+" verwijderen?")) return;
-  analyses.splice(i,1); cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+  analyses.splice(i,1); cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend(); renderGoals();
   if(typeof persistLocal==="function") persistLocal(); if(typeof scheduleSave==="function") scheduleSave(); }
 // Samenhangende cijfers samenvoegen tot één regel: "238 / 448 (53,1%)" i.p.v. vier losse regels.
 // Verschillende exportversies gebruiken andere namen voor dezelfde statistiek.
@@ -2558,6 +2560,34 @@ function anGroepTabel(a){
     gr.rijen.map(r=>{ const c=(r.nu!=null&&r.nt!=null)?(r.nu>r.nt?"var(--green)":r.nu<r.nt?"var(--red)":"var(--txt)"):"var(--txt)";
       return `<tr><td>${r.lbl}</td><td class="center"><b style="color:${c}">${r.us}</b></td><td class="center">${r.them}</td></tr>`;
     }).join("")+`</table></div>`).join("");
+}
+/* Doelpunten van Stiens dit seizoen (ook wedstrijden zonder Veo). Gaat mee naar de cloud via collectState. */
+let DOELPUNTEN=[
+ {d:"2026-08-17",w:"Burgum VR1 – Stiens",u:"0-1",soort:"oefen",s:"Amber Merkx",m:"86'",t:""},
+ {d:"2026-09-19",w:"Stiens – Knickerbockers VR2",u:"2-0",soort:"competitie",s:"Nynke Kuiken",m:"38'",t:"na corner Renske"},
+ {d:"2026-09-19",w:"Stiens – Knickerbockers VR2",u:"2-0",soort:"competitie",s:"eigen doelpunt",m:"52'",t:"na vrije trap Sigrid"},
+ {d:"2026-09-26",w:"FC MVA Noord VR1 – Stiens",u:"0-1",soort:"competitie",s:"Amber Merkx",m:"",t:""},
+ {d:"2026-10-03",w:"Stiens – GVAV-Rapiditas VR1",u:"3-2",soort:"competitie",s:"Amber Merkx",m:"8'",t:""},
+ {d:"2026-10-03",w:"Stiens – GVAV-Rapiditas VR1",u:"3-2",soort:"competitie",s:"Amber Merkx",m:"31'",t:""},
+ {d:"2026-10-03",w:"Stiens – GVAV-Rapiditas VR1",u:"3-2",soort:"competitie",s:"Amber Merkx",m:"67'",t:""},
+ {d:"2026-10-10",w:"SC Bolsward VR1 – Stiens",u:"2-2",soort:"competitie",s:"Coby Keizer",m:"± 15'",t:"kopbal uit corner"},
+ {d:"2026-10-10",w:"SC Bolsward VR1 – Stiens",u:"2-2",soort:"competitie",s:"Jetty de Ruiter",m:"± 60'",t:"na vrije trap Sigrid"}
+];
+function renderGoals(){
+  const w=document.getElementById("anGoals"); if(!w) return;
+  const L=(DOELPUNTEN||[]).slice().sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+  const per={}; L.forEach(g=>{ if(g.s==="eigen doelpunt") return; const p=per[g.s]||(per[g.s]={tot:0,comp:0,beker:0,oefen:0}); p.tot++; p[g.soort]=(p[g.soort]||0)+1; });
+  const rank=Object.entries(per).sort((a,b)=>b[1].tot-a[1].tot||b[1].comp-a[1].comp||a[0].localeCompare(b[0]));
+  const eg=L.filter(g=>g.s==="eigen doelpunt").length;
+  let h=`<p class="hint">Alle doelpunten van Stiens dit seizoen, ook uit wedstrijden zonder Veo-beelden (bron: wedstrijdbestanden, verslagen van de staf en Slotoffensief). In de beker scoorden we nog niet.</p>
+   <table><tr><th>#</th><th>Speelster</th><th class="center">Totaal</th><th class="center">Competitie</th><th class="center">Beker</th><th class="center">Oefen</th></tr>`+
+   rank.map(([n,p],i)=>`<tr><td>${i===0||rank[i-1][1].tot!==p.tot?i+1:""}</td><td><b>${n}</b></td><td class="center"><b>${p.tot}</b></td><td class="center">${p.competitie||0}</td><td class="center">${p.beker||0}</td><td class="center">${p.oefen||0}</td></tr>`).join("")+
+   (eg?`<tr><td></td><td class="mini">eigen doelpunt tegenstander</td><td class="center mini">${eg}</td><td colspan="3"></td></tr>`:"")+`</table>
+   <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--gold);font-size:13px">Per wedstrijd</summary>
+   <div style="overflow:auto;margin-top:8px"><table><tr><th>Datum</th><th>Wedstrijd</th><th class="center">Uitslag</th><th>Doelpunt</th><th class="center">Min.</th><th>Toelichting</th></tr>`+
+   L.map(g=>`<tr><td class="mini">${new Date(g.d+"T00:00:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</td><td>${g.w}${g.soort!=="competitie"?` <span class="mini">(${g.soort})</span>`:""}</td><td class="center">${g.u}</td><td>${g.s}</td><td class="center mini">${g.m||"–"}</td><td class="mini">${g.t||""}</td></tr>`).join("")+
+   `</table></div></details>`;
+  w.innerHTML=h;
 }
 function renderAnalyse(){
   const w=document.getElementById("anBody"); if(!w)return;
@@ -3917,12 +3947,13 @@ function ruimOpstellingenOp(){
   }catch(e){ console.warn("ruimOpstellingenOp",e); }
 }
 
-function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses,
+function collectState(){ return {store:store, fixtures:fixtures, clubDuties:clubDuties, trainings:trainings, events:events, players:PLAYERS, staff:STAFF, duos:DUOS, tokens:MOOD_TOKENS, analyses:analyses, doelpunten:DOELPUNTEN,
   /* het weekbestand uit Veo hoort bij de gedeelde gegevens: anders zien andere apparaten
      alleen de trainingsmetingen en rekenen zij de kaartjes lager uit. */
   matchdata:(typeof MATCHDATA!=="undefined"?MATCHDATA:{}),
   standaardGezien:(typeof STANDAARD_GEZIEN!=="undefined"?STANDAARD_GEZIEN:[])}; }
 function applyState(st){ if(st && st.store){ store=st.store; if(!isStaff) clearPhones(); }
+  if(st && Array.isArray(st.doelpunten) && st.doelpunten.length) DOELPUNTEN=st.doelpunten;
   if(st && Array.isArray(st.standaardGezien) && typeof STANDAARD_GEZIEN!=="undefined"){
     st.standaardGezien.forEach(n=>{ if(STANDAARD_GEZIEN.indexOf(n)<0) STANDAARD_GEZIEN.push(n); });
     bewaarGezien();
@@ -3977,7 +4008,7 @@ function renderAll(){
   PLAYERS.forEach(p=>computePlayerStats(p.n));
   renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
   renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
-  fillAnalyseSel(); renderAnalyse(); renderAnTrend();
+  fillAnalyseSel(); renderAnalyse(); renderAnTrend(); renderGoals();
   applyStaffGate();
 }
 async function cloudLoad(){
@@ -4129,7 +4160,7 @@ const _mood=document.getElementById("moodDate"); if(_mood && !_mood.value) _mood
 renderCards(); renderSquad(); renderSchedTable(); renderBalance(); renderPerPlayer();
 renderMeasTable(); renderTestCfg(); fillProgPlayers(); renderProgress(); renderDev(); renderMoodAll(); renderBel(); renderPeriode(); renderReminders(); renderClubDuties(); renderTrainings(); renderCorvee(); initAgendaUrl(); renderAgenda(); renderKasAll();
 document.getElementById("crestHeader").innerHTML=CREST(66,'h');
-cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend();
+cleanAnalyses(); fillAnalyseSel(true); renderAnalyse(); renderAnTrend(); renderGoals();
 seedSeasonTrainings(); cleanTrainingClashes(); applyRuilingen(); renderTrainings(); renderAgenda();   // wekelijkse trainingen als echte regels
 cloudInit();
 </script>
