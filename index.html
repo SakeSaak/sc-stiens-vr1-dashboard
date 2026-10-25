@@ -226,7 +226,7 @@
     <span id="crestHeader" class="crestbig"></span>
     <div>
       <h1><span>S.C. Stiens</span> VR1 — Teamdashboard</h1>
-      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25c</span></p>
+      <p>Seizoen 2026/2027 · 16 speelsters · zwart · oranje · geel · <span class="mini" style="opacity:.7">versie 2026.10.25d</span></p>
     </div>
   </div>
   <div id="authbar" class="authbar"></div>
@@ -2437,7 +2437,7 @@ function importAnalyse(ev){
                    home:match?match.home:null, us:+g.us||0, them:+g.them||0,
                    file:file.name, tot:tot, half:half };
         const bestaand=analyses.findIndex(a=>a.date===an.date && a.opp===an.opp);
-        if(bestaand>=0) analyses[bestaand]=an; else analyses.push(an);
+        if(bestaand>=0){ if(analyses[bestaand].letop && !an.letop) an.letop=analyses[bestaand].letop; analyses[bestaand]=an; } else analyses.push(an);
         analyses.sort((a,b)=>a.date<b.date?1:-1);
         added++;
       }catch(err){ console.warn(err); alert("Kon "+file.name+" niet lezen: "+err.message); }
@@ -2602,6 +2602,17 @@ function renderAnalyse(){
       + maakTabel(kernRijen.length?kernRijen:a.half)
       + `<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--gold);font-size:13px">Alle cijfers per helft tonen</summary>
          <div style="margin-top:8px">`+maakTabel(a.half)+`</div></details>`;
+  }
+  if(a.letop){
+    /* Opvallendste speelsters per team in deze wedstrijd (Veo, Opta-definities; vergeleken met alle speelsters van beide teams).
+       Voor de wedstrijdbespreking: met wie moeten we rekening houden? Rugnummers van de tegenstander zoals Veo ze las. */
+    const lijst=(L,eigen)=>(L||[]).map(x=>`<tr><td><b>#${x.nr}</b>${x.naam?` ${x.naam}`:``}</td><td class="mini">${x.min}'</td><td>${x.sterk}</td></tr>`).join("")||`<tr><td colspan="3" class="mini">–</td></tr>`;
+    h+=`<h3 class="sec" style="font-size:15px;margin-top:20px">Speelsters om rekening mee te houden</h3>
+      <div class="teamgrid">
+        <div class="teamcard"><h3 style="font-size:13px;margin:0 0 6px">${a.opp}</h3><table>${lijst(a.letop.them)}</table></div>
+        <div class="teamcard"><h3 style="font-size:13px;margin:0 0 6px">S.C. Stiens VR1</h3><table>${lijst(a.letop.us)}</table></div>
+      </div>
+      <p class="mini" style="margin-top:6px">Opvallend in deze wedstrijd ten opzichte van alle speelsters van beide teams (min. 30 minuten): dreiging (schoten, xG), vrijlopen in de laatste derde, progressieve passes, gewonnen duels en onderscheppingen. Eén wedstrijd: een richting, geen oordeel. Rugnummers van de tegenstander zoals Veo ze herkende.</p>`;
   }
   w.innerHTML=h;
 }
